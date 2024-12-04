@@ -22,6 +22,9 @@
 		"boot": "tsx index ./grammar.gg -o ./grammar-new.ts",
 		"build": "tsc --build"
 	},
+    "bin": {
+        "pgen": "./bin/pgen"
+    },
 	"devDependencies": {
 	  "@types/babel__generator": "^7.6.8",
 	  "@types/minimist": "^1.2.5",
