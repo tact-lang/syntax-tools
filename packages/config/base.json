@@ -1,0 +1,22 @@
+{
+  "compilerOptions": {
+    "outDir": "${configDir}/lib",
+    "composite": true,
+    "incremental": true,
+    "declaration": true,
+    "declarationMap": true,
+    "customConditions": ["@langtools/source"],
+
+    "lib": ["ESNext", "DOM"],
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleDetection": "force",
+    "strict": true,
+    "allowJs": true,
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "skipLibCheck": true,
+    "jsx": "react-jsx"
+  },
+  "exclude": ["${configDir}/lib"]
+}

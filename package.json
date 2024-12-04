@@ -1,0 +1,16 @@
+{
+	"name": "langtools",
+	"version": "0.0.0",
+	"private": true,
+	"workspaces": [
+		"packages/*"
+	],
+	"scripts": {
+		"build": "npm run build -ws --if-present"
+	},
+	"devDependencies": {
+		"ts-node": "10.9.2",
+		"tsx": "4.19.2",
+		"typescript": "5.7.2"
+	}
+}

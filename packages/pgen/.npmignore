@@ -1,0 +1,4 @@
+*
+!lib/**
+*.tsbuildinfo
+!package.json
