@@ -1,11 +1,11 @@
 import minimist from 'minimist';
 import generate from "@babel/generator";
 import fs from 'fs/promises';
+import * as $ from '@langtools/runtime';
 import { Grammar } from './grammar';
 import { transform } from './transform';
 import { compile } from './compile';
 import { sort } from './sort';
-import * as $ from './parser';
 
 const main = async () => {
     const argv = minimist(process.argv.slice(2));

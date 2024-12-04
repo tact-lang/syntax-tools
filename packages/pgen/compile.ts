@@ -6,7 +6,7 @@ const astGlobal = '$$';
 
 export const compile = (node: g.Grammar): t.File => {
     const imports: t.Statement[] = [
-        emitNsImport(rtGlobal, './parser'),
+        emitNsImport(rtGlobal, '@langtools/runtime'),
     ];
 
     const definedRules = new Set<string>();

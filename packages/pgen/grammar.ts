@@ -1,4 +1,4 @@
-import * as $ from "./parser";
+import * as $ from "@langtools/runtime";
 export namespace $$ {
   export type ident$noSkip = string;
   export type formals$noSkip = {
