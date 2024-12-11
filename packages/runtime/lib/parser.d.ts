@@ -6,6 +6,17 @@ export type Failure = null;
 export declare const failure: Failure;
 export declare const isFailure: <T>(t: Result<T>) => t is Failure;
 export type Result<T> = Success<T> | Failure;
+export type Trace = TraceTerm | TraceRule;
+export type TraceTerm = {
+    $: 'term';
+    text: string;
+    failed: boolean;
+};
+export type TraceRule = {
+    $: 'rule';
+    name: string;
+    child: Trace;
+};
 declare const createContext: (s: string) => {
     s: string;
     p: number;
@@ -20,6 +31,7 @@ export declare class ParseError extends Error {
     constructor(message: string);
 }
 export declare const parse: <T>(parser: Parser<T>, code: string) => T;
+export declare const rule: <T>(child: Parser<T>) => Parser<T>;
 export declare const pure: <const T>(t: T) => Parser<T>;
 export declare const ap: <T, U>(left: Parser<(t: T) => U>, right: Parser<T>) => Parser<U>;
 export declare const pa: <T, U>(left: Parser<T>, right: Parser<(t: T) => U>) => Parser<U>;
@@ -51,13 +63,13 @@ export declare const app: <A, B>(child: Parser<A>, f: (a: A) => B) => Parser<B>;
 export declare const ref: <A>(child: () => Parser<A>) => Parser<A>;
 export declare const star: <T>(child: Parser<T>) => Parser<T[]>;
 export declare const any: Parser<string>;
-export declare const eof: Parser<undefined>;
 export declare const EPS: Readonly<{}>;
 export declare const eps: Parser<{}>;
 export declare const plus: <T>(child: Parser<T>) => Parser<T[]>;
 export declare const opt: <T>(child: Parser<T>) => Parser<T | undefined>;
 export declare const lookPos: <T>(child: Parser<T>) => Parser<undefined>;
 export declare const lookNeg: <T>(child: Parser<T>) => Parser<undefined>;
+export declare const eof: Parser<undefined>;
 export declare const where: Parser<number>;
 export declare const debug: <T>(child: Parser<T>) => Parser<T>;
 export declare const infix: <A, B>(a: Parser<A>, b: Parser<B>) => Parser<[A, [B, A][]]>;

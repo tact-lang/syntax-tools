@@ -40,11 +40,13 @@ const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
     expr: t.Statement,
     type: t.Statement,
 }> => ctx => {
-    const nameCode = withType(t.identifier(name), emitParserType(name));
+    const nameCode = formals.length === 0
+        ? withType(t.identifier(name), emitParserType(name, []))
+        : t.identifier(name);
 
     const { expr: exprCode, type: typeCode } = compileExpr(body)(ctx);
 
-    const bodyCode = compileFormals(formals, exprCode);
+    const bodyCode = compileFormals(name, formals, exprCode);
     
     return {
         expr: t.exportNamedDeclaration(t.variableDeclaration('const', [
@@ -62,13 +64,13 @@ const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
     };
 };
 
-const compileFormals = (formals: readonly string[], bodyCode: t.Expression): t.Expression => {
+const compileFormals = (name: string, formals: readonly string[], bodyCode: t.Expression): t.Expression => {
     if (formals.length === 0) {
         return bodyCode;
     }
 
     const functionParams = formals.map(formal => {
-        return withType(t.identifier(formal), emitParserType(formal));
+        return withType(t.identifier(formal), emitParserType(formal, [], true));
     });
 
     const arrow = t.arrowFunctionExpression(functionParams, bodyCode);
@@ -76,6 +78,8 @@ const compileFormals = (formals: readonly string[], bodyCode: t.Expression): t.E
     arrow.typeParameters = t.tsTypeParameterDeclaration(formals.map(formal => {
         return t.tsTypeParameter(null, null, formal);
     }));
+
+    arrow.returnType = t.tsTypeAnnotation(emitParserType(name, formals))
 
     return arrow;
 };
@@ -344,12 +348,20 @@ const emitPrim = (name: string): t.Expression => {
     return t.memberExpression(t.identifier(rtGlobal), t.identifier(name));
 };
 
-const emitParserType = (name: string): t.TSType => {
+const emitParserType = (name: string, formals: readonly string[], notQualified: boolean = false): t.TSType => {
+    const typeParams = formals.length === 0
+        ? null
+        : t.tsTypeParameterInstantiation(formals.map(formal => {
+            return t.tsTypeReference(t.identifier(formal));
+        }));
     return t.tsTypeReference(
         t.tsQualifiedName(t.identifier(rtGlobal), t.identifier('Parser')),
         t.tsTypeParameterInstantiation([
             t.tsTypeReference(
-                t.tsQualifiedName(t.identifier(astGlobal), t.identifier(name))
+                notQualified
+                    ? t.identifier(name)
+                    : t.tsQualifiedName(t.identifier(astGlobal), t.identifier(name)),
+                typeParams,
             )
         ])
     );

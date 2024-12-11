@@ -1,4 +1,7 @@
-export const tarjan = (graph) => {
+"use strict";
+Object.defineProperty(exports, "__esModule", { value: true });
+exports.tarjan = void 0;
+const tarjan = (graph) => {
     let index = 0;
     const stack = [];
     const vs = [...new Set([[...graph.keys()], ...graph.values()].flat())];
@@ -50,3 +53,4 @@ export const tarjan = (graph) => {
     }
     return sccs;
 };
+exports.tarjan = tarjan;

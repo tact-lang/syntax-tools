@@ -1,0 +1,33 @@
+{
+	"name": "@langtools/parser-next",
+	"private": true,
+	"version": "0.0.1",
+	"main": "./lib/index.js",
+	"types": "./lib/index.d.ts",
+	"exports": {
+		".": {
+			"import": {
+				"types": "./lib/index.d.ts",
+				"@langtools/source": "./index.ts",
+				"default": "./lib/index.js"
+			},
+			"require": {
+				"types": "./lib/index.d.ts",
+				"@langtools/source": "./index.ts",
+				"default": "./lib/index.js"
+			}
+		},
+		"./package.json": "./package.json"
+	},
+	"devDependencies": {
+		"@langtools/config": "file:../config",
+		"@langtools/runtime": "file:../runtime",
+		"@langtools/pgen": "file:../pgen"
+	},
+	"scripts": {
+		"_generate": "npx pgen ./grammar.gg -o ./grammar.ts",
+		"generate": "ts-node ../pgen/index ./grammar.gg -o ./grammar.ts",
+		"build": "npm run generate && tsc --build",
+		"clean": "rm -rf lib node_modules"
+	}
+}

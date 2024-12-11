@@ -1,5 +1,16 @@
 import { $$ as g } from './grammar';
 
+/*
+Foo = "a" / "b"     : void
+Foo = A / B         : void
+Foo = a:A b:B       : { $: 'Foo', a: A, b: B }
+
+foo = "a" / "b"     : "a" | "b"
+foo = A / B         : A | B
+foo = a:A b:B       : { a: A, b: B }
+foo = @A B          : A
+*/
+
 export type Expr =
     | Alt
     | Eps
@@ -72,38 +83,100 @@ export const Long = (value: string): Long => ({ $: "Long", value });
 export type Ascii = { readonly $: "Ascii", readonly value: string }
 export const Ascii = (value: string): Ascii => ({ $: "Ascii", value });
 
+type SkipType =
+    | 'no-space' // no space rule
+    | 'skip-space' // has space rule, compile with skipping
+    | 'keep-space' // has space rule, compile without skipping
+
 type Context = {
-    isPickAllowed: boolean;
-    isSpaceAdded: boolean;
-    useSkipper: boolean;
+    skip: SkipType;
+    formals: Set<string>;
 }
 type Transform<T> = (ctx: Context) => T
 
+const keywords: Set<string> = new Set([
+    'abstract', 'arguments', 'await', 'boolean', 'break', 'byte', 'case', 'catch', 'char',
+    'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'double', 'else',
+    'enum', 'eval', 'export', 'extends', 'false', 'final', 'finally', 'float', 'for',
+    'function', 'goto', 'if', 'implements', 'import', 'in', 'instanceof', 'int', 'interface',
+    'let', 'long', 'native', 'new', 'null', 'package', 'private', 'protected', 'public',
+    'return', 'short', 'static', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws',
+    'transient', 'true', 'try', 'typeof', 'var', 'void', 'volatile', 'while', 'with', 'yield',
+
+    'as', 'type', 'interface', 'never',
+]);
+
+const renameIfKeyword = (name: string): string => {
+    return keywords.has(name) ? `$${name}` : name;
+};
+
 export const transform = ({ rules }: g.Grammar): Grammar => {
     const useSkipper = Boolean(rules.find(({ name }) => name === 'space'));
-    const spaceOptions = useSkipper ? [false, true] : [false];
+    const skipTypes: SkipType[] = useSkipper ? ['skip-space', 'keep-space'] : ['no-space'];
 
-    return Grammar(rules.flatMap(({ name, formals, body }) => {
-        const isAstRule = name.match(/^[A-Z]/);
-
-        const rules: Rule[] = [];
-
-        for (const isSpaceAdded of spaceOptions) {
-            const fullName = !isSpaceAdded && useSkipper ? `${name}$noSkip` : name;
-            
-            const expr = transformExpr(body)({
-                isPickAllowed: !isAstRule,
-                isSpaceAdded,
-                useSkipper,
-            });
-
-            const wrapped = isAstRule ? Field('$', Pure(name), expr) : expr;
-
-            rules.push(Rule(fullName, formals ? [formals.head, ...formals.tail] : [], wrapped));
-        }
-
-        return rules;
+    return Grammar(rules.flatMap((rule) => {
+        return skipTypes.map(skip => {
+            return transformRule(skip, rule);
+        });
     }));
+};
+
+const transformRule = (
+    skip: SkipType,
+    { name, formals, body }: g.Rule
+) => {
+    const renamed = renameIfKeyword(name);
+    const fullName = skip === 'keep-space' ? `${renamed}$noSkip` : renamed;
+
+    const allFormals = formals ? [formals.head, ...formals.tail] : [];
+    const formalsSet: Set<string> = new Set(allFormals);
+
+    const isAstRule = name.match(/^[A-Z]/);
+
+    if (isAstRule) {
+        const expr = transformAstAlt(body)({
+            skip,
+            formals: formalsSet,
+        });
+    
+        return Rule(fullName, allFormals, Field('$', Pure(name), expr));
+    } else {
+        const expr = transformAlt(body)({
+            skip,
+            formals: formalsSet,
+        });
+    
+        return Rule(fullName, allFormals, expr);
+    }
+};
+
+const transformAstAlt = (node: g.Alt): Transform<Expr> => (ctx) => {
+    const altExprs = [node.head, ...node.tail];
+
+    if (altExprs.length !== 1 || !altExprs[0]) {
+        // Foo = A / B
+        return Ap(transformAlt(node)(ctx), Eps, 'r');
+    }
+
+    const seq = altExprs[0];
+    const { exprs } = seq;
+
+    const hasPick = exprs.filter(expr => expr.selector?.$ === 'Choose').length;
+
+    if (hasPick) {
+        // Foo = A @B
+        throw new Error('AST rules do not allow @-picking');
+    }
+
+    const hasNamed = exprs.filter(expr => expr.selector?.$ === 'Name').length;
+    
+    if (hasNamed) {
+        // Foo = a:A b:B
+        return transformSeq(seq)(ctx);
+    } else {
+        // Foo = A B
+        return Ap(transformSeq(seq)(ctx), Eps, 'r');
+    }
 };
 
 type gExpr = g.Alt | g.Apply | g.Iter | g.Seq | g.Any | g.Class | g.Terminal
@@ -115,27 +188,52 @@ const transformExprs = (nodes: readonly gExpr[]): Transform<Expr[]> => (ctx) => 
 const transformExpr = (node: gExpr): Transform<Expr> => (ctx) => {
     switch (node.$) {
         case 'Apply':
-            return Call(
-                ctx.useSkipper && !ctx.isSpaceAdded ? `${node.name}$noSkip` : node.name,
-                transformExprs(node.params ? [node.params.head, ...node.params.tail] : [])(ctx)
-            );
+            return transformApply(node)(ctx);
         case 'Iter':
             return transformIter(node)(ctx);
         case 'Seq':
             return transformSeq(node)(ctx);
         case 'Alt':
-            const exprs = [node.head, ...node.tail];
-            if (exprs.length === 1 && exprs[0]) {
-                return transformExpr(exprs[0])(ctx);
-            }
-            return transformExprs(exprs)(ctx).reduceRight((prev, next) => Alt(next, prev));
+            return transformAlt(node)(ctx);
         case 'Any':
-            return spaced(Any)(ctx);
+            return transformAny(node)(ctx);
         case 'Class':
-            return spaced(Class(node.seqs, node.negated === '^', node.insensitive === 'i'))(ctx);
+            return transformClass(node)(ctx);
         case 'Terminal':
-            return spaced(Terminal(node.value))(ctx);
+            return transformTerminal(node)(ctx);
     }
+};
+
+const transformAny = (_node: g.Any) => {
+    return spaced(Any);
+};
+
+const transformClass = ({ insensitive, negated, seqs }: g.Class) => {
+    return spaced(Class(seqs, negated === '^', insensitive === 'i'));
+};
+
+const transformTerminal = ({ value }: g.Terminal) => {
+    return spaced(Terminal(value));
+};
+
+const transformApply = (node: g.Apply): Transform<Expr> => (ctx) => {
+    const renamed = renameIfKeyword(node.name);
+    // FIXME: apply in noskip context should use noskip formals
+    const newName = ctx.skip === 'keep-space' && !ctx.formals.has(node.name)
+        ? `${renamed}$noSkip`
+        : renamed;
+    
+    const allParams = node.params ? [node.params.head, ...node.params.tail] : [];
+
+    return Call(newName, transformExprs(allParams)(ctx));
+};
+
+const transformAlt = (node: g.Alt): Transform<Expr> => (ctx) => {
+    const exprs = [node.head, ...node.tail];
+    if (exprs.length === 1 && exprs[0]) {
+        return transformExpr(exprs[0])(ctx);
+    }
+    return transformExprs(exprs)(ctx).reduceRight((prev, next) => Alt(next, prev));
 };
 
 const transformIter = ({ prefix, expr, suffix }: g.Iter): Transform<Expr> => {
@@ -155,9 +253,8 @@ const transformPrefix = (prefix: "!" | "&" | "#" | "$", expr: Transform<Expr>): 
             return Stringify(expr(ctx));
         case '#':
             return spaced(expr({
-                isPickAllowed: ctx.isPickAllowed,
-                isSpaceAdded: false,
-                useSkipper: ctx.useSkipper,
+                skip: ctx.skip === 'skip-space' ? 'keep-space' : ctx.skip,
+                formals: ctx.formals,
             }))(ctx);
         default:
             throw new Error('Unexpected prefix');
@@ -183,10 +280,6 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
     const hasPick = exprs.filter(expr => expr.selector?.$ === 'Choose').length;
     const hasNamed = exprs.filter(expr => expr.selector?.$ === 'Name').length;
 
-    if (!ctx.isPickAllowed && hasPick) {
-        throw new Error('Cannot pick here');
-    }
-
     if (hasPick && hasNamed) {
         throw new Error('Picking and naming at the same time is not allowed');
     }
@@ -195,10 +288,9 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
         throw new Error('Pick one');
     }
 
-    const opts = {
-        isPickAllowed: true,
-        isSpaceAdded: ctx.isSpaceAdded,
-        useSkipper: ctx.useSkipper,
+    const opts: Context = {
+        skip: ctx.skip,
+        formals: ctx.formals,
     };
 
     if (hasPick) {
@@ -237,10 +329,15 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
     }
 
     const e = exprs.map(({ expr }) => transformExpr(expr)(opts));
+
+    if (e.length === 1 && e[0]) {
+        return e[0];
+    }
+
     e.push(Eps);
     return e.reduceRight((prev, expr) => Ap(expr, prev, 'r'));
 };
 
 const spaced = (node: Expr): Transform<Expr> => (ctx) => {
-    return ctx.isSpaceAdded ? Ap(node, Star(Call("space$noSkip", [])), 'l') : node;
+    return ctx.skip === 'skip-space' ? Ap(node, Star(Call("space$noSkip", [])), 'l') : node;
 };

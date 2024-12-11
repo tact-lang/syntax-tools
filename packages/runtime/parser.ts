@@ -9,6 +9,12 @@ export const isFailure = <T>(t: Result<T>): t is Failure => !t;
 
 export type Result<T> = Success<T> | Failure
 
+export type Trace =
+    | TraceTerm
+    | TraceRule
+export type TraceTerm = { $: 'term', text: string, failed: boolean }
+export type TraceRule = { $: 'rule', name: string, child: Trace }
+
 const createContext = (s: string) => {
     let failPos = 0;
     let messages = new Set<string>();
@@ -64,6 +70,11 @@ export const parse = <T,>(parser: Parser<T>, code: string): T => {
         throw new ParseError(c.getError());
     }
     return getSuccess(r);
+};
+
+export const rule = <T>(child: Parser<T>): Parser<T> => (ctx) => {
+    const result = child(ctx);
+    return result;
 };
 
 export const pure = <const T>(t: T): Parser<T> => () => success(t);
@@ -190,16 +201,19 @@ export const ref = <A,>(child: () => Parser<A>): Parser<A> => {
 
 export const star = <T,>(child: Parser<T>): Parser<T[]> => ctx => {
     const result: T[] = [];
+    let p = ctx.p;
     for (;;) {
+        p = ctx.p;
         const r = child(ctx);
-        if (isFailure(r)) return success(result);
+        if (isFailure(r)) {
+            ctx.p = p;
+            return success(result);
+        }
         result.push(getSuccess(r));
     }
 };
 
 export const any: Parser<string> = sat(() => true, 'any character');
-
-export const eof: Parser<undefined> = ctx => ctx.p === ctx.l ? success(undefined) : failure;
 
 export const EPS = Object.freeze({});
 export const eps: Parser<{}> = () => success(EPS);
@@ -219,6 +233,8 @@ export const lookNeg = <T,>(child: Parser<T>): Parser<undefined> => {
     const p = lookPos(child);
     return ctx => isSuccess(p(ctx)) ? failure : success(undefined);
 };
+
+export const eof: Parser<undefined> = lookNeg(any);
 
 export const where: Parser<number> = ctx => success(ctx.p);
 

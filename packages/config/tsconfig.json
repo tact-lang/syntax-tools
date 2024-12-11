@@ -9,12 +9,12 @@
 
     "lib": ["ESNext", "DOM"],
     "target": "ESNext",
-    "module": "ESNext",
+    "module": "Node16",
     "moduleDetection": "force",
     "strict": true,
     "allowJs": true,
     "esModuleInterop": true,
-    "moduleResolution": "bundler",
+    "moduleResolution": "node16",
     "skipLibCheck": true,
     "jsx": "react-jsx"
   },

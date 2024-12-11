@@ -1,0 +1,343 @@
+Module = imports:Import* items:moduleItem*;
+
+Import = import path:StringLiteral ";";
+
+moduleItem
+    = PrimitiveTypeDecl
+    / Function
+    / AsmFunction
+    / NativeFunctionDecl
+    / Constant
+    / StructDecl
+    / MessageDecl
+    / Contract
+    / Trait;
+
+contractItemDecl
+    = ContractInit
+    / receiver
+    / Function
+    / Constant
+    / storageVar;
+
+traitItemDecl
+    = receiver
+    / Function
+    / Constant
+    / storageVar;
+
+PrimitiveTypeDecl = primitive name:TypeId ";";
+
+Function =
+    attributes:functionAttribute*
+    fun
+    name:Id
+    parameters:parametersFormal
+    type:ascription?
+    body:(FunctionDefinition / FunctionDeclaration);
+
+FunctionDefinition = body:statements;
+FunctionDeclaration = $(";" / &"}");
+
+AsmFunction = 
+    "asm"
+    shuffle:("(" ids:Id* to:("->" @IntegerLiteralDec+)? ")")?
+    attributes:functionAttribute*
+    fun
+    name:Id
+    parameters:parametersFormal
+    returnType:ascription?
+    "{"
+    instructions:asmInstruction+
+    "}";
+
+NativeFunctionDecl =
+    "@name" "("
+    nativeName:funcId
+    ")"
+    attributes:functionAttribute*
+    native
+    name:Id
+    parameters:parametersFormal
+    returnType:ascription?
+    ";";
+
+Constant =
+    attributes:(virtual / override / abstract)*
+    const
+    name:Id
+    type:ascription
+    body:(ConstantDefinition / ConstantDeclaration);
+ConstantDefinition = "=" expression:expression (";" / &"}");
+ConstantDeclaration = $(";" / &"}");
+
+storageVar = @FieldDecl (";" / &"}");
+
+StructDecl = "struct" name:TypeId "{" fields:structFields "}";
+MessageDecl = "message" id:("(" @integerLiteral ")")? name:TypeId "{" fields:structFields "}";
+
+structFields = @inter<FieldDecl, ";">? ";"?;
+
+FieldDecl =
+    name:Id
+    type:ascription as:(as @Id)?
+    expression:("=" @expression)?;
+
+Contract =
+    attributes:ContractAttribute*
+    contract
+    name:Id
+    traits:(with @InheritedTraits)?
+    "{"
+    items:contractItemDecl*
+    "}";
+
+Trait = ContractAttribute* trait Id (with InheritedTraits)? "{" traitItemDecl* "}";
+
+InheritedTraits = ids:inter<Id, ","> ","?;
+
+ContractInit = "init" parametersFormal statements;
+
+ContractAttribute = "@interface" "(" StringLiteral ")";
+
+// 'get' cannot be a reserved word because there is the map '.get' method
+functionAttribute = "get" / mutates / extends / virtual / override / inline / abstract;
+
+receiver
+    = ReceiverReceive
+    / ReceiverExternal
+    / ReceiverBounced;
+
+// "bounced" cannot be a reserved word because there a 'bounced' field in stdlib's 'Context' structure
+ReceiverBounced = "bounced" "(" param:Parameter ")" body:statements;
+ReceiverReceive = receive "(" param:receiverParam ")" body:statements;
+ReceiverExternal = external "(" param:receiverParam ")" body:statements;
+receiverParam = @(Parameter / StringLiteral)?;
+
+asmInstruction = AsmData / AsmAny;
+AsmData = [xb]i "{" hexDigit* "}";
+AsmAny = !comment (!space !"}" .)+;
+
+ascription = ":" @type;
+type
+    = TypeOptional
+    / TypeRegular
+    / TypeMap
+    / TypeBounced;
+TypeOptional = child:TypeId "?";
+TypeRegular = child:TypeId;
+TypeBounced = "bounced" "<" child:TypeId ">";
+TypeMap =
+    map "<"
+    key:TypeId keyAs:(as @Id)?
+    ","
+    value:TypeId valueAs:(as @Id)?
+    ">";
+TypeId = name:$#([A-Z] [a-z0-9_]i*);
+
+statement
+    = StatementLet
+    / StatementBlock
+    / StatementReturn
+    / StatementCondition
+    / StatementWhile
+    / StatementRepeat
+    / StatementUntil
+    / StatementTry
+    / StatementForEach
+    / StatementExpression
+    / StatementAssign;
+
+statements = "{" @statement* "}";
+
+StatementLet        = let name:Id type:ascription? "=" init:expression (";" / &"}");
+StatementBlock      = body:statements;
+StatementReturn     = return expression:expression? (";" / &"}");
+StatementExpression = expression:expression (";" / &"}");
+StatementAssign     = left:expression operator:[-+*/%|&^]? "=" right:expression (";" / &"}");
+StatementCondition  = if condition:expression trueBranch:statements falseBranch:(else @(statements / StatementCondition))?;
+StatementWhile      = while condition:parens body:statements;
+StatementRepeat     = repeat condition:parens body:statements;
+StatementUntil      = do body:statements until condition:parens (";" / &"}");
+StatementTry        = try body:statements handler:(catch "(" name:Id ")" body2:statements)?;
+StatementForEach    = foreach "(" key:Id "," value:Id "in" expression:expression ")" body:statements;
+
+expression   = Conditional;
+Conditional  = head:Or tail:("?" thenBranch:Or ":" elseBranch:Conditional)*;
+Or           = inter<And, "||">;
+And          = inter<BitwiseOr, "&&">;
+BitwiseOr    = inter<BitwiseXor, "|">;
+BitwiseXor   = inter<BitwiseAnd, "^">;
+BitwiseAnd   = inter<Equality, "&">;
+Equality     = inter<Compare, ("!=" / "==")>;
+Compare      = inter<BitwiseShift, ("<=" / "<" / ">=" / ">")>;
+BitwiseShift = inter<Add, ("<<" / ">>")>;
+Add          = inter<Mul, ("+" !"+" / "-" !"-")>;
+Mul          = inter<Unary, [*/%]>;
+Unary        = prefixes:[-+!~]* expression:Suffix;
+Suffix       = expression:primary suffixes:suffix*;
+
+suffix
+    = SuffixUnboxNotNull
+    / SuffixCall
+    / SuffixFieldAccess;
+
+SuffixUnboxNotNull = "!!";
+SuffixCall = params:parametersFactual;
+SuffixFieldAccess = "." name:Id;
+
+// Order is important
+primary
+    = Parens
+    / StructInstance
+    / integerLiteral
+    / BoolLiteral
+    / InitOf
+    / null
+    / StringLiteral
+    / Id;
+
+parens = "(" @expression ")";
+Parens = parens;
+
+StructInstance = TypeId "{" fields:inter<structFieldInitializer, ",">? ","? "}";
+InitOf = initOf name:Id params:parametersFactual;
+
+structFieldInitializer = name:Id init:(":" @expression)?;
+
+parametersFactual = "(" @inter<expression, ",">? ","? ")";
+parametersFormal = "(" @inter<Parameter, ",">? ","? ")";
+Parameter = name:Id type:ascription;
+
+// order is important
+integerLiteral
+    = IntegerLiteralHex
+    / IntegerLiteralBin
+    / IntegerLiteralOct
+    / IntegerLiteralDec;
+
+IntegerLiteralDec = digits:$([1-9] ("_"? digit)* / "0" digit*);
+IntegerLiteralHex = "0" [x]i digits:$(hexDigit ("_"? hexDigit)*);
+IntegerLiteralBin = "0" [b]i digits:$([01] ("_"? [01])*);
+IntegerLiteralOct = "0" [o]i digits:$([0-7] ("_"? [0-7])*);
+
+idPart = [a-z0-9_]i;
+Id = name:$#(
+    !reservedWord
+    [a-z_]i idPart*
+);
+
+// FunC identifiers, where `funcId` stands for FunC function identifier
+// A plain identifier cannot be a number, a single underscore, an operator, a keyword or a compiler directive
+// See: https://github.com/ton-blockchain/ton/blob/master/crypto/func/keywords.cpp
+
+// Order of inner alternations matters
+funcInvalidId
+    = notUnderscore / notArithOperator / notComparisonOperator
+    / notBitwiseOperator / notAssignOperator / notDelimiter
+    / notControlKeyword / notTypeKeyword / notKeyword / notDirective
+    / notDecimalNumber / notHexadecimalNumber;
+notUnderscore = "_";
+notDirective = "#include" / "#pragma";
+notDecimalNumber = $("-"? digit+);
+notHexadecimalNumber = $("-"? "0x" hexDigit+);
+notDelimiter = "[" / "]" / "{" / "}" / "?" / ":";
+notArithOperator =
+    "+" / "-" / "*" / "/%" / "/" / "%" / "~/" / "^/" / "~%" / "^%";
+notComparisonOperator =
+    "<=>" / "<=" / "<" / ">=" / ">" / "!=" / "==";
+notBitwiseOperator =
+    "~>>" / "~" / "^>>" / "^" / "&" / "|" / "<<" / ">>" ;
+notAssignOperator
+    = "=" / "+=" / "-=" / "*=" / "/=" / "%=" / "~>>=" / "~/=" / "~%="
+    / "^>>=" / "^/=" / "^%=" / "^=" / "<<=" / ">>=" / "&=" / "|=";
+notTypeKeyword =
+    "int" / "cell" / "builder" / "slice" / "cont" / "tuple" / "type" / "->" / "forall";
+notControlKeyword
+    = "return" / "var" / "repeat" / "do" / "while" / "until" / "try"
+    / "catch" / "ifnot" / "if" / "then" / "elseifnot" / "elseif" / "else";
+notKeyword
+    = "extern" / "global" / "asm" / "impure" / "inline_ref" / "inline"
+    / "auto_apply" / "method_id" / "operator" / "infixl" / "infixr" / "infix" / "const";
+
+funcPlainId = $(!(funcInvalidId ")") (!(whiteSpace / [()[\],.;~]) .)+);
+
+funcQuotedId = "`" @$(![`\n] .)+ "`";
+
+funcId = !("\"" / "{-") accessor:("." / "~")? id:(funcQuotedId / funcPlainId);
+
+// FunC can parse much more than Fift can handle. For example, _0x0 and _0 are valid identifiers in FunC,
+// and using either of them compiles and is then interpreted fine by Fift. But if you use both, FunC still
+// compiles, but Fift crashes.
+//
+// Same goes for plain identifiers using hashes # or emojis — you can have one FunC function with any of
+// those combinations of characters, but you (generally) cannot have two or more of such functions.
+
+// Boolean literals
+BoolLiteral = value:("true" / "false") !idPart;
+
+// String literals
+StringLiteral = value:$#("\"" ([^"\\] / "\\" @escapeChar)* "\"");
+
+escapeChar
+    = [\\"nrtvbf]
+    / "u{" @$(hexDigit hexDigit? hexDigit? hexDigit? hexDigit? hexDigit?) "}"
+    / "u" @$(hexDigit hexDigit hexDigit hexDigit)
+    / "x" @$(hexDigit hexDigit);
+
+hexDigit = [0-9a-f]i;
+digit = [0-9];
+
+// Order is important
+reservedWord = @keyword !idPart;
+keyword
+    = fun / let / return / receive / extend / native / primitive / public
+    / null / if / else / while / repeat / do / until / try / catch / foreach
+    / as / map / mutates / extends / external / import / with / trait / initOf
+    / override / abstract / virtual / inline / const;
+
+contract = #(@"contract" !idPart);
+let = #(@"let" !idPart);
+fun = #(@"fun" !idPart);
+return = #(@"return" !idPart);
+receive = #(@"receive" !idPart);
+extend = #(@"extend" !idPart);
+external = #(@"external" !idPart);
+native = #(@"native" !idPart);
+primitive = #(@"primitive" !idPart);
+public = #(@"public" !idPart);
+null = #(@"null" !idPart);
+if = #(@"if" !idPart);
+else = #(@"else" !idPart);
+while = #(@"while" !idPart);
+repeat = #(@"repeat" !idPart);
+do = #(@"do" !idPart);
+until = #(@"until" !idPart);
+try = #(@"try" !idPart);
+catch = #(@"catch" !idPart);
+foreach = #(@"foreach" !idPart);
+as = #(@"as" !idPart);
+map = #(@"map" !idPart);
+mutates = #(@"mutates" !idPart);
+extends = #(@"extends" !idPart);
+import = #(@"import" !idPart);
+with = #(@"with" !idPart);
+trait = #(@"trait" !idPart);
+initOf = #(@"initOf" !idPart);
+virtual = #(@"virtual" !idPart);
+override = #(@"override" !idPart);
+inline = #(@"inline" !idPart);
+const = #(@"const" !idPart);
+abstract = #(@"abstract" !idPart);
+
+whiteSpace = [ \t\r\n];
+space = [ \t\r\n] / comment;
+comment = multiLineComment / singleLineComment;
+multiLineComment = "/*" @$(!"*/" .)* "*/";
+singleLineComment = "//" @$[^\r\n]*;
+
+// This is not used in the Tact grammar but
+// it is useful for imports resolution
+JustImports = imports:Import* .*;
+
+inter<A, B> = head:A tail:(op:B right:A)*;
