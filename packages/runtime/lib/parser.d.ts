@@ -6,16 +6,10 @@ export type Failure = null;
 export declare const failure: Failure;
 export declare const isFailure: <T>(t: Result<T>) => t is Failure;
 export type Result<T> = Success<T> | Failure;
-export type Trace = TraceTerm | TraceRule;
-export type TraceTerm = {
-    $: 'term';
-    text: string;
-    failed: boolean;
-};
-export type TraceRule = {
-    $: 'rule';
-    name: string;
-    child: Trace;
+export type Position = number;
+export type Location = {
+    start: Position;
+    end: Position;
 };
 declare const createContext: (s: string) => {
     s: string;

@@ -17,6 +17,7 @@ export type Expr =
     | Pure
     | Ap
     | Field
+    | Located
     | Call
     | Class
     | Terminal
@@ -44,6 +45,8 @@ export type Eps = { readonly $: "Eps" }
 export const Eps: Eps = ({ $: "Eps" });
 export type Field = { readonly $: "Field", readonly left: Expr, readonly right: Expr, readonly key: string }
 export const Field = (key: string, left: Expr, right: Expr): Field => ({ $: "Field", key, left, right });
+export type Located = { readonly $: "Located", readonly child: Expr }
+export const Located = (child: Expr): Located => ({ $: "Located", child });
 export type LookNeg = { readonly $: "LookNeg", readonly expr: Expr }
 export const LookNeg = (expr: Expr): LookNeg => ({ $: "LookNeg", expr });
 export type LookPos = { readonly $: "LookPos", readonly expr: Expr }
@@ -139,7 +142,7 @@ const transformRule = (
             formals: formalsSet,
         });
     
-        return Rule(fullName, allFormals, Field('$', Pure(name), expr));
+        return Rule(fullName, allFormals, Located(Field('$', Pure(name), expr)));
     } else {
         const expr = transformAlt(body)({
             skip,

@@ -9,12 +9,6 @@ export const isFailure = <T>(t: Result<T>): t is Failure => !t;
 
 export type Result<T> = Success<T> | Failure
 
-export type Trace =
-    | TraceTerm
-    | TraceRule
-export type TraceTerm = { $: 'term', text: string, failed: boolean }
-export type TraceRule = { $: 'rule', name: string, child: Trace }
-
 const createContext = (s: string) => {
     let failPos = 0;
     let messages = new Set<string>();
@@ -265,7 +259,8 @@ export const suffix = <A,>(a: Parser<A>, b: Parser<(a: A) => A>) => {
     return app(seq.add(a).add(star(b)).end, ([a, bs]) => bs.reduce((p, b) => b(p), a));
 };
 
-export type Located<T> = T & { loc: [from: number, to: number] }
+export type Location = [from: number, to: number]
+export type Located<T> = T & { loc: Location }
 export const loc = <T,>(child: Parser<T>): Parser<Located<T>> => {
     return app(seq.add(where).add(child).add(where).end, ([start, child, end]) => ({ ... child, loc: [start, end] }));
 };

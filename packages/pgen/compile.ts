@@ -96,6 +96,8 @@ const compileExpr = (node: g.Expr): Compiler<ExprWithType> => ctx => {
             return compileCall(node)(ctx);
         case 'Field':
             return compileField(node)(ctx);
+        case 'Located':
+            return compileLocated(node)(ctx);
         case 'Pure':
             return compilePure(node)(ctx);
         case 'Ap':
@@ -147,6 +149,16 @@ const compileField = (node: g.Field): Compiler<ExprWithType> => ctx => {
         ...right.type.members,
     ]);
 
+    return ewt(body, type);
+};
+
+const compileLocated = (node: g.Located): Compiler<ExprWithType> => (ctx) => {
+    const child = compileExpr(node.child)(ctx);
+    const body = emitCall('loc', [child.expr]);
+    const type = t.tsTypeReference(
+        t.tsQualifiedName(t.identifier(rtGlobal), t.identifier('Located')),
+        t.tsTypeParameterInstantiation([child.type]),
+    );
     return ewt(body, type);
 };
 
