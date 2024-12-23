@@ -11,15 +11,27 @@ declare const createContext: (s: string) => {
     p: number;
     l: number;
     assert: <T>(cond: boolean, message: string, len: number, result: T) => Result<T>;
-    getError: () => string;
+    getError: () => {
+        position: number;
+        expected: Set<string>;
+    };
 };
 type Context = ReturnType<typeof createContext>;
 export type Parser<T> = (ctx: Context) => Result<T>;
 export type GetResult<T> = T extends Parser<infer T> ? T : never;
-export declare class ParseError extends Error {
-    constructor(message: string);
-}
-export declare const parse: <T>(parser: Parser<T>, code: string) => T;
+export type ParseResult<T> = ParseResultSuccess<T> | ParseResultError;
+export type ParseResultError = {
+    readonly $: "error";
+    readonly error: {
+        readonly position: number;
+        readonly expected: ReadonlySet<string>;
+    };
+};
+export type ParseResultSuccess<T> = {
+    readonly $: "success";
+    readonly value: T;
+};
+export declare const parse: <T>(parser: Parser<T>, code: string) => ParseResult<T>;
 export declare const rule: <T>(child: Parser<T>) => Parser<T>;
 export declare const pure: <const T>(t: T) => Parser<T>;
 export declare const ap: <T, U>(left: Parser<(t: T) => U>, right: Parser<T>) => Parser<U>;
@@ -56,7 +68,7 @@ export declare const EPS: Readonly<{}>;
 export declare const eps: Parser<{}>;
 export declare const plus: <T>(child: Parser<T>) => Parser<T[]>;
 export declare const opt: <T>(child: Parser<T>) => Parser<T | undefined>;
-export declare const lookPos: <T>(child: Parser<T>) => Parser<undefined>;
+export declare const lookPos: <T>(child: Parser<T>) => Parser<T>;
 export declare const lookNeg: <T>(child: Parser<T>) => Parser<undefined>;
 export declare const eof: Parser<undefined>;
 export declare const where: Parser<number>;
@@ -72,4 +84,4 @@ export type Located<T> = T & {
 };
 export declare const loc: <T>(child: Parser<T>) => Parser<Located<T>>;
 export {};
-//# sourceMappingURL=parser.d.ts.map
+//# sourceMappingURL=runtime.d.ts.map

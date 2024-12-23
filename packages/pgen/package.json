@@ -34,7 +34,6 @@
 	},
 	"dependencies": {
       "@langtools/config": "file:../config",
-      "@langtools/runtime": "file:../runtime",
       "@langtools/algo": "file:../algo",
 	  "@babel/generator": "^7.26.2",
 	  "@babel/types": "^7.26.0",

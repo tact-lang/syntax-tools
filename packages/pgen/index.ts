@@ -1,7 +1,7 @@
 import minimist from 'minimist';
 import generate from "@babel/generator";
 import fs from 'fs/promises';
-import * as $ from '@langtools/runtime';
+import * as $ from './runtime';
 import { Grammar } from './grammar';
 import { transform } from './transform';
 import { compile } from './compile';
@@ -24,9 +24,14 @@ const main = async () => {
     const sorted = sort(transformed);
     const compiled = compile(sorted);
     const generated = generate(compiled, { minified: false }).code;
+    const withEslint = `/* eslint-disable @typescript-eslint/no-namespace */
+/* eslint-disable @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-redundant-type-constituents */
+/* eslint-disable @typescript-eslint/no-duplicate-type-constituents */
+${generated}`;
 
     if (target) {
-        await fs.writeFile(target, generated, 'utf-8');
+        await fs.writeFile(target, withEslint, 'utf-8');
     } else {
         console.log(generated);
     }

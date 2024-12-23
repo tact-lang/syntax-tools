@@ -1,4 +1,4 @@
-import * as $ from "@langtools/runtime";
+import * as $ from "./runtime";
 export namespace $$ {
   export type ident$noSkip = string;
   export type formals$noSkip = {

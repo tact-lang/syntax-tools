@@ -106,7 +106,7 @@ const keywords: Set<string> = new Set([
     'return', 'short', 'static', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws',
     'transient', 'true', 'try', 'typeof', 'var', 'void', 'volatile', 'while', 'with', 'yield',
 
-    'as', 'type', 'interface', 'never',
+    'as', 'type', 'interface', 'never', 'Function',
 ]);
 
 const renameIfKeyword = (name: string): string => {
