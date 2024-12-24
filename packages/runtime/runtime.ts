@@ -9,7 +9,7 @@ export const isFailure = <T>(t: Result<T>): t is Failure => !t;
 
 export type Result<T> = Success<T> | Failure
 
-const createContext = (s: string) => {
+export const createContext = (s: string) => {
     let failPos = 0;
     let messages = new Set<string>();
     const assert = <T,>(cond: boolean, message: string, len: number, result: T): Result<T> => {
@@ -40,68 +40,15 @@ const createContext = (s: string) => {
     return ctx;
 };
 
-type Context = ReturnType<typeof createContext>;
+export type Context = ReturnType<typeof createContext>;
 
 export type Parser<T> = (ctx: Context) => Result<T>;
 export type GetResult<T> = T extends Parser<infer T> ? T : never;
-
-export type ParseResult<T> = ParseResultSuccess<T> | ParseResultError
-export type ParseResultError = {
-    readonly $: "error";
-    readonly error: {
-        readonly position: number;
-        readonly expected: ReadonlySet<string>;
-    };
-}
-export type ParseResultSuccess<T> = {
-    readonly $: "success";
-    readonly value: T;
-}
-
-export const parse = <T,>(parser: Parser<T>, code: string): ParseResult<T> => {
-    const c = createContext(code);
-    const r = parser(c);
-    if (isFailure(r)) {
-        return { $: 'error', error: c.getError() } as const;
-    } else {
-        return { $: 'success', value: getSuccess(r) } as const;
-    }
-};
 
 export const rule = <T>(child: Parser<T>): Parser<T> => (ctx) => {
     const result = child(ctx);
     return result;
 };
-
-type Either<L, R> = Left<L> | Right<R>
-type Left<L> = { $: 'left', value: L }
-type Right<R> = { $: 'right', value: R }
-
-interface P1 {
-    pure: <const T>(t: T) => Parser<T>;
-    where: Parser<number>;
-    any: Parser<string>;
-    str: <K extends string>(s: K) => Parser<K>;
-    regex: <K = string>(s: string, insensitive?: boolean) => Parser<K>;
-
-    ref: <A,>(child: () => Parser<A>) => Parser<A>;
-    ap: <T, U>(left: Parser<(t: T) => U>, right: Parser<T>) => Parser<U>;
-    ch: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<Either<T, U>>;
-    lookPos: <T,>(child: Parser<T>) => Parser<T>;
-}
-
-interface P3 extends P1 {
-    star: <T,>(child: Parser<T>) => Parser<T[]>;
-    alt: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T | U>;
-    field: <T, K extends string, V>(left: Parser<T>, key: K, right: Parser<V>) => Parser<Record<K, T> & V>;
-    stry: <T,>(child: Parser<T>) => Parser<string>;
-    left: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T>;
-    right: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T>;
-    eps: Parser<{}>;
-    opt: <T,>(child: Parser<T>) => Parser<T | undefined>;
-    plus: <T,>(child: Parser<T>) => Parser<T[]>;
-    lookNeg: <T,>(child: Parser<T>) => Parser<undefined>;
-}
 
 export const pure = <const T>(t: T): Parser<T> => () => success(t);
 
@@ -201,6 +148,8 @@ export const any: Parser<string> = sat(() => true, 'any character');
 export const EPS = Object.freeze({});
 export const eps: Parser<{}> = () => success(EPS);
 
+export const fail: Parser<never> = () => failure;
+
 export const plus = <T,>(child: Parser<T>): Parser<T[]> => {
     return app(
         seq(child, star(child)),
@@ -232,16 +181,4 @@ export const debug = <T,>(child: Parser<T>): Parser<T> => ctx => {
     const r = child(ctx);
     console.log(before, ctx.p, r);
     return r;
-};
-
-export type Location = readonly [from: number, to: number]
-export type Located<T> = T & { readonly loc: Location }
-
-export const where: Parser<number> = ctx => success(ctx.p);
-
-export const loc = <T,>(child: Parser<T>): Parser<Located<T>> => {
-    return app(
-        seq(seq(where, child), where),
-        ([[start, child], end]) => ({ ... child, loc: [start, end] })
-    );
 };

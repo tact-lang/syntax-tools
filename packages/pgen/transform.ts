@@ -25,6 +25,7 @@ export type Expr =
     | LookNeg
     | LookPos
     | Stringify
+    | Lex
     | Star
     | Plus
     | Optional
@@ -53,6 +54,8 @@ export type LookPos = { readonly $: "LookPos", readonly expr: Expr }
 export const LookPos = (expr: Expr): LookPos => ({ $: "LookPos", expr });
 export type Stringify = { readonly $: 'Stringify', readonly expr: Expr }
 export const Stringify = (expr: Expr): Stringify => ({ $: "Stringify", expr });
+export type Lex = { readonly $: 'Lex', readonly expr: Expr }
+export const Lex = (expr: Expr): Lex => ({ $: "Lex", expr });
 export type Star = { readonly $: 'Star', readonly expr: Expr }
 export const Star = (expr: Expr): Star => ({ $: "Star", expr });
 export type Plus = { readonly $: 'Plus', readonly expr: Expr }
@@ -92,7 +95,6 @@ type SkipType =
     | 'keep-space' // has space rule, compile without skipping
 
 type Context = {
-    skip: SkipType;
     formals: Set<string>;
 }
 type Transform<T> = (ctx: Context) => T
@@ -114,22 +116,15 @@ const renameIfKeyword = (name: string): string => {
 };
 
 export const transform = ({ rules }: g.Grammar): Grammar => {
-    const useSkipper = Boolean(rules.find(({ name }) => name === 'space'));
-    const skipTypes: SkipType[] = useSkipper ? ['skip-space', 'keep-space'] : ['no-space'];
-
     return Grammar(rules.flatMap((rule) => {
-        return skipTypes.map(skip => {
-            return transformRule(skip, rule);
-        });
+        return transformRule(rule);
     }));
 };
 
 const transformRule = (
-    skip: SkipType,
     { name, formals, body }: g.Rule
 ) => {
-    const renamed = renameIfKeyword(name);
-    const fullName = skip === 'keep-space' ? `${renamed}$noSkip` : renamed;
+    const fullName = renameIfKeyword(name);
 
     const allFormals = formals ? [formals.head, ...formals.tail] : [];
     const formalsSet: Set<string> = new Set(allFormals);
@@ -138,14 +133,12 @@ const transformRule = (
 
     if (isAstRule) {
         const expr = transformAstAlt(body)({
-            skip,
             formals: formalsSet,
         });
     
         return Rule(fullName, allFormals, Located(Field('$', Pure(name), expr)));
     } else {
         const expr = transformAlt(body)({
-            skip,
             formals: formalsSet,
         });
     
@@ -207,24 +200,20 @@ const transformExpr = (node: gExpr): Transform<Expr> => (ctx) => {
     }
 };
 
-const transformAny = (_node: g.Any) => {
-    return spaced(Any);
+const transformAny = (_node: g.Any): Transform<Expr> => () => {
+    return Any;
 };
 
-const transformClass = ({ insensitive, negated, seqs }: g.Class) => {
-    return spaced(Class(seqs, negated === '^', insensitive === 'i'));
+const transformClass = ({ insensitive, negated, seqs }: g.Class): Transform<Expr> => () => {
+    return Class(seqs, negated === '^', insensitive === 'i');
 };
 
-const transformTerminal = ({ value }: g.Terminal) => {
-    return spaced(Terminal(value));
+const transformTerminal = ({ value }: g.Terminal): Transform<Expr> => () => {
+    return Terminal(value);
 };
 
 const transformApply = (node: g.Apply): Transform<Expr> => (ctx) => {
-    const renamed = renameIfKeyword(node.name);
-    // FIXME: apply in noskip context should use noskip formals
-    const newName = ctx.skip === 'keep-space' && !ctx.formals.has(node.name)
-        ? `${renamed}$noSkip`
-        : renamed;
+    const newName = renameIfKeyword(node.name);
     
     const allParams = node.params ? [node.params.head, ...node.params.tail] : [];
 
@@ -240,7 +229,7 @@ const transformAlt = (node: g.Alt): Transform<Expr> => (ctx) => {
 };
 
 const transformIter = ({ prefix, expr, suffix }: g.Iter): Transform<Expr> => {
-    return prefix.reduce(
+    return prefix.reduceRight(
         (acc, prefix) => transformPrefix(prefix, acc),
         (ctx: Context) => transformSuffix(suffix, transformExpr(expr)(ctx)),
     );
@@ -255,10 +244,7 @@ const transformPrefix = (prefix: "!" | "&" | "#" | "$", expr: Transform<Expr>): 
         case '$':
             return Stringify(expr(ctx));
         case '#':
-            return spaced(expr({
-                skip: ctx.skip === 'skip-space' ? 'keep-space' : ctx.skip,
-                formals: ctx.formals,
-            }))(ctx);
+            return Lex(expr(ctx));
         default:
             throw new Error('Unexpected prefix');
     }
@@ -292,7 +278,6 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
     }
 
     const opts: Context = {
-        skip: ctx.skip,
         formals: ctx.formals,
     };
 
@@ -341,6 +326,6 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
     return e.reduceRight((prev, expr) => Ap(expr, prev, 'r'));
 };
 
-const spaced = (node: Expr): Transform<Expr> => (ctx) => {
-    return ctx.skip === 'skip-space' ? Ap(node, Star(Call("space$noSkip", [])), 'l') : node;
-};
+// const spaced = (node: Expr): Transform<Expr> => (ctx) => {
+//     return Ap(node, Star(Call("space$noSkip", [])), 'l');
+// };

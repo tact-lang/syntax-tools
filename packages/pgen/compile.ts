@@ -1,12 +1,13 @@
 import * as t from '@babel/types';
 import * as g from "./transform";
 
-const rtGlobal = '$';
-const astGlobal = '$$';
+const libGlobal = '$';
+const primGlobal = '$';
+const astGlobal = '$ast';
 
 export const compile = (node: g.Grammar): t.File => {
     const imports: t.Statement[] = [
-        emitNsImport(rtGlobal, '@langtools/pgen/runtime'),
+        emitNsImport(libGlobal, '@langtools/runtime'),
     ];
 
     const definedRules = new Set<string>();
@@ -14,12 +15,26 @@ export const compile = (node: g.Grammar): t.File => {
 
     const stmts: t.Statement[] = [];
     const ast: t.Statement[] = [];
+    const names: string[] = [];
     for (const rule of node.rules) {
-        const { expr, type } = compileRule(rule)({ isDefined });
+        const { expr, type, name } = compileRule(rule)({ isDefined });
         stmts.push(expr);
         ast.push(type);
+        if (name) names.push(name);
         definedRules.add(rule.name);
     }
+
+    // const exports = t.returnStatement(t.objectExpression(
+    //     names.map(name => t.objectProperty(
+    //         t.identifier(name),
+    //         emitCall('compile', [
+    //             t.identifier(name),
+    //             t.arrowFunctionExpression([], t.identifier('space')),
+    //         ]),
+    //         false,
+    //         true,
+    //     ))
+    // ));
 
     return t.file(t.program([
         ...imports,
@@ -28,6 +43,20 @@ export const compile = (node: g.Grammar): t.File => {
             t.tsModuleBlock(ast),
         )),
         ...stmts,
+        // t.exportNamedDeclaration(t.variableDeclaration("const", [
+        //     t.variableDeclarator(t.identifier("getParser"), t.arrowFunctionExpression(
+        //         [withType(
+        //             t.identifier(primGlobal),
+        //             t.tsTypeReference(
+        //                 t.tsQualifiedName(t.identifier(libGlobal), t.identifier('Algebra')),
+        //             )
+        //         )],
+        //         t.blockStatement([
+        //             ...stmts,
+        //             exports,
+        //         ]),
+        //     ))
+        // ])),
     ]));
 };
 
@@ -37,6 +66,7 @@ type Context = {
 type Compiler<T> = (ctx: Context) => T;
 
 const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
+    name: string | undefined,
     expr: t.Statement,
     type: t.Statement,
 }> => ctx => {
@@ -49,6 +79,7 @@ const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
     const bodyCode = compileFormals(name, formals, exprCode);
     
     return {
+        name: formals.length > 0 ? undefined : name,
         expr: t.exportNamedDeclaration(t.variableDeclaration('const', [
             t.variableDeclarator(nameCode, bodyCode)
         ])),
@@ -116,6 +147,8 @@ const compileExpr = (node: g.Expr): Compiler<ExprWithType> => ctx => {
             return compileStar(node)(ctx);
         case 'Stringify':
             return compileStringify(node)(ctx);
+        case 'Lex':
+            return compileLex(node)(ctx);
         case 'Alt':
             return compileAlt(node)(ctx);
         case 'Class':
@@ -156,7 +189,7 @@ const compileLocated = (node: g.Located): Compiler<ExprWithType> => (ctx) => {
     const child = compileExpr(node.child)(ctx);
     const body = emitCall('loc', [child.expr]);
     const type = t.tsTypeReference(
-        t.tsQualifiedName(t.identifier(rtGlobal), t.identifier('Located')),
+        t.tsQualifiedName(t.identifier(libGlobal), t.identifier('Located')),
         t.tsTypeParameterInstantiation([child.type]),
     );
     return ewt(body, type);
@@ -222,6 +255,11 @@ const compileClass = ({ insensitive, negated, seqs }: g.Class): Compiler<ExprWit
 const compileStringify = (node: g.Stringify): Compiler<ExprWithType> => ctx => {
     const { expr } = compileExpr(node.expr)(ctx);
     return ewt(emitCall('stry', [expr]), t.tsStringKeyword());
+};
+
+const compileLex = (node: g.Lex): Compiler<ExprWithType> => ctx => {
+    const { expr, type } = compileExpr(node.expr)(ctx);
+    return ewt(emitCall('lex', [expr]), type);
 };
 
 const compilePlus = (node: g.Plus): Compiler<ExprWithType> => ctx => {
@@ -357,7 +395,7 @@ const emitCall = (name: string, args: t.Expression[], params?: t.TSType[]): t.Ex
 };
 
 const emitPrim = (name: string): t.Expression => {
-    return t.memberExpression(t.identifier(rtGlobal), t.identifier(name));
+    return t.memberExpression(t.identifier(primGlobal), t.identifier(name));
 };
 
 const emitParserType = (name: string, formals: readonly string[], notQualified: boolean = false): t.TSType => {
@@ -367,7 +405,7 @@ const emitParserType = (name: string, formals: readonly string[], notQualified: 
             return t.tsTypeReference(t.identifier(formal));
         }));
     return t.tsTypeReference(
-        t.tsQualifiedName(t.identifier(rtGlobal), t.identifier('Parser')),
+        t.tsQualifiedName(t.identifier(libGlobal), t.identifier('Parser')),
         t.tsTypeParameterInstantiation([
             t.tsTypeReference(
                 notQualified

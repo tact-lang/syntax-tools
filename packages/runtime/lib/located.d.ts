@@ -1,31 +1,21 @@
-export type Success<T> = [T];
-export declare const success: <T>(t: T) => Success<T>;
-export declare const getSuccess: <T>(t: Success<T>) => T;
-export declare const isSuccess: <T>(t: Result<T>) => t is Success<T>;
-export type Failure = null;
-export declare const failure: Failure;
-export declare const isFailure: <T>(t: Result<T>) => t is Failure;
-export type Result<T> = Success<T> | Failure;
-export declare const createContext: (s: string) => {
-    s: string;
-    p: number;
-    l: number;
-    assert: <T>(cond: boolean, message: string, len: number, result: T) => Result<T>;
-    getError: () => {
-        position: number;
-        expected: Set<string>;
-    };
+import * as P from './runtime';
+export type Parser<T> = P.Parser<[T, Loc]>;
+export type Loc = LocRange | LocEmpty;
+export type LocRange = {
+    readonly $: 'range';
+    readonly start: number;
+    readonly end: number;
 };
-export type Context = ReturnType<typeof createContext>;
-export type Parser<T> = (ctx: Context) => Result<T>;
-export type GetResult<T> = T extends Parser<infer T> ? T : never;
+export type LocEmpty = {
+    readonly $: 'empty';
+    readonly at: number;
+};
 export declare const rule: <T>(child: Parser<T>) => Parser<T>;
 export declare const pure: <const T>(t: T) => Parser<T>;
 export declare const ap: <T, U>(left: Parser<(t: T) => U>, right: Parser<T>) => Parser<U>;
 export declare const left: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T>;
 export declare const right: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<U>;
 export declare const seq: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<[T, U]>;
-export declare const singleton: <K extends string, V>(key: K, value: V) => Record<K, V>;
 export declare const field: <T, K extends string, V>(left: Parser<T>, key: K, right: Parser<V>) => Parser<Record<K, T> & V>;
 export declare const alt: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T | U>;
 export declare const str: <K extends string>(s: K) => Parser<K>;
@@ -36,7 +26,6 @@ export declare const app: <A, B>(child: Parser<A>, f: (a: A) => B) => Parser<B>;
 export declare const ref: <A>(child: () => Parser<A>) => Parser<A>;
 export declare const star: <T>(child: Parser<T>) => Parser<T[]>;
 export declare const any: Parser<string>;
-export declare const EPS: Readonly<{}>;
 export declare const eps: Parser<{}>;
 export declare const fail: Parser<never>;
 export declare const plus: <T>(child: Parser<T>) => Parser<T[]>;
@@ -45,4 +34,6 @@ export declare const lookPos: <T>(child: Parser<T>) => Parser<T>;
 export declare const lookNeg: <T>(child: Parser<T>) => Parser<undefined>;
 export declare const eof: Parser<undefined>;
 export declare const debug: <T>(child: Parser<T>) => Parser<T>;
-//# sourceMappingURL=runtime.d.ts.map
+export declare const where: Parser<number>;
+export declare const withLoc: <T>(child: Parser<T>) => Parser<[T, Loc]>;
+//# sourceMappingURL=located.d.ts.map
