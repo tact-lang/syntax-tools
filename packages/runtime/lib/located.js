@@ -35,40 +35,37 @@ var __importStar = (this && this.__importStar) || (function () {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.withLoc = exports.where = exports.debug = exports.eof = exports.lookNeg = exports.lookPos = exports.opt = exports.plus = exports.fail = exports.eps = exports.any = exports.star = exports.ref = exports.app = exports.stry = exports.regex = exports.sat = exports.str = exports.alt = exports.field = exports.seq = exports.right = exports.left = exports.ap = exports.pure = exports.rule = void 0;
 const P = __importStar(require("./runtime"));
-const range = (start, end) => ({ $: 'range', start, end });
-const empty = (at) => ({ $: 'empty', at });
-const isEmpty = (loc) => loc.$ === 'empty';
-const span = (left, right) => {
-    return isEmpty(left) ? right : isEmpty(right) ? left : range(left.start, right.end);
-};
+const L = __importStar(require("./loc"));
 const terminal = (p) => c => {
     const start = c.p;
     const r = p(c);
     if (P.isFailure(r))
         return P.failure;
-    return P.success([P.getSuccess(r), range(start, c.p)]);
+    return P.success([P.getSuccess(r), L.rangeLoc(start, c.p)]);
 };
 const rule = (child) => (ctx) => {
     const result = child(ctx);
     return result;
 };
 exports.rule = rule;
-const pure = (t) => terminal(P.pure(t));
+const pure = (t) => ctx => {
+    return P.app(P.pure(t), t => [t, L.emptyLoc(ctx.p)])(ctx);
+};
 exports.pure = pure;
 const ap = (left, right) => {
-    return P.app(P.seq(left, right), ([[f, l], [x, r]]) => [f(x), span(l, r)]);
+    return P.app(P.seq(left, right), ([[f, l], [x, r]]) => [f(x), L.mergeLoc(l, r)]);
 };
 exports.ap = ap;
 const left = (left, right) => {
-    return P.app(P.seq(left, right), ([[t, l], [, r]]) => [t, span(l, r)]);
+    return P.app(P.seq(left, right), ([[t, l], [, r]]) => [t, L.mergeLoc(l, r)]);
 };
 exports.left = left;
 const right = (left, right) => {
-    return P.app(P.seq(left, right), ([[, l], [u, r]]) => [u, span(l, r)]);
+    return P.app(P.seq(left, right), ([[, l], [u, r]]) => [u, L.mergeLoc(l, r)]);
 };
 exports.right = right;
 const seq = (left, right) => {
-    return P.app(P.seq(left, right), ([[t, l], [u, r]]) => [[t, u], span(l, r)]);
+    return P.app(P.seq(left, right), ([[t, l], [u, r]]) => [[t, u], L.mergeLoc(l, r)]);
 };
 exports.seq = seq;
 const field = (left, key, right) => {
@@ -106,12 +103,13 @@ exports.ref = ref;
 const star = (child) => {
     return P.app(P.seq(exports.where, P.star(child)), ([[at], ls]) => [
         ls.map(([t]) => t),
-        ls.map(([, l]) => l).reduce(span, empty(at))
+        ls.map(([, l]) => l).reduce(L.mergeLoc, L.emptyLoc(at))
     ]);
 };
 exports.star = star;
 exports.any = terminal(P.any);
-exports.eps = terminal(P.eps);
+const eps = (ctx) => P.success([P.EPS, L.emptyLoc(ctx.p)]);
+exports.eps = eps;
 exports.fail = P.fail;
 const plus = (child) => {
     return (0, exports.app)((0, exports.seq)(child, (0, exports.star)(child)), ([a, as]) => (as.unshift(a), as));
@@ -121,18 +119,24 @@ const opt = (child) => {
     return (0, exports.alt)(child, (0, exports.app)(exports.eps, () => undefined));
 };
 exports.opt = opt;
-exports.lookPos = P.lookPos;
+const lookPos = (child) => {
+    const p = P.lookPos(child);
+    return ctx => {
+        return P.app(p, ([t]) => [t, L.emptyLoc(ctx.p)])(ctx);
+    };
+};
+exports.lookPos = lookPos;
 const lookNeg = (child) => {
     const p = (0, exports.lookPos)(child);
     return ctx => {
         const r = p(ctx);
-        return P.isSuccess(r) ? P.failure : P.success([undefined, empty(ctx.p)]);
+        return P.isSuccess(r) ? P.failure : P.success([undefined, L.emptyLoc(ctx.p)]);
     };
 };
 exports.lookNeg = lookNeg;
 exports.eof = (0, exports.lookNeg)(exports.any);
 exports.debug = P.debug;
-const where = ctx => P.success([ctx.p, empty(ctx.p)]);
+const where = ctx => P.success([ctx.p, L.emptyLoc(ctx.p)]);
 exports.where = where;
 const withLoc = (child) => {
     return P.app(child, ([t, loc]) => [[t, loc], loc]);

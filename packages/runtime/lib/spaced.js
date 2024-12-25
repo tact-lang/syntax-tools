@@ -140,6 +140,7 @@ const lex = (child) => {
 };
 exports.lex = lex;
 const compile = (child, space) => {
-    return B.app((0, exports.right)((0, exports.star)(space), (0, exports.left)(child, exports.eof)).skip(space.keep), ([t]) => t);
+    return B.app(B.right(B.star(space.keep), B.left(child.skip(space.keep), B.eof)), ([t]) => t);
+    // return B.app(right(star(space), left(child, eof)).skip(space.keep), ([t]) => t);
 };
 exports.compile = compile;

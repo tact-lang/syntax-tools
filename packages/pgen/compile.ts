@@ -24,18 +24,6 @@ export const compile = (node: g.Grammar): t.File => {
         definedRules.add(rule.name);
     }
 
-    // const exports = t.returnStatement(t.objectExpression(
-    //     names.map(name => t.objectProperty(
-    //         t.identifier(name),
-    //         emitCall('compile', [
-    //             t.identifier(name),
-    //             t.arrowFunctionExpression([], t.identifier('space')),
-    //         ]),
-    //         false,
-    //         true,
-    //     ))
-    // ));
-
     return t.file(t.program([
         ...imports,
         t.exportNamedDeclaration(t.tsModuleDeclaration(
@@ -43,20 +31,6 @@ export const compile = (node: g.Grammar): t.File => {
             t.tsModuleBlock(ast),
         )),
         ...stmts,
-        // t.exportNamedDeclaration(t.variableDeclaration("const", [
-        //     t.variableDeclarator(t.identifier("getParser"), t.arrowFunctionExpression(
-        //         [withType(
-        //             t.identifier(primGlobal),
-        //             t.tsTypeReference(
-        //                 t.tsQualifiedName(t.identifier(libGlobal), t.identifier('Algebra')),
-        //             )
-        //         )],
-        //         t.blockStatement([
-        //             ...stmts,
-        //             exports,
-        //         ]),
-        //     ))
-        // ])),
     ]));
 };
 

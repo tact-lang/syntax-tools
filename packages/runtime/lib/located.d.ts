@@ -1,15 +1,6 @@
 import * as P from './runtime';
-export type Parser<T> = P.Parser<[T, Loc]>;
-export type Loc = LocRange | LocEmpty;
-export type LocRange = {
-    readonly $: 'range';
-    readonly start: number;
-    readonly end: number;
-};
-export type LocEmpty = {
-    readonly $: 'empty';
-    readonly at: number;
-};
+import * as L from './loc';
+export type Parser<T> = P.Parser<readonly [T, L.Loc]>;
 export declare const rule: <T>(child: Parser<T>) => Parser<T>;
 export declare const pure: <const T>(t: T) => Parser<T>;
 export declare const ap: <T, U>(left: Parser<(t: T) => U>, right: Parser<T>) => Parser<U>;
@@ -35,5 +26,5 @@ export declare const lookNeg: <T>(child: Parser<T>) => Parser<undefined>;
 export declare const eof: Parser<undefined>;
 export declare const debug: <T>(child: Parser<T>) => Parser<T>;
 export declare const where: Parser<number>;
-export declare const withLoc: <T>(child: Parser<T>) => Parser<[T, Loc]>;
+export declare const withLoc: <T>(child: Parser<T>) => Parser<[T, L.Loc]>;
 //# sourceMappingURL=located.d.ts.map

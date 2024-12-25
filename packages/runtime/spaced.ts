@@ -1,5 +1,6 @@
 import * as B from './runtime';
 import * as L from './located';
+import { Loc } from './loc';
 
 export type Parser<T> = {
     keep: L.Parser<T>;
@@ -8,7 +9,7 @@ export type Parser<T> = {
 
 const P = <T>(skip: (space: L.Parser<unknown>) => L.Parser<T>, keep: L.Parser<T>): Parser<T> => ({ keep, skip });
 
-export type Located<T> = T & { readonly loc: L.Loc }
+export type Located<T> = T & { readonly loc: Loc }
 
 export const terminal = <T>(child: L.Parser<T>): Parser<T> => {
     return P(space => B.app(B.seq(child, B.star(space)), ([[t, l]]) => [t, l]), child);
@@ -107,7 +108,7 @@ export const debug = <T,>(child: Parser<T>): Parser<T> => {
 
 export const where: Parser<number> = P(() => L.where, L.where);
 
-export const withLoc = <T,>(child: Parser<T>): Parser<[T, L.Loc]> => {
+export const withLoc = <T,>(child: Parser<T>): Parser<[T, Loc]> => {
     return P(space => L.withLoc(child.skip(space)), L.withLoc(child.keep));
 };
 
@@ -120,5 +121,5 @@ export const lex = <T,>(child: Parser<T>): Parser<T> => {
 };
 
 export const compile = <T,>(child: Parser<T>, space: Parser<unknown>) => {
-    return B.app(right(star(space), left(child, eof)).skip(space.keep), ([t]) => t);
+    return B.app(B.right(B.star(space.keep), B.left(child.skip(space.keep), B.eof)), ([t]) => t);
 };

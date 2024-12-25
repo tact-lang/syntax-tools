@@ -1,11 +1,12 @@
 import * as B from './runtime';
 import * as L from './located';
+import { Loc } from './loc';
 export type Parser<T> = {
     keep: L.Parser<T>;
     skip: (space: L.Parser<unknown>) => L.Parser<T>;
 };
 export type Located<T> = T & {
-    readonly loc: L.Loc;
+    readonly loc: Loc;
 };
 export declare const terminal: <T>(child: L.Parser<T>) => Parser<T>;
 export declare const rule: <T>(child: Parser<T>) => Parser<T>;
@@ -32,7 +33,7 @@ export declare const lookNeg: <T>(child: Parser<T>) => Parser<undefined>;
 export declare const eof: Parser<undefined>;
 export declare const debug: <T>(child: Parser<T>) => Parser<T>;
 export declare const where: Parser<number>;
-export declare const withLoc: <T>(child: Parser<T>) => Parser<[T, L.Loc]>;
+export declare const withLoc: <T>(child: Parser<T>) => Parser<[T, Loc]>;
 export declare const loc: <T>(child: Parser<T>) => Parser<Located<T>>;
 export declare const lex: <T>(child: Parser<T>) => Parser<T>;
 export declare const compile: <T>(child: Parser<T>, space: Parser<unknown>) => B.Parser<T>;

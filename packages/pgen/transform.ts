@@ -325,7 +325,3 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
     e.push(Eps);
     return e.reduceRight((prev, expr) => Ap(expr, prev, 'r'));
 };
-
-// const spaced = (node: Expr): Transform<Expr> => (ctx) => {
-//     return Ap(node, Star(Call("space$noSkip", [])), 'l');
-// };

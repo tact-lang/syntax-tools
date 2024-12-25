@@ -1,6 +1,6 @@
 import { Parser } from "./runtime";
 export { Parser, Located, alt, any, ap, app, compile, debug, eof, eps, field, left, lex, loc, lookNeg, lookPos, opt, plus, pure, ref, regex, right, rule, sat, seq, star, str, stry, terminal, where, withLoc } from './spaced';
-export { Loc, LocEmpty, LocRange } from './located';
+export * from './loc';
 export type ParseResult<T> = ParseResultSuccess<T> | ParseResultError;
 export type ParseResultError = {
     readonly $: "error";
