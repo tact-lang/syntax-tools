@@ -64,8 +64,8 @@ export type Optional = { readonly $: 'Optional', readonly expr: Expr }
 export const Optional = (expr: Expr): Optional => ({ $: "Optional", expr });
 export type Call = { readonly $: "Call", readonly name: string, readonly params: readonly Expr[] }
 export const Call = (name: string, params: readonly Expr[]): Call => ({ $: "Call", name, params });
-export type Class = { readonly $: "Class", readonly seqs: readonly (Group | ClassChar | SpecialClass | Escape)[], readonly negated: boolean, readonly insensitive: boolean }
-export const Class = (seqs: readonly (Group | ClassChar | SpecialClass | Escape)[], negated: boolean, insensitive: boolean): Class => ({ $: "Class", insensitive, negated, seqs });
+export type Class = { readonly $: "Class", readonly seqs: readonly (Group | ClassChar | SpecialClass | Escape)[], readonly negated: boolean }
+export const Class = (seqs: readonly (Group | ClassChar | SpecialClass | Escape)[], negated: boolean): Class => ({ $: "Class", negated, seqs });
 export type Group = { readonly $: "Group", readonly from: ClassChar | SpecialClass | Escape, readonly to: ClassChar | SpecialClass | Escape }
 export const Group = (from: ClassChar | SpecialClass | Escape, to: ClassChar | SpecialClass | Escape): Group => ({ $: "Group", from, to });
 export type ClassChar = { readonly $: "ClassChar", readonly value: string }
@@ -88,11 +88,6 @@ export type Long = { readonly $: "Long", readonly value: string }
 export const Long = (value: string): Long => ({ $: "Long", value });
 export type Ascii = { readonly $: "Ascii", readonly value: string }
 export const Ascii = (value: string): Ascii => ({ $: "Ascii", value });
-
-type SkipType =
-    | 'no-space' // no space rule
-    | 'skip-space' // has space rule, compile with skipping
-    | 'keep-space' // has space rule, compile without skipping
 
 type Context = {
     formals: Set<string>;
@@ -205,7 +200,7 @@ const transformAny = (_node: g.Any): Transform<Expr> => () => {
 };
 
 const transformClass = ({ negated, seqs }: g.Class): Transform<Expr> => () => {
-    return Class(seqs, negated === '^', false);
+    return Class(seqs, negated === '^');
 };
 
 const transformTerminal = ({ value }: g.Terminal): Transform<Expr> => () => {

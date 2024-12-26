@@ -25,7 +25,7 @@ export type GetResult<T> = T extends Parser<infer T> ? T : never;
 export declare const terminal: <T>(kind: E.Expectable, child: (ctx: Context) => Result<T>) => Parser<T>;
 export declare const any: Parser<string>;
 export declare const range: (from: string, to: string) => Parser<string>;
-export declare const regex: <K = string>(s: string, exps: E.Expectable[], insensitive?: boolean) => Parser<K>;
+export declare const regex: <K = string>(s: string, exps: E.Expectable[]) => Parser<K>;
 export declare const str: <K extends string>(s: K) => Parser<K>;
 export declare const app: <A, B>(child: Parser<A>, f: (a: A) => B) => Parser<B>;
 export declare const seq: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<[T, U]>;

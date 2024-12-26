@@ -58,8 +58,8 @@ const range = (from, to) => {
     return (0, exports.terminal)(L.range(from, to));
 };
 exports.range = range;
-const regex = (s, exps, insensitive = false) => {
-    return (0, exports.terminal)(L.regex(s, exps, insensitive));
+const regex = (s, exps) => {
+    return (0, exports.terminal)(L.regex(s, exps));
 };
 exports.regex = regex;
 const lex = (child) => {

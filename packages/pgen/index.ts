@@ -19,22 +19,6 @@ const main = async () => {
 
     const code = await fs.readFile(source, 'utf-8');
 
-    // const ident = (
-    //     (
-    //         $.regex<string | "_">("a-z_", [$.ExpRange("a", "z"), $.ExpString("_")]),
-    //         // $.right(
-    //         //     $.regex<string | "_">("a-z_", [$.ExpRange("a", "z"), $.ExpString("_")]),
-    //         //     $.right(
-    //         //         $.star(
-    //         //             $.regex<string | string | "_">(
-    //         //                 "a-z0-9_", [$.ExpRange("a", "z"), $.ExpRange("0", "9"), $.ExpString("_")]
-    //         //             )
-    //         //         ), 
-    //         //         $.eps
-    //         //     )
-    //         // )
-    //     )
-    // );
     const ast = $.parse($.compile(G.Grammar, G.space))(code);
     if (ast.$ === 'error') {
         console.error(ast.error);

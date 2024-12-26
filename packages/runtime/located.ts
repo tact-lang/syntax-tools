@@ -26,14 +26,10 @@ export const str = <K extends string>(s: K): Parser<K> => {
     return terminal(P.str(s));
 };
 
-export const regex = <K = string>(s: string, exps: Expectable[], insensitive: boolean = false): Parser<K> => {
-    return terminal(P.regex(s, exps, insensitive));
+export const regex = <K = string>(s: string, exps: Expectable[]): Parser<K> => {
+    return terminal(P.regex(s, exps));
 };
 
-
-// export const pure = <const T>(t: T): Parser<T> => ctx => {
-//     return P.app(P.pure(t), t => [t, L.emptyLoc(ctx.p)] as const)(ctx);
-// };
 
 export const app = <A, B>(child: Parser<A>, f: (a: A) => B): Parser<B> => {
     return P.app(child, ([v, l]) => [f(v), l])

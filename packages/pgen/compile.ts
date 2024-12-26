@@ -220,7 +220,7 @@ const compileTerminal = (node: g.Terminal): Compiler<ExprWithType> => ctx => {
     return ewt(emitCall('str', [wrapped]), t.tsLiteralType(t.stringLiteral(value)));
 };
 
-const compileClass = ({ insensitive, negated, seqs }: g.Class): Compiler<ExprWithType> => ctx => {
+const compileClass = ({ negated, seqs }: g.Class): Compiler<ExprWithType> => ctx => {
     const prefix = negated ? "^" : "";
     const children = seqs.map(seq => compileSeq(seq));
     const body = children.map(child => child.expr).join('');
@@ -234,7 +234,6 @@ const compileClass = ({ insensitive, negated, seqs }: g.Class): Compiler<ExprWit
                 negated
                     ? emitCall('negateExps', [expectables])
                     : expectables,
-                // t.booleanLiteral(insensitive)
             ],
             [t.tsUnionType(types)]
         ),

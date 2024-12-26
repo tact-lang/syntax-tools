@@ -56,13 +56,10 @@ const str = (s) => {
     return terminal(P.str(s));
 };
 exports.str = str;
-const regex = (s, exps, insensitive = false) => {
-    return terminal(P.regex(s, exps, insensitive));
+const regex = (s, exps) => {
+    return terminal(P.regex(s, exps));
 };
 exports.regex = regex;
-// export const pure = <const T>(t: T): Parser<T> => ctx => {
-//     return P.app(P.pure(t), t => [t, L.emptyLoc(ctx.p)] as const)(ctx);
-// };
 const app = (child, f) => {
     return P.app(child, ([v, l]) => [f(v), l]);
 };

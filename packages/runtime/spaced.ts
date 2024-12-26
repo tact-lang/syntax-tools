@@ -33,8 +33,8 @@ export const range = (from: string, to: string): Parser<string> => {
     return terminal(L.range(from, to));
 };
 
-export const regex = <K = string>(s: string, exps: Expectable[], insensitive: boolean = false): Parser<K> => {
-    return terminal(L.regex(s, exps, insensitive));
+export const regex = <K = string>(s: string, exps: Expectable[]): Parser<K> => {
+    return terminal(L.regex(s, exps));
 };
 
 export const lex = <T,>(child: Parser<T>): Parser<T> => {

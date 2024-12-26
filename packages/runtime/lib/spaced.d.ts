@@ -10,7 +10,7 @@ export declare const lift2: <T, U, V>(f: (p: L.Parser<T>, q: L.Parser<U>) => L.P
 export declare const any: Parser<string>;
 export declare const str: <K extends string>(s: K) => Parser<K>;
 export declare const range: (from: string, to: string) => Parser<string>;
-export declare const regex: <K = string>(s: string, exps: Expectable[], insensitive?: boolean) => Parser<K>;
+export declare const regex: <K = string>(s: string, exps: Expectable[]) => Parser<K>;
 export declare const lex: <T>(child: Parser<T>) => Parser<T>;
 export declare const pure: <const T>(t: T) => Parser<T>;
 export declare const app: <A, B>(child: Parser<A>, f: (a: A) => B) => Parser<B>;

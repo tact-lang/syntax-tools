@@ -77,8 +77,8 @@ const range = (from, to) => (0, exports.terminal)(E.ExpRange(from, to), ctx => {
     }
 });
 exports.range = range;
-const regex = (s, exps, insensitive = false) => {
-    const r = new RegExp(`^[${s}]$`, insensitive ? "i" : undefined);
+const regex = (s, exps) => {
+    const r = new RegExp(`^[${s}]$`);
     return ctx => {
         const at = ctx.p;
         const c = ctx.s[at];
@@ -103,7 +103,6 @@ const str = (s) => (0, exports.terminal)(E.ExpString(s), ctx => {
     }
 });
 exports.str = str;
-// export const pure = <const T>(t: T): Parser<T> => () => success(t);
 const app = (child, f) => ctx => {
     const r = child(ctx);
     return {

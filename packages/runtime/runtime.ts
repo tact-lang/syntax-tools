@@ -4,11 +4,9 @@ import * as E from "./expectable";
 export type Success<T> = { readonly ok: true, readonly value: T }
 export const success = <T>(value: T): Success<T> => ({ ok: true, value });
 export const getSuccess = <T>(t: Success<T>): T => t.value;
-// export const isSuccess = <T>(t: Result<T>): t is Success<T> => t.ok;
 
 export type Failure = { readonly ok: false }
 export const failure = (): Failure => ({ ok: false });
-// export const isFailure = <T>(t: Result<T>): t is Failure => !t.ok;
 
 export type Result<T> = Success<T> | Failure
 
@@ -58,8 +56,8 @@ export const range = (from: string, to: string): Parser<string> => terminal(E.Ex
     }
 });
 
-export const regex = <K = string>(s: string, exps: E.Expectable[], insensitive: boolean = false): Parser<K> => {
-    const r = new RegExp(`^[${s}]$`, insensitive ? "i" : undefined);
+export const regex = <K = string>(s: string, exps: E.Expectable[]): Parser<K> => {
+    const r = new RegExp(`^[${s}]$`);
     return ctx => {
         const at = ctx.p;
         const c = ctx.s[at];
@@ -81,8 +79,6 @@ export const str = <K extends string>(s: K): Parser<K> => terminal(E.ExpString(s
         return failure();
     }
 });
-
-// export const pure = <const T>(t: T): Parser<T> => () => success(t);
 
 export const app = <A, B>(child: Parser<A>, f: (a: A) => B): Parser<B> => ctx => {
     const r = child(ctx);

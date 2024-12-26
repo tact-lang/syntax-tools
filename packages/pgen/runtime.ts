@@ -173,8 +173,8 @@ export const sat = (cond: (c: string) => boolean, message: string): Parser<strin
     return ctx.assert(ctx.p < ctx.l && cond(c), message, 1, c);
 };
 
-export const regex = <K = string>(s: string, insensitive: boolean = false): Parser<K> => {
-    const r = new RegExp(`^[${s}]$`, insensitive ? "i" : undefined);
+export const regex = <K = string>(s: string): Parser<K> => {
+    const r = new RegExp(`^[${s}]$`);
     return sat(c => r.test(c), `[${s}]`) as Parser<K>;
 };
 
