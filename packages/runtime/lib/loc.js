@@ -1,11 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.mergeLoc = exports.isEmptyLoc = exports.emptyLoc = exports.rangeLoc = void 0;
-const rangeLoc = (start, end) => {
-    if (start === 32 && end === 32)
-        debugger;
-    return { $: 'range', start, end };
-};
+const rangeLoc = (start, end) => ({ $: 'range', start, end });
 exports.rangeLoc = rangeLoc;
 const emptyLoc = (at) => ({ $: 'empty', at });
 exports.emptyLoc = emptyLoc;

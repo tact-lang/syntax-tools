@@ -1,4 +1,4 @@
-import { $$ as g } from './grammar';
+import { $ast as g } from './grammar';
 
 /*
 Foo = "a" / "b"     : void
@@ -34,8 +34,8 @@ export type Mode = 'l' | 'r'
 
 export type Grammar = { readonly $: "Grammar", readonly rules: readonly Rule[] }
 export const Grammar = (rules: readonly Rule[]): Grammar => ({ $: "Grammar", rules });
-export type Rule = { readonly $: "Rule", readonly name: string, readonly formals: readonly string[], readonly body: Expr }
-export const Rule = (name: string, formals: readonly string[], body: Expr): Rule => ({ $: "Rule", name, formals, body });
+export type Rule = { readonly $: "Rule", readonly name: string, readonly formals: readonly string[], readonly body: Expr, readonly display: undefined | readonly (Char | Special | Escape)[] }
+export const Rule = (name: string, formals: readonly string[], body: Expr, display: undefined | readonly (Char | Special | Escape)[]): Rule => ({ $: "Rule", name, formals, body, display });
 export type Alt = { readonly $: "Alt", readonly left: Expr, readonly right: Expr }
 export const Alt = (left: Expr, right: Expr): Alt => ({ $: "Alt", left, right });
 export type Pure = { readonly $: "Pure", readonly value: string }
@@ -108,7 +108,7 @@ const keywords: Set<string> = new Set([
     'return', 'short', 'static', 'super', 'switch', 'synchronized', 'this', 'throw', 'throws',
     'transient', 'true', 'try', 'typeof', 'var', 'void', 'volatile', 'while', 'with', 'yield',
 
-    'as', 'type', 'interface', 'never', 'Function',
+    'as', 'type', 'interface', 'never', 'Function', 'string', 'number', 'boolean',
 ]);
 
 const renameIfKeyword = (name: string): string => {
@@ -122,7 +122,7 @@ export const transform = ({ rules }: g.Grammar): Grammar => {
 };
 
 const transformRule = (
-    { name, formals, body }: g.Rule
+    { name, display, formals, body }: g.Rule
 ) => {
     const fullName = renameIfKeyword(name);
 
@@ -136,13 +136,13 @@ const transformRule = (
             formals: formalsSet,
         });
     
-        return Rule(fullName, allFormals, Located(Field('$', Pure(name), expr)));
+        return Rule(fullName, allFormals, Located(Field('$', Pure(name), expr)), display);
     } else {
         const expr = transformAlt(body)({
             formals: formalsSet,
         });
     
-        return Rule(fullName, allFormals, expr);
+        return Rule(fullName, allFormals, expr, display);
     }
 };
 
@@ -204,8 +204,8 @@ const transformAny = (_node: g.Any): Transform<Expr> => () => {
     return Any;
 };
 
-const transformClass = ({ insensitive, negated, seqs }: g.Class): Transform<Expr> => () => {
-    return Class(seqs, negated === '^', insensitive === 'i');
+const transformClass = ({ negated, seqs }: g.Class): Transform<Expr> => () => {
+    return Class(seqs, negated === '^', false);
 };
 
 const transformTerminal = ({ value }: g.Terminal): Transform<Expr> => () => {

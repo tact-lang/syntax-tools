@@ -33,7 +33,7 @@ var __importStar = (this && this.__importStar) || (function () {
     };
 })();
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.compile = exports.lex = exports.loc = exports.withLoc = exports.where = exports.debug = exports.eof = exports.lookNeg = exports.lookPos = exports.opt = exports.plus = exports.eps = exports.any = exports.star = exports.ref = exports.app = exports.stry = exports.regex = exports.sat = exports.str = exports.alt = exports.field = exports.seq = exports.right = exports.left = exports.ap = exports.pure = exports.rule = exports.terminal = void 0;
+exports.withLoc = exports.where = exports.named = exports.lookNeg = exports.lookPos = exports.stry = exports.ref = exports.star = exports.alt = exports.seq = exports.app = exports.pure = exports.lex = exports.regex = exports.range = exports.str = exports.any = exports.lift2 = exports.lift1 = exports.terminal = void 0;
 const B = __importStar(require("./runtime"));
 const L = __importStar(require("./located"));
 const P = (skip, keep) => ({ keep, skip });
@@ -41,106 +41,55 @@ const terminal = (child) => {
     return P(space => B.app(B.seq(child, B.star(space)), ([[t, l]]) => [t, l]), child);
 };
 exports.terminal = terminal;
-const rule = (child) => {
-    return P(space => L.rule(child.skip(space)), L.rule(child.keep));
+const lift1 = (f) => (child) => {
+    return P(space => f(child.skip(space)), f(child.keep));
 };
-exports.rule = rule;
-const pure = (t) => {
-    const child = L.pure(t);
-    return P(() => child, child);
+exports.lift1 = lift1;
+const lift2 = (f) => (l, r) => {
+    return P(space => f(l.skip(space), r.skip(space)), f(l.keep, r.keep));
 };
-exports.pure = pure;
-const ap = (left, right) => {
-    return P(space => L.ap(left.skip(space), right.skip(space)), L.ap(left.keep, right.keep));
-};
-exports.ap = ap;
-const left = (left, right) => {
-    return P(space => L.left(left.skip(space), right.skip(space)), L.left(left.keep, right.keep));
-};
-exports.left = left;
-const right = (left, right) => {
-    return P(space => L.right(left.skip(space), right.skip(space)), L.right(left.keep, right.keep));
-};
-exports.right = right;
-const seq = (left, right) => {
-    return P(space => L.seq(left.skip(space), right.skip(space)), L.seq(left.keep, right.keep));
-};
-exports.seq = seq;
-const field = (left, key, right) => {
-    return P(space => L.field(left.skip(space), key, right.skip(space)), L.field(left.keep, key, right.keep));
-};
-exports.field = field;
-const alt = (left, right) => {
-    return P(space => L.alt(left.skip(space), right.skip(space)), L.alt(left.keep, right.keep));
-};
-exports.alt = alt;
+exports.lift2 = lift2;
+exports.any = (0, exports.terminal)(L.any);
 const str = (s) => {
     return (0, exports.terminal)(L.str(s));
 };
 exports.str = str;
-const sat = (cond, message) => {
-    return (0, exports.terminal)(L.sat(cond, message));
+const range = (from, to) => {
+    return (0, exports.terminal)(L.range(from, to));
 };
-exports.sat = sat;
-const regex = (s, insensitive = false) => {
-    return (0, exports.terminal)(L.regex(s, insensitive));
+exports.range = range;
+const regex = (s, exps, insensitive = false) => {
+    return (0, exports.terminal)(L.regex(s, exps, insensitive));
 };
 exports.regex = regex;
-const stry = (child) => {
-    return P(space => L.stry(child.skip(space)), L.stry(child.keep));
-};
-exports.stry = stry;
-const app = (child, f) => {
-    return P(space => L.app(child.skip(space), f), L.app(child.keep, f));
-};
-exports.app = app;
-const ref = (child) => {
-    let p = null;
-    return P(space => ctx => (p || (p = child())).skip(space)(ctx), ctx => (p || (p = child())).keep(ctx));
-};
-exports.ref = ref;
-const star = (child) => {
-    return P(space => L.star(child.skip(space)), L.star(child.keep));
-};
-exports.star = star;
-exports.any = (0, exports.terminal)(L.any);
-exports.eps = (0, exports.terminal)(L.eps);
-const plus = (child) => {
-    return P(space => L.plus(child.skip(space)), L.plus(child.keep));
-};
-exports.plus = plus;
-const opt = (child) => {
-    return P(space => L.opt(child.skip(space)), L.opt(child.keep));
-};
-exports.opt = opt;
-const lookPos = (child) => {
-    return P(space => L.lookPos(child.skip(space)), L.lookPos(child.keep));
-};
-exports.lookPos = lookPos;
-const lookNeg = (child) => {
-    return P(space => L.lookNeg(child.skip(space)), L.lookNeg(child.keep));
-};
-exports.lookNeg = lookNeg;
-exports.eof = P(() => L.eof, L.eof);
-const debug = (child) => {
-    return P(space => L.debug(child.skip(space)), L.debug(child.keep));
-};
-exports.debug = debug;
-exports.where = P(() => L.where, L.where);
-const withLoc = (child) => {
-    return P(space => L.withLoc(child.skip(space)), L.withLoc(child.keep));
-};
-exports.withLoc = withLoc;
-const loc = (child) => {
-    return (0, exports.app)((0, exports.withLoc)(child), ([t, loc]) => ({ ...t, loc }));
-};
-exports.loc = loc;
 const lex = (child) => {
     return (0, exports.terminal)(child.keep);
 };
 exports.lex = lex;
-const compile = (child, space) => {
-    return B.app(B.right(B.star(space.keep), B.left(child.skip(space.keep), B.eof)), ([t]) => t);
-    // return B.app(right(star(space), left(child, eof)).skip(space.keep), ([t]) => t);
+const pure = (t) => {
+    const child = L.app(L.where, () => t);
+    return P(() => child, child);
 };
-exports.compile = compile;
+exports.pure = pure;
+const app = (child, f) => {
+    return P(space => L.app(child.skip(space), f), L.app(child.keep, f));
+};
+exports.app = app;
+exports.seq = (0, exports.lift2)(L.seq);
+exports.alt = (0, exports.lift2)(L.alt);
+exports.star = (0, exports.lift1)(L.star);
+const ref = (child) => {
+    let p = null;
+    const getP = () => p || (p = child());
+    return P(space => ctx => getP().skip(space)(ctx), ctx => getP().keep(ctx));
+};
+exports.ref = ref;
+exports.stry = (0, exports.lift1)(L.stry);
+exports.lookPos = (0, exports.lift1)(L.lookPos);
+exports.lookNeg = (0, exports.lift1)(L.lookNeg);
+const named = (name, child) => {
+    return P(space => L.named(name, child.skip(space)), L.named(name, child.keep));
+};
+exports.named = named;
+exports.where = P(() => L.where, L.where);
+exports.withLoc = (0, exports.lift1)(L.withLoc);

@@ -1,48 +1,40 @@
-export type Success<T> = [T];
-export declare const success: <T>(t: T) => Success<T>;
+import * as E from "./expectable";
+export type Success<T> = {
+    readonly ok: true;
+    readonly value: T;
+};
+export declare const success: <T>(value: T) => Success<T>;
 export declare const getSuccess: <T>(t: Success<T>) => T;
-export declare const isSuccess: <T>(t: Result<T>) => t is Success<T>;
-export type Failure = null;
-export declare const failure: Failure;
-export declare const isFailure: <T>(t: Result<T>) => t is Failure;
+export type Failure = {
+    readonly ok: false;
+};
+export declare const failure: () => Failure;
 export type Result<T> = Success<T> | Failure;
 export declare const createContext: (s: string) => {
     s: string;
     p: number;
     l: number;
-    assert: <T>(cond: boolean, message: string, len: number, result: T) => Result<T>;
-    getError: () => {
-        position: number;
-        expected: Set<string>;
-    };
+    ignoreErrors: boolean;
 };
 export type Context = ReturnType<typeof createContext>;
-export type Parser<T> = (ctx: Context) => Result<T>;
+export type Parser<T> = (ctx: Context) => {
+    result: Result<T>;
+    exps: E.ExpSet;
+};
 export type GetResult<T> = T extends Parser<infer T> ? T : never;
-export declare const rule: <T>(child: Parser<T>) => Parser<T>;
-export declare const pure: <const T>(t: T) => Parser<T>;
-export declare const ap: <T, U>(left: Parser<(t: T) => U>, right: Parser<T>) => Parser<U>;
-export declare const left: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T>;
-export declare const right: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<U>;
-export declare const seq: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<[T, U]>;
-export declare const singleton: <K extends string, V>(key: K, value: V) => Record<K, V>;
-export declare const field: <T, K extends string, V>(left: Parser<T>, key: K, right: Parser<V>) => Parser<Record<K, T> & V>;
-export declare const alt: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T | U>;
-export declare const str: <K extends string>(s: K) => Parser<K>;
-export declare const sat: (cond: (c: string) => boolean, message: string) => Parser<string>;
-export declare const regex: <K = string>(s: string, insensitive?: boolean) => Parser<K>;
-export declare const stry: <T>(child: Parser<T>) => Parser<string>;
-export declare const app: <A, B>(child: Parser<A>, f: (a: A) => B) => Parser<B>;
-export declare const ref: <A>(child: () => Parser<A>) => Parser<A>;
-export declare const star: <T>(child: Parser<T>) => Parser<T[]>;
+export declare const terminal: <T>(kind: E.Expectable, child: (ctx: Context) => Result<T>) => Parser<T>;
 export declare const any: Parser<string>;
-export declare const EPS: Readonly<{}>;
-export declare const eps: Parser<{}>;
-export declare const fail: Parser<never>;
-export declare const plus: <T>(child: Parser<T>) => Parser<T[]>;
-export declare const opt: <T>(child: Parser<T>) => Parser<T | undefined>;
+export declare const range: (from: string, to: string) => Parser<string>;
+export declare const regex: <K = string>(s: string, exps: E.Expectable[], insensitive?: boolean) => Parser<K>;
+export declare const str: <K extends string>(s: K) => Parser<K>;
+export declare const app: <A, B>(child: Parser<A>, f: (a: A) => B) => Parser<B>;
+export declare const seq: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<[T, U]>;
+export declare const alt: <T, U>(left: Parser<T>, right: Parser<U>) => Parser<T | U>;
+export declare const star: <T>(child: Parser<T>) => Parser<T[]>;
+export declare const ref: <A>(child: () => Parser<A>) => Parser<A>;
+export declare const stry: <T>(child: Parser<T>) => Parser<string>;
 export declare const lookPos: <T>(child: Parser<T>) => Parser<T>;
 export declare const lookNeg: <T>(child: Parser<T>) => Parser<undefined>;
-export declare const eof: Parser<undefined>;
-export declare const debug: <T>(child: Parser<T>) => Parser<T>;
+export declare const named: <T>(name: string, child: Parser<T>) => Parser<T>;
+export declare const where: Parser<number>;
 //# sourceMappingURL=runtime.d.ts.map

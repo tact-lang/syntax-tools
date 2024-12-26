@@ -39,7 +39,7 @@ type Context = {
 }
 type Compiler<T> = (ctx: Context) => T;
 
-const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
+const compileRule = ({ name, formals, body, display }: g.Rule): Compiler<{
     name: string | undefined,
     expr: t.Statement,
     type: t.Statement,
@@ -50,7 +50,7 @@ const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
 
     const { expr: exprCode, type: typeCode } = compileExpr(body)(ctx);
 
-    const bodyCode = compileFormals(name, formals, exprCode);
+    const bodyCode = compileFormals(name, formals, compileDisplay(display, exprCode));
     
     return {
         name: formals.length > 0 ? undefined : name,
@@ -67,6 +67,15 @@ const compileRule = ({ name, formals, body }: g.Rule): Compiler<{
             typeCode,
         ))
     };
+};
+
+const compileDisplay = (display: g.Rule["display"], expr: t.Expression): t.Expression => {
+    if (!display) {
+        return expr;
+    }
+    const body = display.map(char => compileChar(char)).join('');
+    const value = JSON.parse(`"${body}"`);
+    return emitCall('named', [t.stringLiteral(value), expr]);
 };
 
 const compileFormals = (name: string, formals: readonly string[], bodyCode: t.Expression): t.Expression => {
@@ -216,10 +225,17 @@ const compileClass = ({ insensitive, negated, seqs }: g.Class): Compiler<ExprWit
     const children = seqs.map(seq => compileSeq(seq));
     const body = children.map(child => child.expr).join('');
     const types = children.map(child => child.type);
+    const expectables = t.arrayExpression(children.map(child => child.exp));
     return ewt(
         emitCall(
             'regex',
-            [t.stringLiteral(prefix + body), t.booleanLiteral(insensitive)],
+            [
+                t.stringLiteral(prefix + body),
+                negated
+                    ? emitCall('negateExps', [expectables])
+                    : expectables,
+                // t.booleanLiteral(insensitive)
+            ],
             [t.tsUnionType(types)]
         ),
         t.tsUnionType(types),
@@ -295,7 +311,7 @@ const compileCall = (node: g.Call): Compiler<ExprWithType> => ctx => {
     return ewt(wrapInRef(node.name, body), type);
 };
 
-type TypedString = { expr: string, type: t.TSType };
+type TypedString = { expr: string, type: t.TSType, exp: t.Expression };
 
 const compileChar = (node: g.Escape | g.Special | g.Char): string => {
     switch (node.$) {
@@ -309,9 +325,12 @@ const compileChar = (node: g.Escape | g.Special | g.Char): string => {
 const compileSeq = (node: g.Group | g.ClassChar | g.SpecialClass | g.Escape): TypedString => {
     switch (node.$) {
         case 'Group':
+            const from = compileSeq(node.from).expr;
+            const to = compileSeq(node.to).expr;
             return {
-                expr: compileSeq(node.from).expr + '-' + compileSeq(node.to).expr,
+                expr: from + '-' + to,
                 type: t.tsStringKeyword(),
+                exp: emitCall('ExpRange', [t.stringLiteral(from), t.stringLiteral(to)])
             };
         case 'ClassChar':
             return {
@@ -319,6 +338,7 @@ const compileSeq = (node: g.Group | g.ClassChar | g.SpecialClass | g.Escape): Ty
                     ? `\\${node.value}`
                     : node.value,
                 type: t.tsLiteralType(t.stringLiteral(node.value)),
+                exp: emitCall('ExpString', [t.stringLiteral(node.value)])
             };
         default:
             return compileEscape(node);
@@ -330,18 +350,20 @@ const compileEscape = (node: g.Escape | g.Special | g.SpecialClass): TypedString
 
     const str = `"${expr}"`;
 
-    const type = (() => {
-        try {
-            return t.tsLiteralType(t.stringLiteral(JSON.parse(str)));
-        } catch (e) {
-            return t.tsStringKeyword();
-        }
-    })();
-
-    return {
-        expr,
-        type,
-    };
+    try {
+        const parsed = JSON.parse(str);
+        return {
+            expr,
+            type: t.tsLiteralType(t.stringLiteral(parsed)),
+            exp: emitCall('ExpString', [t.stringLiteral(parsed)])
+        };
+    } catch (e) {
+        return {
+            expr,
+            type: t.tsStringKeyword(),
+            exp: emitCall('ExpString', [t.stringLiteral(str)])
+        };
+    }
 };
 
 const compileEscapeToString = (node: g.Escape | g.Special | g.SpecialClass): string => {
