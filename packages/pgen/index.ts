@@ -3,8 +3,8 @@ import generate from "@babel/generator";
 import fs from 'fs/promises';
 import * as $ from '@langtools/runtime';
 import * as G from './grammar';
-import { transform } from './transform';
-import { compile } from './compile';
+import { desugar } from './transform';
+import { generateTsAst } from './compile';
 import { sort } from './sort';
 
 const main = async () => {
@@ -19,17 +19,19 @@ const main = async () => {
 
     const code = await fs.readFile(source, 'utf-8');
 
-    const ast = $.parse($.wrap(G.Grammar, G.space))(code);
+    const ast = $.parse({
+        grammar: G.Grammar,
+        space: G.space,
+        text: code,
+    });
     if (ast.$ === 'error') {
         console.error(ast.error);
         process.exit(1);
     }
 
-    // desugar
-    const transformed = transform(ast.value);
+    const transformed = desugar(ast.value);
     const sorted = sort(transformed);
-    // generateTsAst
-    const compiled = compile(sorted);
+    const compiled = generateTsAst(sorted);
     const generated = generate(compiled, { minified: false }).code;
     const withEslint = `/* Generated. Do not edit. */
 /* eslint-disable @typescript-eslint/no-namespace */

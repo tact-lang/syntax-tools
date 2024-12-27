@@ -110,7 +110,7 @@ const renameIfKeyword = (name: string): string => {
     return keywords.has(name) ? `$${name}` : name;
 };
 
-export const transform = ({ rules }: g.Grammar): Grammar => {
+export const desugar = ({ rules }: g.Grammar): Grammar => {
     return Grammar(rules.flatMap((rule) => {
         return transformRule(rule);
     }));

@@ -1,4 +1,4 @@
-import { tarjan } from "@langtools/algo";
+import { tarjan } from "./tarjan";
 import * as g from "./transform";
 
 export const sort = (node: g.Grammar) => {

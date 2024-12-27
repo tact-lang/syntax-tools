@@ -1,4 +1,4 @@
-import * as P from './runtime';
+import * as P from './basic';
 import * as L from './loc';
 import { Expectable } from './expectable';
 

@@ -1,25 +1,12 @@
-import { Expectable, ExpNamed, getExpectables, printExpectable } from './expectable';
+import { getExpectables } from './expectable';
 import { Loc } from './loc';
-import * as B from './runtime';
+import * as B from './basic';
 import * as S from './spaced';
 import { singleton } from './util';
 
 export { Parser, alt, any, app, lex, lookNeg, lookPos, named, pure, lazy, regex, seq, star, str, stry, terminal, where, withLoc } from './spaced';
 export * from './loc';
 export * from './expectable';
-
-export type ParseResult<T> = ParseResultSuccess<T> | ParseResultError
-export type ParseResultError = {
-    readonly $: "error";
-    readonly error: {
-        readonly position: number;
-        readonly expected: ReadonlySet<string>;
-    };
-}
-export type ParseResultSuccess<T> = {
-    readonly $: "success";
-    readonly value: T;
-}
 
 export const left = <T, U>(left: S.Parser<T>, right: S.Parser<U>): S.Parser<T> => {
     return S.app(S.seq(left, right), ([l, _]) => l);
@@ -81,16 +68,29 @@ export const ignoreLoc = <T,>(child: B.Parser<readonly [T, Loc]>) => {
     );
 };
 
-export const wrap = <T,>(child: S.Parser<T>, space: S.Parser<unknown>) => {
-    return ignoreLoc(consumesAll(skipInitialSpaces(child, space)));
-};
+export type ParseResult<T> = ParseResultSuccess<T> | ParseResultError
+export type ParseResultError = {
+    readonly $: "error";
+    readonly error: {
+        readonly position: number;
+        readonly expected: ReadonlySet<string>;
+    };
+}
+export type ParseResultSuccess<T> = {
+    readonly $: "success";
+    readonly value: T;
+}
 
-export const parse = <T>(
-    grammar: B.Parser<T>,
-) => (text: string): ParseResult<T> => {
+export type ParseOptions<T> = {
+    text: string;
+    grammar: S.Parser<T>;
+    space: S.Parser<unknown>;
+}
+
+export const parse = <T>({ text, grammar, space }: ParseOptions<T>): ParseResult<T> => {
     const ctx: B.Context = B.createContext(text);
 
-    const { result, exps } = grammar(ctx);
+    const { result, exps } = ignoreLoc(consumesAll(skipInitialSpaces(grammar, space)))(ctx);
 
     if (!result.ok) {
         return {

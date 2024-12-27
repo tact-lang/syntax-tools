@@ -5,7 +5,7 @@ const libGlobal = '$';
 const primGlobal = '$';
 const astGlobal = '$ast';
 
-export const compile = (node: g.Grammar): t.File => {
+export const generateTsAst = (node: g.Grammar): t.File => {
     const imports: t.Statement[] = [
         emitNsImport(libGlobal, '@langtools/runtime'),
     ];
