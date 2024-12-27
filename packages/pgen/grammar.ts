@@ -4,7 +4,7 @@
 /* eslint-disable @typescript-eslint/no-redundant-type-constituents */
 /* eslint-disable @typescript-eslint/no-duplicate-type-constituents */
 /* eslint-disable @typescript-eslint/no-unused-vars */
-import * as $ from "@langtools/runtime";
+import * as $ from "@tonstudio/parser-runtime";
 export namespace $ast {
   export type Grammar = $.Located<{
     readonly $: "Grammar";

@@ -1,6 +1,5 @@
 {
-	"name": "@langtools/runtime",
-	"private": true,
+	"name": "@tonstudio/parser-runtime",
 	"version": "0.0.1",
 	"main": "./lib/index.js",
 	"types": "./lib/index.d.ts",
@@ -8,19 +7,16 @@
 		".": {
 			"import": {
 				"types": "./lib/index.d.ts",
-				"@langtools/source": "./index.ts",
+				"@tonstudio/source": "./index.ts",
 				"default": "./lib/index.js"
 			},
 			"require": {
 				"types": "./lib/index.d.ts",
-				"@langtools/source": "./index.ts",
+				"@tonstudio/source": "./index.ts",
 				"default": "./lib/index.js"
 			}
 		},
 		"./package.json": "./package.json"
-	},
-	"dependencies": {
-		"@langtools/config": "file:../config"
 	},
 	"scripts": {
 		"build": "tsc --build",

@@ -1,3 +1,23 @@
 {
-	"extends": "@langtools/config/tsconfig.json"
-}
+	"compilerOptions": {
+	  "outDir": "${configDir}/lib",
+	  "composite": true,
+	  "incremental": true,
+	  "declaration": true,
+	  "declarationMap": true,
+	  "customConditions": ["@tonstudio/source"],
+  
+	  "lib": ["ESNext", "DOM"],
+	  "target": "ESNext",
+	  "module": "Node16",
+	  "moduleDetection": "force",
+	  "strict": true,
+	  "allowJs": true,
+	  "esModuleInterop": true,
+	  "moduleResolution": "node16",
+	  "skipLibCheck": true,
+	  "jsx": "react-jsx"
+	},
+	"exclude": ["${configDir}/lib"]
+  }
+  

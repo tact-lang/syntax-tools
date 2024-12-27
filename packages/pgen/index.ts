@@ -1,7 +1,7 @@
 import minimist from 'minimist';
 import generate from "@babel/generator";
 import fs from 'fs/promises';
-import * as $ from '@langtools/runtime';
+import * as $ from '@tonstudio/parser-runtime';
 import * as G from './grammar';
 import { desugar } from './transform';
 import { generateTsAst } from './compile';

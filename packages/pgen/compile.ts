@@ -7,7 +7,7 @@ const astGlobal = '$ast';
 
 export const generateTsAst = (node: g.Grammar): t.File => {
     const imports: t.Statement[] = [
-        emitNsImport(libGlobal, '@langtools/runtime'),
+        emitNsImport(libGlobal, '@tonstudio/parser-runtime'),
     ];
 
     const definedRules = new Set<string>();
