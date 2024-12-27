@@ -19,14 +19,16 @@ const main = async () => {
 
     const code = await fs.readFile(source, 'utf-8');
 
-    const ast = $.parse($.compile(G.Grammar, G.space))(code);
+    const ast = $.parse($.wrap(G.Grammar, G.space))(code);
     if (ast.$ === 'error') {
         console.error(ast.error);
         process.exit(1);
     }
 
+    // desugar
     const transformed = transform(ast.value);
     const sorted = sort(transformed);
+    // generateTsAst
     const compiled = compile(sorted);
     const generated = generate(compiled, { minified: false }).code;
     const withEslint = `/* Generated. Do not edit. */

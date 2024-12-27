@@ -4,7 +4,10 @@ import * as g from "./transform";
 export const sort = (node: g.Grammar) => {
     const graph = walkGrammar(node);
     const components = tarjan(graph);
-    const index = components.flat().map((name, idx) => [name, idx] as const);
+    const index = components
+        .flat()
+        .map((name, idx) => [name, idx] as const)
+        .reverse();
     const indexObj = Object.fromEntries(index);
     const compare = ({ name: a }: g.Rule, { name: b }: g.Rule) => {
         return (indexObj[a] ?? 0) - (indexObj[b] ?? 0);

@@ -50,7 +50,7 @@ export const star = <T,>(child: Parser<T>): Parser<T[]> => {
     ])
 };
 
-export const ref: <A,>(child: () => Parser<A>) => Parser<A> = P.ref;
+export const lazy: <A,>(child: () => Parser<A>) => Parser<A> = P.lazy;
 
 export const stry = <T,>(child: Parser<T>): Parser<string> => {
     return terminal(P.stry(child));

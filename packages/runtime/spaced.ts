@@ -57,7 +57,7 @@ export const alt = lift2(L.alt);
 
 export const star = lift1(L.star);
 
-export const ref = <A,>(child: () => Parser<A>): Parser<A> => {
+export const lazy = <A,>(child: () => Parser<A>): Parser<A> => {
     let p: null | Parser<A> = null;
     const getP = () => p || (p = child());
     return P(

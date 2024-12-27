@@ -285,7 +285,7 @@ const compileCall = (node: g.Call): Compiler<ExprWithType> => ctx => {
         if (ctx.isDefined(name)) {
             return expr;
         } else {
-            return t.callExpression(emitPrim('ref'), [t.arrowFunctionExpression([], expr)]);
+            return t.callExpression(emitPrim('lazy'), [t.arrowFunctionExpression([], expr)]);
         }
     };
 

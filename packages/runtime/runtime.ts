@@ -1,6 +1,5 @@
 import * as E from "./expectable";
 
-
 export type Success<T> = { readonly ok: true, readonly value: T }
 export const success = <T>(value: T): Success<T> => ({ ok: true, value });
 export const getSuccess = <T>(t: Success<T>): T => t.value;
@@ -135,7 +134,7 @@ export const star = <T,>(child: Parser<T>): Parser<T[]> => ctx => {
     }
 };
 
-export const ref = <A,>(child: () => Parser<A>): Parser<A> => {
+export const lazy = <A,>(child: () => Parser<A>): Parser<A> => {
     let p: null | Parser<A> = null;
     return ctx => (p || (p = child()))(ctx);
 };

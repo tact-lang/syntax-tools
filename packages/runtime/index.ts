@@ -4,7 +4,7 @@ import * as B from './runtime';
 import * as S from './spaced';
 import { singleton } from './util';
 
-export { Parser, alt, any, app, lex, lookNeg, lookPos, named, pure, ref, regex, seq, star, str, stry, terminal, where, withLoc } from './spaced';
+export { Parser, alt, any, app, lex, lookNeg, lookPos, named, pure, lazy, regex, seq, star, str, stry, terminal, where, withLoc } from './spaced';
 export * from './loc';
 export * from './expectable';
 
@@ -54,17 +54,35 @@ export const loc = <T,>(child: S.Parser<T>): S.Parser<Located<T>> => {
     return S.app(S.withLoc(child), ([t, loc]) => ({ ...t, loc }));
 };
 
-export const compile = <T,>(child: S.Parser<T>, space: S.Parser<unknown>) => {
+export const skipInitialSpaces = <T,>(child: S.Parser<T>, space: S.Parser<unknown>) => {
     return B.app(
         B.seq(
             B.star(space.keep),
-            B.seq(
-                child.skip(space.keep),
-                B.lookNeg(B.any),
-            ),
+            child.skip(space.keep),
         ),
-        ([, [[t]]]) => t,
+        ([, t]) => t,
     );
+};
+
+export const consumesAll = <T,>(child: B.Parser<T>) => {
+    return B.app(
+        B.seq(
+            child,
+            B.lookNeg(B.any),
+        ),
+        ([t]) => t,
+    );
+};
+
+export const ignoreLoc = <T,>(child: B.Parser<readonly [T, Loc]>) => {
+    return B.app(
+        child,
+        ([t]) => t,
+    );
+};
+
+export const wrap = <T,>(child: S.Parser<T>, space: S.Parser<unknown>) => {
+    return ignoreLoc(consumesAll(skipInitialSpaces(child, space)));
 };
 
 export const parse = <T>(
