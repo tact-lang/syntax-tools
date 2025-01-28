@@ -87,10 +87,10 @@ export type ParseOptions<T> = {
     space: S.Parser<unknown>;
 }
 
-export const parse = <T>({ text, grammar, space }: ParseOptions<T>): ParseResult<T> => {
+export const parseBasic = <T>(text: string, parser: B.Parser<T>): ParseResult<T> => {
     const ctx: B.Context = B.createContext(text);
 
-    const { result, exps } = ignoreLoc(consumesAll(skipInitialSpaces(grammar, space)))(ctx);
+    const { result, exps } = parser(ctx);
 
     if (!result.ok) {
         return {
@@ -103,4 +103,12 @@ export const parse = <T>({ text, grammar, space }: ParseOptions<T>): ParseResult
     } else {
         return { $: 'success', value: B.getSuccess(result) };
     }
+};
+
+export const parse = <T>({ text, grammar, space }: ParseOptions<T>): ParseResult<T> => {
+    return parseBasic(text, ignoreLoc(consumesAll(skipInitialSpaces(grammar, space))));
+};
+
+export const parseNoSkip = <T>(text: string, grammar: S.Parser<T>): ParseResult<T> => {
+    return parseBasic(text, ignoreLoc(consumesAll(grammar.keep)));
 };

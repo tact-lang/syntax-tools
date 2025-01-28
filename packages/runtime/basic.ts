@@ -18,10 +18,11 @@ export const createContext = (s: string) => ({
 
 export type Context = ReturnType<typeof createContext>;
 
-export type Parser<T> = (ctx: Context) => {
+export type BasicResult<T> = {
     result: Result<T>,
     exps: E.ExpSet,
-};
+}
+export type Parser<T> = (ctx: Context) => BasicResult<T>;
 export type GetResult<T> = T extends Parser<infer T> ? T : never;
 
 export const terminal = <T>(
