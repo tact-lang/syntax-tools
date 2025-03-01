@@ -30,8 +30,6 @@ export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
 }
 
 export const generateExpr = (node: g.Expr): t.Statement[] => {
-    const stmts: t.Statement[] = []
-
     switch (node.$) {
         case 'Seq':
             return generateSeq(node)
@@ -52,8 +50,6 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         default:
             throw new Error(`Unsupported expr: ${node.$}`)
     }
-
-    return stmts
 }
 
 // A = #B
