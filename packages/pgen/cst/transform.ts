@@ -27,8 +27,8 @@ export const SeqClause = (expr: Expr, name: undefined | string): SeqClause => ({
 
 export type Grammar = { readonly $: "Grammar", readonly rules: readonly Rule[] }
 export const Grammar = (rules: readonly Rule[]): Grammar => ({ $: "Grammar", rules });
-export type Rule = { readonly $: "Rule", readonly name: string, readonly formals: readonly string[], readonly body: Expr, readonly display: undefined | readonly (Char | Special | Escape)[] }
-export const Rule = (name: string, formals: readonly string[], body: Expr, display: undefined | readonly (Char | Special | Escape)[]): Rule => ({ $: "Rule", name, formals, body, display });
+export type Rule = { readonly $: "Rule", readonly name: string, readonly formals: readonly string[], readonly body: Expr, readonly display: undefined | readonly (Char | Special | Escape)[], isPrivate: boolean }
+export const Rule = (name: string, formals: readonly string[], body: Expr, display: undefined | readonly (Char | Special | Escape)[], isPrivate: boolean = false): Rule => ({ $: "Rule", name, formals, body, display, isPrivate });
 export type Alt = { readonly $: "Alt", readonly exprs: readonly Expr[] }
 export const Alt = (exprs: readonly Expr[]): Alt => ({ $: "Alt", exprs });
 export type Seq = { readonly $: "Seq", readonly clauses: readonly SeqClause[] }
@@ -300,6 +300,6 @@ const extractRule = (
     const params = formals.map(it => Call(it, []));
     const innerName = `${ruleName}_${exprType}_${ctx.extraRules?.length || 0}`;
     ctx.extraRules = ctx.extraRules || [];
-    ctx.extraRules.push(Rule(innerName, formals, expr, undefined));
+    ctx.extraRules.push(Rule(innerName, formals, expr, undefined, true));
     return Call(innerName, params);
 };

@@ -1,5 +1,6 @@
 import * as t from '@babel/types';
 import * as g from './transform';
+import {Expression} from "@babel/types";
 
 export const generate = (node: g.Grammar): t.File => {
     return t.file(t.program(
@@ -29,7 +30,7 @@ export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
             t.identifier("ctx"),
             t.identifier("b"),
         ],
-        t.blockStatement(generateExpr(node.body))
+        t.blockStatement(generateExpr(node.body, node.isPrivate ? "" : node.name))
     );
 
     // export const commaList: (T: Rule) => Rule = (T: Rule) => {
@@ -67,34 +68,34 @@ export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
     ))
 }
 
-export const generateExpr = (node: g.Expr): t.Statement[] => {
+export const generateExpr = (node: g.Expr, ruleName: string): t.Statement[] => {
     switch (node.$) {
         case 'Seq':
-            return generateSeq(node)
+            return generateSeq(node, ruleName)
         case 'Alt':
-            return generateAlt(node)
+            return generateAlt(node, ruleName)
         case 'Star':
-            return generateStar(node)
+            return generateStar(node, ruleName)
         case 'Plus':
-            return generatePlus(node)
+            return generatePlus(node, ruleName)
         case 'Terminal':
-            return generateSeq(g.Seq([g.SeqClause(node, undefined)]))
+            return generateSeq(g.Seq([g.SeqClause(node, undefined)]), ruleName)
         case 'Class':
-            return generateClass(node)
+            return generateClass(node, ruleName)
         case 'Stringify':
-            return generateStringify(node)
+            return generateStringify(node, ruleName)
         case 'Lex':
-            return generateLex(node)
+            return generateLex(node, ruleName)
         case 'Optional':
-            return generateOptional(node)
+            return generateOptional(node, ruleName)
         case "Any":
             return generateAny()
         case "Call":
             return generateCall(node)
         case "LookNeg":
-            return generateLookNeg(node)
+            return generateLookNeg(node, ruleName)
         case "LookPos":
-            return generateLookPos(node)
+            return generateLookPos(node, ruleName)
         // TODO
         // - check escapes
         // - positions
@@ -129,13 +130,16 @@ const saveCurrentPosition = () => t.variableDeclaration(
 );
 
 // b.push(CstNode(b2))
-const storeNodeFromBuilder = (name: string) => t.expressionStatement(
+const storeNodeFromBuilder = (name: string, nodeType: string) => t.expressionStatement(
     t.callExpression(
         t.memberExpression(
             t.identifier("b"),
             t.identifier("push")
         ), [
-            t.callExpression(t.identifier("CstNode"), [t.identifier(name)])
+            t.callExpression(t.identifier("CstNode"), [
+                t.identifier(name),
+                t.stringLiteral(nodeType)
+            ])
         ])
 );
 
@@ -153,7 +157,7 @@ const storeLeaf = (expr: t.Expression) => t.expressionStatement(
 // if (r && b2.length > 0) {
 //    b.push(CstNode(b2))
 // }
-const storeNodeIfMatched = () => t.ifStatement(
+const storeNodeIfMatched = (nodeType: string) => t.ifStatement(
     t.logicalExpression(
         "&&",
         t.identifier("r"),
@@ -164,21 +168,21 @@ const storeNodeIfMatched = () => t.ifStatement(
         )
     ),
     t.blockStatement([
-        storeNodeFromBuilder("b2")
+        storeNodeFromBuilder("b2", nodeType)
     ]),
 );
 
 // if (b2.length > 0) {
 //    b.push(CstNode(b2))
 // }
-const storeNodeIfNotEmpty = () => t.ifStatement(
+const storeNodeIfNotEmpty = (nodeType: string) => t.ifStatement(
     t.binaryExpression(
         '>',
         t.memberExpression(t.identifier("b2"), t.identifier("length")),
         t.numericLiteral(0)
     ),
     t.blockStatement([
-        storeNodeFromBuilder("b2")
+        storeNodeFromBuilder("b2", nodeType)
     ]),
 );
 
@@ -188,7 +192,7 @@ const storeNodeIfNotEmpty = () => t.ifStatement(
 //     ctx.p = p
 //     return r
 // }
-export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
+export const generateLookPos = (lookNeg: g.LookPos, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const p = ctx.p
@@ -220,7 +224,7 @@ export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
 //     ctx.p = p
 //     return !r
 // }
-export const generateLookNeg = (lookNeg: g.LookNeg): t.Statement[] => {
+export const generateLookNeg = (lookNeg: g.LookNeg, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const p = ctx.p
@@ -387,7 +391,7 @@ export const generateAny = (): t.Statement[] => {
 //     }
 //     return r;
 // }
-export const generateOptional = (node: g.Optional): t.Statement[] => {
+export const generateOptional = (node: g.Optional, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const b2: Builder = []
@@ -427,7 +431,7 @@ export const generateOptional = (node: g.Optional): t.Statement[] => {
     // if (r && b2.length > 0) {
     //    b.push(CstNode(b2))
     // }
-    stmts.push(storeNodeIfMatched())
+    stmts.push(storeNodeIfMatched(ruleName))
 
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
@@ -446,7 +450,7 @@ export const generateOptional = (node: g.Optional): t.Statement[] => {
 //    skip(ctx, b)
 //    return r
 // }
-export const generateLex = (node: g.Lex): t.Statement[] => {
+export const generateLex = (node: g.Lex, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const newCtx = {
@@ -498,7 +502,7 @@ export const generateLex = (node: g.Lex): t.Statement[] => {
 //     b.push(CstLeaf(text))
 //     return r
 // }
-export const generateStringify = (node: g.Stringify): t.Statement[] => {
+export const generateStringify = (node: g.Stringify, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const p = ctx.p
@@ -550,7 +554,7 @@ export const generateStringify = (node: g.Stringify): t.Statement[] => {
 //     b.push(CstNode(b2))
 //     return r
 // }
-export const generateStar = (node: g.Star): t.Statement[] => {
+export const generateStar = (node: g.Star, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const b2: Builder = []
@@ -588,7 +592,7 @@ export const generateStar = (node: g.Star): t.Statement[] => {
     // if (b2.length > 0) {
     //    b.push(CstNode(b2))
     // }
-    stmts.push(storeNodeIfNotEmpty())
+    stmts.push(storeNodeIfNotEmpty(ruleName))
 
     // return true
     stmts.push(t.returnStatement(t.identifier("true")))
@@ -607,7 +611,7 @@ export const generateStar = (node: g.Star): t.Statement[] => {
 //     b.push(CstNode(b2))
 //     return r
 // }
-export const generatePlus = (node: g.Plus): t.Statement[] => {
+export const generatePlus = (node: g.Plus, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const b2: Builder = []
@@ -658,7 +662,7 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
     // if (b2.length > 0) {
     //    b.push(CstNode(b2))
     // }
-    stmts.push(storeNodeIfNotEmpty())
+    stmts.push(storeNodeIfNotEmpty(ruleName))
 
     // return true
     stmts.push(t.returnStatement(t.identifier("r")))
@@ -749,7 +753,7 @@ const compileClass = (node: g.Class, builderName: t.Expression, ctxName?: t.Expr
 // const A = (ctx, b) => {
 //     return consumeClass(ctx, b, (c) => c >= 'a' && c <= 'z')
 // }
-export const generateClass = (node: g.Class): t.Statement[] => {
+export const generateClass = (node: g.Class, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
     const expr = compileClass(node, t.identifier("b"));
     stmts.push(t.returnStatement(expr))
@@ -770,7 +774,7 @@ export const generateClass = (node: g.Class): t.Statement[] => {
 //    }
 //    return r
 // }
-export const generateAlt = (node: g.Alt): t.Statement[] => {
+export const generateAlt = (node: g.Alt, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const b2: Builder = []
@@ -822,7 +826,7 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
     // if (b2.length > 0) {
     //     b.push(CstNode(b2))
     // }
-    stmts.push(storeNodeIfNotEmpty())
+    stmts.push(storeNodeIfNotEmpty(ruleName))
 
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
@@ -846,7 +850,7 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
 //     }
 //     return r
 // }
-export const generateSeq = (node: g.Seq): t.Statement[] => {
+export const generateSeq = (node: g.Seq, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const b2: Builder = []
@@ -889,7 +893,7 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
     // if (r && b2.length > 0 {
     //     b.push(CstNode(b2))
     // }
-    stmts.push(storeNodeIfMatched())
+    stmts.push(storeNodeIfMatched(ruleName))
 
     // if (!r) {
     //    ctx.p = p

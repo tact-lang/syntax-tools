@@ -87,6 +87,7 @@ export type CstLeaf = {
 export type CstNode = {
     readonly $: "node",
     readonly id: number,
+    readonly type: string,
     readonly children: readonly Cst[],
 }
 
@@ -96,9 +97,10 @@ export const CstLeaf = (text: string): CstLeaf => ({
     text,
 });
 
-export const CstNode = (children: readonly Cst[]): CstNode => ({
+export const CstNode = (children: readonly Cst[], type: string = "unknown"): CstNode => ({
     $: "node",
     id: nextId++,
+    type,
     children,
 });
 
@@ -120,7 +122,7 @@ const consumeClass = (ctx: Context, b: Builder, cond: (c: string) => boolean): b
     b2.push(CstLeaf(c))
     skip(ctx, b2)
     if (b2.length > 0) {
-        b.push(CstNode(b2))
+        b.push(CstNode(b2, ""))
     }
     return true
 }
@@ -132,7 +134,7 @@ const consumeString = (ctx: Context, b: Builder, token: string): boolean => {
     b2.push(CstLeaf(token))
     skip(ctx, b2)
     if (b2.length > 0) {
-        b.push(CstNode(b2))
+        b.push(CstNode(b2, ""))
     }
     return true
 }
