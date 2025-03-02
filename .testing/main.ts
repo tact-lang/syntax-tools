@@ -21,24 +21,41 @@ const ast = $.parse({
 // C = "world";
 // D = "Earth";
 
-Funcs = Func*;
-File = Funcs other;
+File = Func*;
 
 Symbol = [a-zA-Z];
 Ident_1 = Symbol+;
 Ident_2 = $Ident_1;
 Ident = #Ident_2;
-Func = "fun" Ident "(" Params ")" Result "{" "}";
+Func = "fun" Ident "(" Params ")" Result statements;
 Params = commaList<Param>?;
-Param = Ident ":" Ident;
-// Type = Ident;
+Param = Ident ":" Type;
+Type = Ident;
 Result = Result_1?;
-Result_1 = ":" Ident;
+Result_1 = ":" Type;
+
+statementsList = statement*;
+statements = "{" statementsList "}";
+
+statement
+    = StatementLet;
+
+StatementLet        = "let" name:Ident "=" Ident semicolon;
+
+nextBrace = &"}";
+semicolon = ";" / nextBrace;
 
 CommentSymbol = [^\\r\\n];
 CommentSymbol_1 = $CommentSymbol;
 CommentContent = CommentSymbol_1*;
 Comment = "//" CommentContent;
+
+multiLineCommentContent = !"*/";
+any = .;
+multiLineCommentContent_0 = multiLineCommentContent any;
+multiLineCommentContent_1 = $(multiLineCommentContent_0);
+multiLineCommentContent_2 = multiLineCommentContent_1*;
+multiLineComment = "/*" multiLineCommentContent_2 "*/";
 
 optionalComme = ","?;
 commaList<T> = inter<T, ","> optionalComme;
@@ -47,11 +64,7 @@ interInner<A, B> = op:B right:A;
 interTail<A, B> = interInner<A, B>*;
 inter<A, B> = head:A tail:interTail<A, B>;
 
-Any = .;
-Any_1 = Any*;
-other = $(Any_1);
-
-space = " " / "\\\\n" / Comment;
+space = " " / "\\\\n" / Comment / multiLineComment;
 
     `,
 });

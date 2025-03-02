@@ -89,6 +89,12 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
             return generateOptional(node)
         case "Any":
             return generateAny()
+        case "Call":
+            return generateCall(node)
+        case "LookNeg":
+            return generateLookNeg(node)
+        case "LookPos":
+            return generateLookPos(node)
         // TODO
         // - transform rules to flat list
         //   - flatten rules must be generic as well
@@ -96,13 +102,8 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         // - positions
         // - fix nesting
         // - rules
-        //   - Type = Ident;
-        //   - lookahead
-        //   - negate lookahead
         //   - char class
         //      - others
-        default:
-            throw new Error(`Unsupported expr: ${node.$}`)
     }
 }
 
@@ -169,7 +170,91 @@ const storeNodeIfMatched = () => t.ifStatement(
     ]),
 );
 
-// const A = (ctx: Context, b: Builder, rule: Rule): boolean => {
+// const A = (ctx: Context, b: Builder): boolean => {
+//     const p = ctx.p
+//     const r = B(ctx, b)
+//     ctx.p = p
+//     return r
+// }
+export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
+    const stmts: t.Statement[] = []
+
+    // const p = ctx.p
+    stmts.push(saveCurrentPosition())
+
+    // const r = B(ctx, b)
+    stmts.push(t.variableDeclaration(
+        'const',
+        [
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr))
+        ]
+    ))
+
+    // ctx.p = p
+    stmts.push(t.expressionStatement(t.assignmentExpression(
+        '=',
+        t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+        t.identifier("p")
+    )))
+
+    // return r
+    stmts.push(t.returnStatement(t.identifier("r")))
+    return stmts
+}
+
+// const A = (ctx: Context, b: Builder): boolean => {
+//     const p = ctx.p
+//     const r = B(ctx, b)
+//     ctx.p = p
+//     return !r
+// }
+export const generateLookNeg = (lookNeg: g.LookNeg): t.Statement[] => {
+    const stmts: t.Statement[] = []
+
+    // const p = ctx.p
+    stmts.push(saveCurrentPosition())
+
+    // const r = B(ctx, b)
+    stmts.push(t.variableDeclaration(
+        'const',
+        [
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr))
+        ]
+    ))
+
+    // ctx.p = p
+    stmts.push(t.expressionStatement(t.assignmentExpression(
+        '=',
+        t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+        t.identifier("p")
+    )))
+
+    // return !r
+    stmts.push(t.returnStatement(t.unaryExpression("!", t.identifier("r"))))
+    return stmts
+}
+
+// const A = (ctx: Context, b: Builder): boolean => {
+//     return B(ctx, b)
+// }
+export const generateCall = (call: g.Call): t.Statement[] => {
+    const stmts: t.Statement[] = []
+
+    // return B(ctx, b)
+    stmts.push(t.returnStatement(
+        t.callExpression(
+            t.identifier(call.name),
+            [
+                t.identifier("ctx"),
+                t.identifier("b")
+            ]
+        )
+    ))
+
+    return stmts
+}
+
+// const A = (ctx: Context, b: Builder): boolean => {
 //     if (ctx.p === ctx.l) {
 //         b.push(CstLeaf(""))
 //         return false
@@ -204,9 +289,9 @@ export const generateAny = (): t.Statement[] => {
         'const',
         [
             t.variableDeclarator(
-                t.identifier("c"), 
+                t.identifier("c"),
                 t.memberExpression(
-                    t.memberExpression(t.identifier("ctx"), t.identifier("s")), 
+                    t.memberExpression(t.identifier("ctx"), t.identifier("s")),
                     t.memberExpression(t.identifier("ctx"), t.identifier("p")),
                     true,
                 )

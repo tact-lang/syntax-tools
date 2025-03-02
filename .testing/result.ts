@@ -97,20 +97,11 @@ const lex = (ctx: Context, b: Builder, rule: Rule): boolean => {
 }
 
 
-export const Funcs: Rule = (ctx, b) => {
+export const File: Rule = (ctx, b) => {
   const b2: Builder = [];
   while (Func(ctx, b2)) {}
   b.push(CstNode(b2));
   return true;
-};
-export const File: Rule = (ctx, b) => {
-  const b2: Builder = [];
-  let r = Funcs(ctx, b2);
-  r = r && other(ctx, b2);
-  if (r && b2.length > 0) {
-    b.push(CstNode(b2));
-  }
-  return r;
 };
 export const Symbol: Rule = (ctx, b) => {
   const c = consumeClass(ctx, c => c >= "a" && c <= "z" || c >= "A" && c <= "Z");
@@ -152,8 +143,7 @@ export const Func: Rule = (ctx, b) => {
   r = r && Params(ctx, b2);
   r = r && consumeString(ctx, b2, ")");
   r = r && Result(ctx, b2);
-  r = r && consumeString(ctx, b2, "{");
-  r = r && consumeString(ctx, b2, "}");
+  r = r && statements(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
@@ -173,11 +163,14 @@ export const Param: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = Ident(ctx, b2);
   r = r && consumeString(ctx, b2, ":");
-  r = r && Ident(ctx, b2);
+  r = r && Type(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;
+};
+export const Type: Rule = (ctx, b) => {
+  return Ident(ctx, b);
 };
 export const Result: Rule = (ctx, b) => {
   const b2: Builder = [];
@@ -192,10 +185,55 @@ export const Result: Rule = (ctx, b) => {
 export const Result_1: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = consumeString(ctx, b2, ":");
-  r = r && Ident(ctx, b2);
+  r = r && Type(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
+  return r;
+};
+export const statementsList: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  while (statement(ctx, b2)) {}
+  b.push(CstNode(b2));
+  return true;
+};
+export const statements: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  let r = consumeString(ctx, b2, "{");
+  r = r && statementsList(ctx, b2);
+  r = r && consumeString(ctx, b2, "}");
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
+};
+export const statement: Rule = (ctx, b) => {
+  return StatementLet(ctx, b);
+};
+export const StatementLet: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  let r = consumeString(ctx, b2, "let");
+  r = r && Ident(ctx, b2);
+  r = r && consumeString(ctx, b2, "=");
+  r = r && Ident(ctx, b2);
+  r = r && semicolon(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
+};
+export const nextBrace: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = consumeString(ctx, b, "}");
+  ctx.p = p;
+  return r;
+};
+export const semicolon: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = consumeString(ctx, b, ";");
+  r = r || (ctx.p = p, nextBrace(ctx, b2));
+  b.push(CstNode(b2));
   return r;
 };
 export const CommentSymbol: Rule = (ctx, b) => {
@@ -223,6 +261,54 @@ export const Comment: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = consumeString(ctx, b2, "//");
   r = r && CommentContent(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
+};
+export const multiLineCommentContent: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = consumeString(ctx, b, "*/");
+  ctx.p = p;
+  return !r;
+};
+export const any: Rule = (ctx, b) => {
+  if (ctx.p === ctx.l) {
+    b.push(CstLeaf(""));
+    return false;
+  }
+  const c = ctx.s[ctx.p];
+  b.push(CstLeaf(c));
+  ctx.p++;
+  return true;
+};
+export const multiLineCommentContent_0: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  let r = multiLineCommentContent(ctx, b2);
+  r = r && any(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
+};
+export const multiLineCommentContent_1: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = multiLineCommentContent_0(ctx, []);
+  const text = ctx.s.substring(p, ctx.p);
+  b.push(CstLeaf(text));
+  return r;
+};
+export const multiLineCommentContent_2: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  while (multiLineCommentContent_1(ctx, b2)) {}
+  b.push(CstNode(b2));
+  return true;
+};
+export const multiLineComment: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  let r = consumeString(ctx, b2, "/*");
+  r = r && multiLineCommentContent_2(ctx, b2);
+  r = r && consumeString(ctx, b2, "*/");
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
@@ -279,35 +365,13 @@ export const inter: (A: Rule, B: Rule) => Rule = (A, B) => {
     return r;
   };
 };
-export const Any: Rule = (ctx, b) => {
-  if (ctx.p === ctx.l) {
-    b.push(CstLeaf(""));
-    return false;
-  }
-  const c = ctx.s[ctx.p];
-  b.push(CstLeaf(c));
-  ctx.p++;
-  return true;
-};
-export const Any_1: Rule = (ctx, b) => {
-  const b2: Builder = [];
-  while (Any(ctx, b2)) {}
-  b.push(CstNode(b2));
-  return true;
-};
-export const other: Rule = (ctx, b) => {
-  const p = ctx.p;
-  const r = Any_1(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
-  return r;
-};
 export const space: Rule = (ctx, b) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b, " ");
   r = r || (ctx.p = p, consumeString(ctx, b, "\n"));
   r = r || (ctx.p = p, Comment(ctx, b2));
+  r = r || (ctx.p = p, multiLineComment(ctx, b2));
   b.push(CstNode(b2));
   return r;
 };

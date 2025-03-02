@@ -1,14 +1,20 @@
-import { createContext, Context, Rule, Builder, Func, CstNode, space, skip, File } from "./result";
+import { createContext, Builder, space, skip, File } from "./result";
 import { inspect } from "util";
 const log = (obj: unknown) => console.log(inspect(obj, { colors: true, depth: Infinity }));
 
 const ctx = createContext(`
 // hello world
 // some other comment
-fun bar(a: Int, other: String): string {}
+fun bar(a: Int, other: String /* comment */): string {
+    let some = other
+}
 
+/* 
 
-aaaaaasafsfwe
+some comment
+
+*/
+
 `, space);
 
 const b: Builder = []
