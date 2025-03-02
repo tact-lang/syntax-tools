@@ -96,8 +96,6 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         case "LookPos":
             return generateLookPos(node)
         // TODO
-        // - transform rules to flat list
-        //   - flatten rules must be generic as well
         // - check escapes
         // - positions
         // - fix nesting
@@ -822,6 +820,11 @@ export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName
             }
             return t.callExpression(t.identifier(expr.name), args)
         }
+        case "Any":
+            return t.callExpression(t.identifier("consumeAny"), [
+                t.identifier("ctx"),
+                t.identifier("b"),
+            ])
         default:
             throw new Error(`Unsupported expr2: ${expr.$}`)
     }

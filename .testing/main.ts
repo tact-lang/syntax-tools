@@ -42,27 +42,16 @@ statement
 
 StatementLet        = "let" name:Ident "=" Ident semicolon;
 
-nextBrace = &"}";
-semicolon = ";" / nextBrace;
+// nextBrace = &"}";
+semicolon = ";" / &"}";
 
-CommentSymbol = [^\\r\\n];
-CommentSymbol_1 = $CommentSymbol;
-CommentContent = CommentSymbol_1*;
-Comment = "//" CommentContent;
+Comment = "//" $([^\\r\\n])*;
 
-multiLineCommentContent = !"*/";
-any = .;
-multiLineCommentContent_0 = multiLineCommentContent any;
-multiLineCommentContent_1 = $(multiLineCommentContent_0);
-multiLineCommentContent_2 = multiLineCommentContent_1*;
-multiLineComment = "/*" multiLineCommentContent_2 "*/";
+multiLineComment = "/*" $(!"*/" .)* "*/";
 
-optionalComme = ","?;
-commaList<T> = inter<T, ","> optionalComme;
+commaList<T> = inter<T, ","> ","?;
 
-interInner<A, B> = op:B right:A;
-interTail<A, B> = interInner<A, B>*;
-inter<A, B> = head:A tail:interTail<A, B>;
+inter<A, B> = head:A tail:(op:B right:A)*;
 
 space = " " / "\\\\n" / Comment / multiLineComment;
 
@@ -77,7 +66,7 @@ const transformed = desugar(ast.value);
 log(transformed)
 
 const ast2 = g.generate(transformed)
-log(ast2)
+// log(ast2)
 
 const generated = generate(ast2, { minified: false }).code;
 
@@ -148,6 +137,18 @@ const consumeString = (ctx: Context, b: Builder, token: string): boolean => {
     b.push(CstNode(b2))
     return true
 }
+
+export const consumeAny = (ctx: Context, b: Builder) => {
+    if (ctx.p === ctx.l) {
+        b.push(CstLeaf(""));
+        return false;
+    }
+
+    const c = ctx.s[ctx.p];
+    b.push(CstLeaf(c));
+    ctx.p++;
+    return true;
+};
 
 export const skip = (ctx: Context, b: Builder) => {
     const prevPos = ctx.p

@@ -66,6 +66,18 @@ const consumeString = (ctx: Context, b: Builder, token: string): boolean => {
     return true
 }
 
+export const consumeAny = (ctx: Context, b: Builder) => {
+    if (ctx.p === ctx.l) {
+        b.push(CstLeaf(""));
+        return false;
+    }
+
+    const c = ctx.s[ctx.p];
+    b.push(CstLeaf(c));
+    ctx.p++;
+    return true;
+};
+
 export const skip = (ctx: Context, b: Builder) => {
     const prevPos = ctx.p
     const newCtx = {
@@ -222,103 +234,28 @@ export const StatementLet: Rule = (ctx, b) => {
   }
   return r;
 };
-export const nextBrace: Rule = (ctx, b) => {
-  const p = ctx.p;
-  const r = consumeString(ctx, b, "}");
-  ctx.p = p;
-  return r;
-};
 export const semicolon: Rule = (ctx, b) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b, ";");
-  r = r || (ctx.p = p, nextBrace(ctx, b2));
+  r = r || (ctx.p = p, semicolon_pos_0(ctx, b2));
   b.push(CstNode(b2));
   return r;
-};
-export const CommentSymbol: Rule = (ctx, b) => {
-  const c = consumeClass(ctx, c => !(c === "\r" || c === "\n"));
-  if (c !== undefined) {
-    b.push(CstLeaf(c));
-    return true;
-  }
-  return false;
-};
-export const CommentSymbol_1: Rule = (ctx, b) => {
-  const p = ctx.p;
-  const r = CommentSymbol(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
-  return r;
-};
-export const CommentContent: Rule = (ctx, b) => {
-  const b2: Builder = [];
-  while (CommentSymbol_1(ctx, b2)) {}
-  b.push(CstNode(b2));
-  return true;
 };
 export const Comment: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = consumeString(ctx, b2, "//");
-  r = r && CommentContent(ctx, b2);
+  r = r && Comment_stringify_3(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;
-};
-export const multiLineCommentContent: Rule = (ctx, b) => {
-  const p = ctx.p;
-  const r = consumeString(ctx, b, "*/");
-  ctx.p = p;
-  return !r;
-};
-export const any: Rule = (ctx, b) => {
-  if (ctx.p === ctx.l) {
-    b.push(CstLeaf(""));
-    return false;
-  }
-  const c = ctx.s[ctx.p];
-  b.push(CstLeaf(c));
-  ctx.p++;
-  return true;
-};
-export const multiLineCommentContent_0: Rule = (ctx, b) => {
-  const b2: Builder = [];
-  let r = multiLineCommentContent(ctx, b2);
-  r = r && any(ctx, b2);
-  if (r && b2.length > 0) {
-    b.push(CstNode(b2));
-  }
-  return r;
-};
-export const multiLineCommentContent_1: Rule = (ctx, b) => {
-  const p = ctx.p;
-  const r = multiLineCommentContent_0(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
-  return r;
-};
-export const multiLineCommentContent_2: Rule = (ctx, b) => {
-  const b2: Builder = [];
-  while (multiLineCommentContent_1(ctx, b2)) {}
-  b.push(CstNode(b2));
-  return true;
 };
 export const multiLineComment: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = consumeString(ctx, b2, "/*");
-  r = r && multiLineCommentContent_2(ctx, b2);
+  r = r && multiLineComment_stringify_7(ctx, b2);
   r = r && consumeString(ctx, b2, "*/");
-  if (r && b2.length > 0) {
-    b.push(CstNode(b2));
-  }
-  return r;
-};
-export const optionalComme: Rule = (ctx, b) => {
-  const b2: Builder = [];
-  const p = ctx.p;
-  let r = consumeString(ctx, b2, ",");
-  r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
@@ -328,37 +265,18 @@ export const commaList: (T: Rule) => Rule = T => {
   return (ctx, b) => {
     const b2: Builder = [];
     let r = inter(T, (ctx, b) => consumeString(ctx, b, ","))(ctx, b2);
-    r = r && optionalComme(ctx, b2);
+    r = r && commaList_opt_8(T)(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2));
     }
     return r;
-  };
-};
-export const interInner: (A: Rule, B: Rule) => Rule = (A, B) => {
-  return (ctx, b) => {
-    const b2: Builder = [];
-    let r = B(ctx, b2);
-    r = r && A(ctx, b2);
-    if (r && b2.length > 0) {
-      b.push(CstNode(b2));
-    }
-    return r;
-  };
-};
-export const interTail: (A: Rule, B: Rule) => Rule = (A, B) => {
-  return (ctx, b) => {
-    const b2: Builder = [];
-    while (interInner(A, B)(ctx, b2)) {}
-    b.push(CstNode(b2));
-    return true;
   };
 };
 export const inter: (A: Rule, B: Rule) => Rule = (A, B) => {
   return (ctx, b) => {
     const b2: Builder = [];
     let r = A(ctx, b2);
-    r = r && interTail(A, B)(ctx, b2);
+    r = r && inter_star_10(A, B)(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2));
     }
@@ -374,4 +292,90 @@ export const space: Rule = (ctx, b) => {
   r = r || (ctx.p = p, multiLineComment(ctx, b2));
   b.push(CstNode(b2));
   return r;
+};
+export const semicolon_pos_0: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = consumeString(ctx, b, "}");
+  ctx.p = p;
+  return r;
+};
+export const Comment_class_1: Rule = (ctx, b) => {
+  const c = consumeClass(ctx, c => !(c === "\r" || c === "\n"));
+  if (c !== undefined) {
+    b.push(CstLeaf(c));
+    return true;
+  }
+  return false;
+};
+export const Comment_star_2: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  while (Comment_class_1(ctx, b2)) {}
+  b.push(CstNode(b2));
+  return true;
+};
+export const Comment_stringify_3: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = Comment_star_2(ctx, []);
+  const text = ctx.s.substring(p, ctx.p);
+  b.push(CstLeaf(text));
+  return r;
+};
+export const multiLineComment_neg_4: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = consumeString(ctx, b, "*/");
+  ctx.p = p;
+  return !r;
+};
+export const multiLineComment_seq_5: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  let r = multiLineComment_neg_4(ctx, b2);
+  r = r && consumeAny(ctx, b);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
+};
+export const multiLineComment_star_6: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  while (multiLineComment_seq_5(ctx, b2)) {}
+  b.push(CstNode(b2));
+  return true;
+};
+export const multiLineComment_stringify_7: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = multiLineComment_star_6(ctx, []);
+  const text = ctx.s.substring(p, ctx.p);
+  b.push(CstLeaf(text));
+  return r;
+};
+export const commaList_opt_8: (T: Rule) => Rule = T => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    const p = ctx.p;
+    let r = consumeString(ctx, b2, ",");
+    r = r || (ctx.p = p, true);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2));
+    }
+    return r;
+  };
+};
+export const inter_seq_9: (A: Rule, B: Rule) => Rule = (A, B) => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    let r = B(ctx, b2);
+    r = r && A(ctx, b2);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2));
+    }
+    return r;
+  };
+};
+export const inter_star_10: (A: Rule, B: Rule) => Rule = (A, B) => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    while (inter_seq_9(A, B)(ctx, b2)) {}
+    b.push(CstNode(b2));
+    return true;
+  };
 };
