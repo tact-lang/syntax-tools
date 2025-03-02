@@ -10,49 +10,39 @@ const log = (obj: unknown) => console.log(inspect(obj, { colors: true, depth: In
 const ast = $.parse({
     grammar: G.Grammar,
     space: G.space,
-    text: `
-
-// A = "hello" Ident B;
-// Symbol = [a-z];
-// Ident_1 = Symbol+;
-// Ident_2 = $Ident_1;
-// Ident = #Ident_2;
-// B = C / D;
-// C = "world";
-// D = "Earth";
-
-File = Func*;
-
-Symbol = [a-zA-Z];
-Ident = #$(Symbol+);
-Func = "fun" Ident "(" Params ")" Result statements;
-Params = commaList<Param>?;
-Param = Ident ":" Type;
-Type = Ident;
-Result = Result_1?;
-Result_1 = ":" Type;
-
-statementsList = statement*;
-statements = "{" statementsList "}";
-
-statement
-    = StatementLet;
-
-StatementLet        = "let" name:Ident "=" Ident semicolon;
-
-semicolon = ";" / &"}";
-
-Comment = "//" $([^\\r\\n])*;
-
-multiLineComment = "/*" $(!"*/" .)* "*/";
-
-commaList<T> = inter<T, ","> ","?;
-
-inter<A, B> = head:A tail:(op:B right:A)*;
-
-space = " " / "\\\\n" / Comment / multiLineComment;
-
-    `,
+    text: fs.readFileSync("grammar.gg", "utf8"),
+//
+//         `
+// File = Func*;
+//
+// Ident = #$([a-zA-Z]+);
+// Func = "fun" Ident "(" Params ")" Result statements;
+// Params = commaList<Param>?;
+// Param = Ident ":" Type;
+// Type = Ident;
+// Result = (":" Type)?;
+//
+// statementsList = statement*;
+// statements = "{" statementsList "}";
+//
+// statement
+//     = StatementLet;
+//
+// StatementLet        = "let" name:Ident "=" Ident semicolon;
+//
+// semicolon = ";" / &"}";
+//
+// Comment = "//" $([^\\r\\n])*;
+//
+// multiLineComment = "/*" $(!"*/" .)* "*/";
+//
+// commaList<T> = inter<T, ","> ","?;
+//
+// inter<A, B> = head:A tail:(op:B right:A)*;
+//
+// space = " " / "\\\\n" / Comment / multiLineComment;
+//
+//     `,
 });
 if (ast.$ === 'error') {
     console.error(ast.error);

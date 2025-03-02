@@ -168,6 +168,20 @@ const storeNodeIfMatched = () => t.ifStatement(
     ]),
 );
 
+// if (b2.length > 0) {
+//    b.push(CstNode(b2))
+// }
+const storeNodeIfNotEmpty = () => t.ifStatement(
+    t.binaryExpression(
+        '>',
+        t.memberExpression(t.identifier("b2"), t.identifier("length")),
+        t.numericLiteral(0)
+    ),
+    t.blockStatement([
+        storeNodeFromBuilder("b2")
+    ]),
+);
+
 // const A = (ctx: Context, b: Builder): boolean => {
 //     const p = ctx.p
 //     const r = B(ctx, b)
@@ -184,7 +198,7 @@ export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr))
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, t.identifier("b")))
         ]
     ))
 
@@ -216,7 +230,7 @@ export const generateLookNeg = (lookNeg: g.LookNeg): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr))
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, t.identifier("b")))
         ]
     ))
 
@@ -232,16 +246,54 @@ export const generateLookNeg = (lookNeg: g.LookNeg): t.Statement[] => {
     return stmts
 }
 
+export const compileCall = (call: g.Call): t.Expression => {
+    if (call.params.length > 0) {
+        // commaList(Foo)(args)
+        const params = call.params.map(param => {
+            if (param.$ === "Call") {
+                return compileCall(param)
+            }
+            if (param.$ === "Terminal") {
+                // (ctx, b) => consumeToken(ctx, b, <param>)
+                return t.arrowFunctionExpression(
+                    [
+                        t.identifier("ctx"),
+                        t.identifier("b"),
+                    ],
+                    compileTerminal(param)
+                )
+            }
+            if (param.$ === "Class") {
+                // (ctx, b) => consumeClass(ctx, b, <param>)
+                return t.arrowFunctionExpression(
+                    [
+                        t.identifier("ctx"),
+                        t.identifier("b"),
+                    ],
+                    compileClass(param)
+                )
+            }
+            throw new Error(`Unsupported param ${param.$}`)
+        })
+
+        return emitCall(call.name, params)
+    }
+
+    return t.identifier(call.name)
+}
+
 // const A = (ctx: Context, b: Builder): boolean => {
 //     return B(ctx, b)
 // }
 export const generateCall = (call: g.Call): t.Statement[] => {
     const stmts: t.Statement[] = []
 
+    const expr = compileCall(call)
+
     // return B(ctx, b)
     stmts.push(t.returnStatement(
         t.callExpression(
-            t.identifier(call.name),
+            expr,
             [
                 t.identifier("ctx"),
                 t.identifier("b")
@@ -494,12 +546,14 @@ export const generateStar = (node: g.Star): t.Statement[] => {
 
     // while (B(ctx, b2))
     stmts.push(t.whileStatement(
-        generateClause(node.expr),
+        generateClause(node.expr, t.identifier("b2")),
         t.blockStatement([])
     ))
 
-    // b.push(CstNode(b2))
-    stmts.push(storeNodeFromBuilder("b2"))
+    // if (b2.length > 0) {
+    //    b.push(CstNode(b2))
+    // }
+    stmts.push(storeNodeIfNotEmpty())
 
     // return true
     stmts.push(t.returnStatement(t.identifier("true")))
@@ -524,11 +578,11 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(node.expr))
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b2")))
         ]
     ))
 
-    const clause = generateClause(node.expr)
+    const clause = generateClause(node.expr, t.identifier("b2"))
 
     // while (r && B(ctx, b2))
     stmts.push(t.whileStatement(
@@ -540,26 +594,17 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
         t.blockStatement([])
     ))
 
-    // b.push(CstNode(b2))
-    stmts.push(storeNodeFromBuilder("b2"))
+    // if (b2.length > 0) {
+    //    b.push(CstNode(b2))
+    // }
+    stmts.push(storeNodeIfNotEmpty())
 
     // return true
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
 }
 
-// A = [a-z]
-// const A = (ctx, b) => {
-//     let c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
-//     if (c) {
-//         return true
-//     }
-//     ctx.p++;
-//     return false
-// }
-export const generateClass = (node: g.Class): t.Statement[] => {
-    const stmts: t.Statement[] = []
-
+const compileClass = (node: g.Class) => {
     const expr = node.seqs.reduce((prev: undefined | t.Expression, seq): t.Expression => {
         let thisExpr: t.Expression
 
@@ -586,7 +631,6 @@ export const generateClass = (node: g.Class): t.Statement[] => {
                 break
             }
             case "Named":
-                console.log(seq)
                 // \r, \n, \t
                 // c === "\r" || c === "\n" ...
 
@@ -598,6 +642,13 @@ export const generateClass = (node: g.Class): t.Statement[] => {
                             ? "\t" : seq.value === "r"
                                 ? "\r" : seq.value === "b"
                                     ? "\b" : ""),
+                )
+                break
+            case "SpecialClass":
+                thisExpr = t.binaryExpression(
+                    "===",
+                    t.identifier("c"),
+                    t.stringLiteral(compileEscape(seq)),
                 )
                 break
             default:
@@ -619,22 +670,37 @@ export const generateClass = (node: g.Class): t.Statement[] => {
         throw new Error(`Something went wrong"`)
     }
 
-    const finalExpr = node.negated ? t.unaryExpression("!", expr) : expr
+    const finalExpr = node.negated ? t.unaryExpression("!", expr) : expr;
+    return t.callExpression(
+        t.identifier("consumeClass"),
+        [
+            t.identifier("ctx"),
+            t.arrowFunctionExpression(
+                [t.identifier("c")],
+                finalExpr,
+            )
+        ]
+    )
+}
+
+// A = [a-z]
+// const A = (ctx, b) => {
+//     let c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
+//     if (c) {
+//         return true
+//     }
+//     ctx.p++;
+//     return false
+// }
+export const generateClass = (node: g.Class): t.Statement[] => {
+    const stmts: t.Statement[] = []
+    const expr = compileClass(node);
 
     // const c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("c"), t.callExpression(
-                t.identifier("consumeClass"),
-                [
-                    t.identifier("ctx"),
-                    t.arrowFunctionExpression(
-                        [t.identifier("c")],
-                        finalExpr,
-                    )
-                ]
-            ))
+            t.variableDeclarator(t.identifier("c"), expr)
         ]
     ))
 
@@ -696,7 +762,7 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
         [
             t.variableDeclarator(
                 t.identifier("r"),
-                generateClause(head)
+                generateClause(head, t.identifier("b2"))
             )
         ]
     ))
@@ -716,7 +782,7 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
                             t.memberExpression(t.identifier("ctx"), t.identifier("p")),
                             t.identifier("p")
                         ),
-                        generateClause(clause)
+                        generateClause(clause, t.identifier("b2"))
                     ]
                 )
             )
@@ -788,7 +854,7 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
     return stmts
 }
 
-export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName?: t.Expression): t.Expression => {
+export const generateClause = (expr: g.Expr, builderName: t.Expression, ctxName?: t.Expression): t.Expression => {
     switch (expr.$) {
         case 'Terminal':
             return compileTerminal(expr, builderName)
@@ -797,28 +863,7 @@ export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName
                 ctxName ?? t.identifier("ctx"),
                 builderName ?? t.identifier("b2"),
             ]
-            if (expr.params.length !== 0) {
-                // commaList(Foo)(args)
-                const params = expr.params.map(param => {
-                    if (param.$ === "Call") {
-                        return t.identifier(param.name)
-                    }
-                    if (param.$ === "Terminal") {
-                        // (ctx, b) => consumeToken(ctx, b, <param>)
-                        return t.arrowFunctionExpression(
-                            [
-                                t.identifier("ctx"),
-                                t.identifier("b"),
-                            ],
-                            compileTerminal(param)
-                        )
-                    }
-                    throw new Error("unsupported param")
-                })
-
-                return t.callExpression(emitCall(expr.name, params), args)
-            }
-            return t.callExpression(t.identifier(expr.name), args)
+            return t.callExpression(compileCall(expr), args)
         }
         case "Any":
             return t.callExpression(t.identifier("consumeAny"), [
@@ -832,7 +877,15 @@ export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName
 
 const compileTerminal = (node: g.Terminal, builderName?: t.Expression): t.Expression => {
     const body = node.value.map(char => compileChar(char)).join('');
-    const value = JSON.parse(`"${body}"`);
+
+    let value = `"${body}"`
+    try {
+        value = JSON.parse(`"${body}"`)
+    } catch (e) {
+        value = body
+    }
+
+    // const value = JSON.parse(`"${body}"`);
     const wrapped = t.stringLiteral(value);
     return emitCall('consumeString', [t.identifier("ctx"), builderName ?? t.identifier("b"), wrapped]);
 };

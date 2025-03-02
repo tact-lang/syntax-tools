@@ -1,4 +1,5 @@
 import { $ast as g } from '../grammar';
+import {Loc} from "@tonstudio/parser-runtime";
 
 export type Expr =
     | Alt
@@ -239,8 +240,13 @@ export const desugar = ({rules}: g.Grammar): Grammar => {
 };
 
 const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], ctx: Context, needExtract: boolean): Expr => {
-    if (expr.$ === 'Terminal' || expr.$ === 'Any' || expr.$ === 'Call') {
+    if (expr.$ === 'Terminal' || expr.$ === 'Any') {
         return expr;
+    }
+
+    if (expr.$ === 'Call') {
+        const processed = expr.params.map(e => processExpr(e, ruleName, formals, ctx, true))
+        return Call(expr.name, processed)
     }
 
     if (expr.$ === 'Class') {
