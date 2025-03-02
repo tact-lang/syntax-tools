@@ -184,7 +184,7 @@ const storeNodeIfNotEmpty = () => t.ifStatement(
 
 // const A = (ctx: Context, b: Builder): boolean => {
 //     const p = ctx.p
-//     const r = B(ctx, b)
+//     const r = B(ctx, [])
 //     ctx.p = p
 //     return r
 // }
@@ -198,7 +198,7 @@ export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, t.identifier("b")))
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, t.arrayExpression([])))
         ]
     ))
 
@@ -260,7 +260,7 @@ export const compileCall = (call: g.Call): t.Expression => {
                         t.identifier("ctx"),
                         t.identifier("b"),
                     ],
-                    compileTerminal(param)
+                    compileTerminal(param, t.identifier("b"))
                 )
             }
             if (param.$ === "Class") {
@@ -270,7 +270,16 @@ export const compileCall = (call: g.Call): t.Expression => {
                         t.identifier("ctx"),
                         t.identifier("b"),
                     ],
-                    compileClass(param)
+                    compileClass(param, t.identifier("b"))
+                )
+            }
+            if (param.$ === "Any") {
+                return t.arrowFunctionExpression(
+                    [
+                        t.identifier("ctx"),
+                        t.identifier("b"),
+                    ],
+                    compileAny(t.identifier("b"))
                 )
             }
             throw new Error(`Unsupported param ${param.$}`)
@@ -532,11 +541,14 @@ export const generateStringify = (node: g.Stringify): t.Statement[] => {
 }
 
 // A = B*
+// A = (B A) | ""
 // const A = (ctx, b) => {
 //     const b2: Builder = []
-//     while (B(ctx, b2));
+//     let p = ctx.p;
+//     while (p = ctx.p, B(ctx, b2))
+//     ctx.p = p;
 //     b.push(CstNode(b2))
-//     return true
+//     return r
 // }
 export const generateStar = (node: g.Star): t.Statement[] => {
     const stmts: t.Statement[] = []
@@ -544,11 +556,34 @@ export const generateStar = (node: g.Star): t.Statement[] => {
     // const b2: Builder = []
     stmts.push(createEmptyBuilder("b2"))
 
+    stmts.push(t.variableDeclaration(
+        'let',
+        [
+            t.variableDeclarator(t.identifier("p"), t.memberExpression(t.identifier("ctx"), t.identifier("p")))
+        ]
+    ))
+
     // while (B(ctx, b2))
     stmts.push(t.whileStatement(
-        generateClause(node.expr, t.identifier("b2")),
+        t.sequenceExpression(
+            [
+                t.assignmentExpression(
+                    "=",
+                    t.identifier("p"),
+                    t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+                ),
+                generateClause(node.expr, t.identifier("b2")),
+            ]
+        ),
         t.blockStatement([])
     ))
+
+    // ctx.p = p
+    stmts.push(t.expressionStatement(t.assignmentExpression(
+        "=",
+        t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+        t.identifier("p"),
+    )))
 
     // if (b2.length > 0) {
     //    b.push(CstNode(b2))
@@ -564,7 +599,11 @@ export const generateStar = (node: g.Star): t.Statement[] => {
 // const A = (ctx, b) => {
 //     const b2: Builder = []
 //     const r = B(ctx, b2);
-//     while (r && B(ctx, b2));
+//     if (r) {
+//        let p = ctx.p;
+//        while (p = ctx.p, B(ctx, b2))
+//        ctx.p = p;
+//     }
 //     b.push(CstNode(b2))
 //     return r
 // }
@@ -584,15 +623,37 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
 
     const clause = generateClause(node.expr, t.identifier("b2"))
 
-    // while (r && B(ctx, b2))
-    stmts.push(t.whileStatement(
-        t.logicalExpression(
-            '&&',
+    stmts.push(
+        t.ifStatement(
             t.identifier("r"),
-            clause
-        ),
-        t.blockStatement([])
-    ))
+            t.blockStatement([
+                t.variableDeclaration(
+                    'let',
+                    [
+                        t.variableDeclarator(t.identifier("p"), t.memberExpression(t.identifier("ctx"), t.identifier("p")))
+                    ]
+                ),
+                t.whileStatement(
+                    t.sequenceExpression(
+                        [
+                            t.assignmentExpression(
+                                "=",
+                                t.identifier("p"),
+                                t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+                            ),
+                            clause,
+                        ]
+                    ),
+                    t.blockStatement([])
+                ),
+                t.expressionStatement(t.assignmentExpression(
+                    "=",
+                    t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+                    t.identifier("p"),
+                ))
+            ])
+        )
+    )
 
     // if (b2.length > 0) {
     //    b.push(CstNode(b2))
@@ -604,7 +665,7 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
     return stmts
 }
 
-const compileClass = (node: g.Class) => {
+const compileClass = (node: g.Class, builderName: t.Expression, ctxName?: t.Expression) => {
     const expr = node.seqs.reduce((prev: undefined | t.Expression, seq): t.Expression => {
         let thisExpr: t.Expression
 
@@ -674,7 +735,8 @@ const compileClass = (node: g.Class) => {
     return t.callExpression(
         t.identifier("consumeClass"),
         [
-            t.identifier("ctx"),
+            ctxName ?? t.identifier("ctx"),
+            builderName,
             t.arrowFunctionExpression(
                 [t.identifier("c")],
                 finalExpr,
@@ -685,46 +747,12 @@ const compileClass = (node: g.Class) => {
 
 // A = [a-z]
 // const A = (ctx, b) => {
-//     let c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
-//     if (c) {
-//         return true
-//     }
-//     ctx.p++;
-//     return false
+//     return consumeClass(ctx, b, (c) => c >= 'a' && c <= 'z')
 // }
 export const generateClass = (node: g.Class): t.Statement[] => {
     const stmts: t.Statement[] = []
-    const expr = compileClass(node);
-
-    // const c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
-    stmts.push(t.variableDeclaration(
-        'const',
-        [
-            t.variableDeclarator(t.identifier("c"), expr)
-        ]
-    ))
-
-    // if (c !== undefined) {
-    //     b.push(CstLeaf(c))
-    //     return true
-    // }
-    // return false
-    stmts.push(t.ifStatement(
-        t.binaryExpression(
-            '!==',
-            t.identifier("c"),
-            t.identifier("undefined")
-        ),
-        t.blockStatement([
-            // b.push(CstLeaf(c))
-            storeLeaf(t.identifier("c")),
-            // return true
-            t.returnStatement(t.identifier("true"))
-        ]),
-    ))
-
-    stmts.push(t.returnStatement(t.identifier("false")))
-
+    const expr = compileClass(node, t.identifier("b"));
+    stmts.push(t.returnStatement(expr))
     return stmts
 }
 
@@ -737,7 +765,9 @@ export const generateClass = (node: g.Class): t.Statement[] => {
 //    let r = A(ctx, b2)
 //    r = r || (ctx.p = p, B(ctx, b2))
 // 
-//    b.push(CstNode(b2))
+//    if (b2.length > 0) {
+//        b.push(CstNode(b2))
+//    }
 //    return r
 // }
 export const generateAlt = (node: g.Alt): t.Statement[] => {
@@ -789,8 +819,10 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
         )))
     }
 
-    // b.push(CstNode(b2))
-    stmts.push(storeNodeFromBuilder("b2"))
+    // if (b2.length > 0) {
+    //     b.push(CstNode(b2))
+    // }
+    stmts.push(storeNodeIfNotEmpty())
 
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
@@ -799,12 +831,18 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
 // Seq = A B
 // const Seq = (ctx: Context, b: Builder): boolean => {
 //     const b2: Builder = []
-// 
+//
+//     const p = ctx.p
+//
 //     let r = A(ctx, b2)
 //     r = r && B(ctx, b2)
 //
 //     if (r && b2.length > 0 {
 //         b.push(CstNode(b2))
+//     }
+//
+//     if (!r) {
+//        ctx.p = p
 //     }
 //     return r
 // }
@@ -813,6 +851,9 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
 
     // const b2: Builder = []
     stmts.push(createEmptyBuilder("b2"))
+
+    // const p = ctx.p
+    stmts.push(saveCurrentPosition())
 
     const [head, ...tail] = node.clauses
     if (!head) {
@@ -850,44 +891,63 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
     // }
     stmts.push(storeNodeIfMatched())
 
+    // if (!r) {
+    //    ctx.p = p
+    // }
+    stmts.push(t.ifStatement(
+        t.unaryExpression("!", t.identifier("r")),
+        t.blockStatement([
+            t.expressionStatement(t.assignmentExpression(
+                '=',
+                t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+                t.identifier("p")
+            ))
+        ]),
+    ))
+
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
 }
 
+function compileAny(builderName: t.Expression, ctxName?: t.Expression) {
+    return t.callExpression(t.identifier("consumeAny"), [
+        ctxName ?? t.identifier("ctx"),
+        builderName,
+    ]);
+}
+
 export const generateClause = (expr: g.Expr, builderName: t.Expression, ctxName?: t.Expression): t.Expression => {
     switch (expr.$) {
-        case 'Terminal':
-            return compileTerminal(expr, builderName)
         case 'Call': {
             const args: t.Expression[] = [
                 ctxName ?? t.identifier("ctx"),
-                builderName ?? t.identifier("b2"),
+                builderName,
             ]
             return t.callExpression(compileCall(expr), args)
         }
+        case 'Terminal':
+            return compileTerminal(expr, builderName)
+        case "Class":
+            return compileClass(expr, builderName, ctxName)
         case "Any":
-            return t.callExpression(t.identifier("consumeAny"), [
-                t.identifier("ctx"),
-                t.identifier("b"),
-            ])
+            return compileAny(builderName, ctxName)
         default:
             throw new Error(`Unsupported expr2: ${expr.$}`)
     }
 }
 
-const compileTerminal = (node: g.Terminal, builderName?: t.Expression): t.Expression => {
+const compileTerminal = (node: g.Terminal, builderName: t.Expression): t.Expression => {
     const body = node.value.map(char => compileChar(char)).join('');
 
-    let value = `"${body}"`
+    let value;
     try {
         value = JSON.parse(`"${body}"`)
     } catch (e) {
         value = body
     }
 
-    // const value = JSON.parse(`"${body}"`);
     const wrapped = t.stringLiteral(value);
-    return emitCall('consumeString', [t.identifier("ctx"), builderName ?? t.identifier("b"), wrapped]);
+    return emitCall('consumeString', [t.identifier("ctx"), builderName, wrapped]);
 };
 
 const compileChar = (node: g.Escape | g.Special | g.Char): string => {

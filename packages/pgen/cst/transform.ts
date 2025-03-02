@@ -250,7 +250,7 @@ const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], c
     }
 
     if (expr.$ === 'Class') {
-        return extractRule(Class(expr.seqs, expr.negated), 'class', ruleName, formals, ctx, needExtract);
+        return expr
     }
 
     if (expr.$ === 'Alt') {

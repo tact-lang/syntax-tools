@@ -58,6 +58,7 @@ const ast2 = g.generate(transformed)
 const generated = generate(ast2, { minified: false }).code;
 
 const header = `
+let nextId = 0
 
 export const createContext = (s: string, space: Rule) => ({
     s,
@@ -79,21 +80,25 @@ export type Cst = CstLeaf | CstNode
 
 export type CstLeaf = {
     readonly $: "leaf",
+    readonly id: number,
     readonly text: string,
 }
 
 export type CstNode = {
     readonly $: "node",
+    readonly id: number,
     readonly children: readonly Cst[],
 }
 
 export const CstLeaf = (text: string): CstLeaf => ({
     $: "leaf",
+    id: nextId++,
     text,
 });
 
 export const CstNode = (children: readonly Cst[]): CstNode => ({
     $: "node",
+    id: nextId++,
     children,
 });
 
@@ -106,13 +111,18 @@ const peek = (ctx: Context): string | undefined => {
     return ctx.s[ctx.p]
 }
 
-const consumeClass = (ctx: Context, cond: (c: string) => boolean): string | undefined => {
-    if (ctx.p === ctx.l) return undefined
+const consumeClass = (ctx: Context, b: Builder, cond: (c: string) => boolean): boolean => {
+    if (ctx.p === ctx.l) return false
     const c = ctx.s[ctx.p]
-    if (!cond(c)) return undefined
+    if (!cond(c)) return false
     ctx.p++;
-    skip(ctx, [])
-    return c
+    const b2: Builder = []
+    b2.push(CstLeaf(c))
+    skip(ctx, b2)
+    if (b2.length > 0) {
+        b.push(CstNode(b2))
+    }
+    return true
 }
 
 const consumeString = (ctx: Context, b: Builder, token: string): boolean => {
@@ -121,7 +131,9 @@ const consumeString = (ctx: Context, b: Builder, token: string): boolean => {
     const b2: Builder = []
     b2.push(CstLeaf(token))
     skip(ctx, b2)
-    b.push(CstNode(b2))
+    if (b2.length > 0) {
+        b.push(CstNode(b2))
+    }
     return true
 }
 
