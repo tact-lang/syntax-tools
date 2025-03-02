@@ -56,12 +56,10 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         // - rules
         //   - generics
         //      - flatten rules must be generic as well
-        //   - optionals
         //   - lookahead
         //   - negate lookahead
         //   - any
         //   - char class
-        //      - [a-zA-Z]
         //      - [^\n\r]
         //      - ["{}]
         //      - [^\n\r]
@@ -405,32 +403,48 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
 export const generateClass = (node: g.Class): t.Statement[] => {
     const stmts: t.Statement[] = []
 
-    let expr: t.Expression
+    const expr = node.seqs.reduce((prev: undefined | t.Expression, seq): t.Expression => {
+        let thisExpr: t.Expression
 
-    switch (node.seqs[0].$) {
-        case 'ClassChar': {
-            const char = node.seqs[0].value
-            // c === char
-            expr = t.binaryExpression(
-                '===',
-                t.identifier("c"),
-                t.stringLiteral(char)
-            )
-            break
+        switch (seq.$) {
+            case 'ClassChar': {
+                const char = seq.value
+                // c === char
+                thisExpr = t.binaryExpression(
+                    '===',
+                    t.identifier("c"),
+                    t.stringLiteral(char)
+                )
+                break
+            }
+            case 'Group': {
+                const from = seq.from
+                const to = seq.to
+                // c >= from && c <= to
+                thisExpr = t.logicalExpression(
+                    '&&',
+                    t.binaryExpression('>=', t.identifier("c"), t.stringLiteral(from.value)),
+                    t.binaryExpression('<=', t.identifier("c"), t.stringLiteral(to.value))
+                )
+                break
+            }
+            default:
+                throw new Error(`Unsupported class: ${seq.$}`)
         }
-        case 'Group': {
-            const from = node.seqs[0].from
-            const to = node.seqs[0].to
-            // c >= from && c <= to
-            expr = t.logicalExpression(
-                '&&',
-                t.binaryExpression('>=', t.identifier("c"), t.stringLiteral(from.value)),
-                t.binaryExpression('<=', t.identifier("c"), t.stringLiteral(to.value))
-            )
-            break
+
+        if (!prev) {
+            return thisExpr
         }
-        default:
-            throw new Error(`Unsupported class: ${node.seqs[0].$}`)
+
+        return t.logicalExpression(
+            "||",
+            prev,
+            thisExpr,
+        )
+    }, undefined as undefined | t.Expression)
+
+    if (!expr) {
+        throw new Error(`Something went wrong"`)
     }
 
     // const c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
@@ -579,7 +593,7 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
 //     let r = A(ctx, b2)
 //     r = r && B(ctx, b2)
 //
-//     if (b2.length > 0 {
+//     if (r && b2.length > 0 {
 //         b.push(CstNode(b2))
 //     }
 //     return r
@@ -636,10 +650,14 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
     //     b.push(CstNode(b2))
     // }
     stmts.push(t.ifStatement(
-        t.binaryExpression(
-            '>',
-            t.memberExpression(t.identifier("b2"), t.identifier("length")),
-            t.numericLiteral(0)
+        t.logicalExpression(
+            "&&",
+            t.identifier("r"),
+            t.binaryExpression(
+                '>',
+                t.memberExpression(t.identifier("b2"), t.identifier("length")),
+                t.numericLiteral(0)
+            )
         ),
         t.blockStatement([
             t.expressionStatement(

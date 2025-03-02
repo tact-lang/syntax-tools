@@ -104,7 +104,7 @@ export const File: Rule = (ctx, b) => {
   return true;
 };
 export const Symbol: Rule = (ctx, b) => {
-  const c = consumeClass(ctx, c => c >= "a" && c <= "z");
+  const c = consumeClass(ctx, c => c >= "a" && c <= "z" || c >= "A" && c <= "Z");
   if (c !== undefined) {
     b.push(CstLeaf(c));
     return true;
@@ -145,7 +145,7 @@ export const Func: Rule = (ctx, b) => {
   r = r && Result(ctx, b2);
   r = r && consumeString(ctx, b2, "{");
   r = r && consumeString(ctx, b2, "}");
-  if (b2.length > 0) {
+  if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;
@@ -161,7 +161,7 @@ export const Param: Rule = (ctx, b) => {
   let r = Ident(ctx, b2);
   r = r && consumeString(ctx, b2, ":");
   r = r && Ident(ctx, b2);
-  if (b2.length > 0) {
+  if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;
@@ -180,7 +180,7 @@ export const Result_1: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = consumeString(ctx, b2, ":");
   r = r && Ident(ctx, b2);
-  if (b2.length > 0) {
+  if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;
@@ -196,7 +196,7 @@ export const Comment: Rule = (ctx, b) => {
   let r = consumeString(ctx, b2, "// ");
   r = r && CommentContent(ctx, b2);
   r = r && consumeString(ctx, b2, "\n");
-  if (b2.length > 0) {
+  if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;

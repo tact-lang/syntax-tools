@@ -4,7 +4,7 @@ const log = (obj: unknown) => console.log(inspect(obj, { colors: true, depth: In
 
 const ctx = createContext(`
 // helloworld
-fun bar(a: int): string {}
+fun bar(a: Int): string {}
 
 fun foo() {}
 `, space);

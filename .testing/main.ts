@@ -23,7 +23,7 @@ const ast = $.parse({
 
 File = Func*;
 
-Symbol = [a-z];
+Symbol = [a-zA-Z];
 Ident_1 = Symbol+;
 Ident_2 = $Ident_1;
 Ident = #Ident_2;
