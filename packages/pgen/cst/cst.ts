@@ -1,6 +1,5 @@
 import * as t from '@babel/types';
 import * as g from './transform';
-import {log} from 'console';
 
 export const generate = (node: g.Grammar): t.File => {
     return t.file(t.program(
@@ -47,6 +46,8 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
             return generateStringify(node)
         case 'Lex':
             return generateLex(node)
+        case 'Optional':
+            return generateOptional(node)
         // TODO
         // - transform rules to flat list
         // - check escapes
@@ -67,6 +68,104 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         default:
             throw new Error(`Unsupported expr: ${node.$}`)
     }
+}
+
+// A = B?
+//
+// const A = (ctx: Context, b: Builder, rule: Rule): boolean => {
+//     const b2: Builder = []
+//
+//     const p = ctx.p
+//     let r = B(ctx, b2)
+//     r = r || (ctx.p = p, true)
+//
+//     if (b2.length > 0) {
+//         b.push(CstNode(b2))
+//     }
+//     return r;
+// }
+export const generateOptional = (node: g.Optional): t.Statement[] => {
+    const stmts: t.Statement[] = []
+
+    const builderName = t.identifier("b2")
+    builderName.typeAnnotation = t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Builder")))
+
+    // const b2: Builder = []
+    stmts.push(t.variableDeclaration(
+        'const',
+        [
+            t.variableDeclarator(
+                builderName,
+                t.arrayExpression([])
+            )
+        ]
+    ))
+
+    // const p = ctx.p
+    stmts.push(t.variableDeclaration(
+        'const',
+        [
+            t.variableDeclarator(t.identifier("p"), t.memberExpression(t.identifier("ctx"), t.identifier("p")))
+        ]
+    ))
+
+    // let r = B(ctx, []);
+    stmts.push(t.variableDeclaration(
+        'let',
+        [
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b2")))
+        ]
+    ))
+
+    // r = r || (ctx.p = p, true)
+    stmts.push(t.expressionStatement(t.assignmentExpression(
+        "=",
+        t.identifier("r"),
+        t.logicalExpression(
+            "||",
+            t.identifier("r"),
+            t.sequenceExpression(
+                [
+                    t.assignmentExpression(
+                        "=",
+                        t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+                        t.identifier("p")
+                    ),
+                    t.booleanLiteral(true),
+                ]
+            )
+        )
+    )))
+
+    // if (r && b2.length > 0) {
+    //    b.push(CstNode(b2))
+    // }
+    stmts.push(t.ifStatement(
+        t.logicalExpression(
+            "&&",
+            t.identifier("r"),
+            t.binaryExpression(
+                '>',
+                t.memberExpression(t.identifier("b2"), t.identifier("length")),
+                t.numericLiteral(0)
+            )
+        ),
+        t.blockStatement([
+            t.expressionStatement(
+                t.callExpression(
+                    t.memberExpression(
+                        t.identifier("b"),
+                        t.identifier("push"),
+                    ), [
+                        t.callExpression(t.identifier("CstNode"), [builderName])
+                    ]
+                )
+            )
+        ]),
+    ))
+
+    stmts.push(t.returnStatement(t.identifier("r")))
+    return stmts
 }
 
 // A = #B
@@ -479,8 +578,10 @@ export const generateAlt = (node: g.Alt): t.Statement[] => {
 // 
 //     let r = A(ctx, b2)
 //     r = r && B(ctx, b2)
-// 
-//     b.push(CstNode(b2))
+//
+//     if (b2.length > 0 {
+//         b.push(CstNode(b2))
+//     }
 //     return r
 // }
 export const generateSeq = (node: g.Seq): t.Statement[] => {
@@ -531,15 +632,26 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
         )))
     }
 
-    // b.push(CstNode(b2))
-    stmts.push(t.expressionStatement(
-        t.callExpression(
-            t.memberExpression(
-                t.identifier("b"),
-                t.identifier("push")
-            ), [
-                t.callExpression(t.identifier("CstNode"), [builderName])
-            ])
+    // if (b2.length > 0 {
+    //     b.push(CstNode(b2))
+    // }
+    stmts.push(t.ifStatement(
+        t.binaryExpression(
+            '>',
+            t.memberExpression(t.identifier("b2"), t.identifier("length")),
+            t.numericLiteral(0)
+        ),
+        t.blockStatement([
+            t.expressionStatement(
+                t.callExpression(
+                    t.memberExpression(
+                        t.identifier("b"),
+                        t.identifier("push")
+                    ), [
+                        t.callExpression(t.identifier("CstNode"), [builderName])
+                    ])
+            )
+        ]),
     ))
 
     stmts.push(t.returnStatement(t.identifier("r")))

@@ -97,6 +97,12 @@ const lex = (ctx: Context, b: Builder, rule: Rule): boolean => {
 }
 
 
+export const File: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  while (Func(ctx, b2)) {}
+  b.push(CstNode(b2));
+  return true;
+};
 export const Symbol: Rule = (ctx, b) => {
   const c = consumeClass(ctx, c => c >= "a" && c <= "z");
   if (c !== undefined) {
@@ -139,7 +145,9 @@ export const Func: Rule = (ctx, b) => {
   r = r && Result(ctx, b2);
   r = r && consumeString(ctx, b2, "{");
   r = r && consumeString(ctx, b2, "}");
-  b.push(CstNode(b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2));
+  }
   return r;
 };
 export const Params: Rule = (ctx, b) => {
@@ -153,14 +161,28 @@ export const Param: Rule = (ctx, b) => {
   let r = Ident(ctx, b2);
   r = r && consumeString(ctx, b2, ":");
   r = r && Ident(ctx, b2);
-  b.push(CstNode(b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2));
+  }
   return r;
 };
 export const Result: Rule = (ctx, b) => {
   const b2: Builder = [];
+  const p = ctx.p;
+  let r = Result_1(ctx, b2);
+  r = r || (ctx.p = p, true);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
+};
+export const Result_1: Rule = (ctx, b) => {
+  const b2: Builder = [];
   let r = consumeString(ctx, b2, ":");
   r = r && Ident(ctx, b2);
-  b.push(CstNode(b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2));
+  }
   return r;
 };
 export const CommentContent: Rule = (ctx, b) => {
@@ -174,7 +196,9 @@ export const Comment: Rule = (ctx, b) => {
   let r = consumeString(ctx, b2, "// ");
   r = r && CommentContent(ctx, b2);
   r = r && consumeString(ctx, b2, "\n");
-  b.push(CstNode(b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2));
+  }
   return r;
 };
 export const space: Rule = (ctx, b) => {

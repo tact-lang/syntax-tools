@@ -21,6 +21,8 @@ const ast = $.parse({
 // C = "world";
 // D = "Earth";
 
+File = Func*;
+
 Symbol = [a-z];
 Ident_1 = Symbol+;
 Ident_2 = $Ident_1;
@@ -29,7 +31,8 @@ Func = "fun" Ident "(" Params ")" Result "{" "}";
 Params = Param*;
 Param = Ident ":" Ident;
 // Type = Ident;
-Result = ":" Ident;
+Result = Result_1?;
+Result_1 = ":" Ident;
 
 CommentContent = Symbol*;
 Comment = "// " CommentContent "\\\\n";
