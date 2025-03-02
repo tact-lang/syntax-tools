@@ -153,7 +153,7 @@ const storeLeaf = (expr: t.Expression) => t.expressionStatement(
 // if (r && b2.length > 0) {
 //    b.push(CstNode(b2))
 // }
-const storeNotIfMatched = () => t.ifStatement(
+const storeNodeIfMatched = () => t.ifStatement(
     t.logicalExpression(
         "&&",
         t.identifier("r"),
@@ -222,7 +222,7 @@ export const generateOptional = (node: g.Optional): t.Statement[] => {
     // if (r && b2.length > 0) {
     //    b.push(CstNode(b2))
     // }
-    stmts.push(storeNotIfMatched())
+    stmts.push(storeNodeIfMatched())
 
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
@@ -638,7 +638,7 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
     // if (r && b2.length > 0 {
     //     b.push(CstNode(b2))
     // }
-    stmts.push(storeNotIfMatched())
+    stmts.push(storeNodeIfMatched())
 
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts
