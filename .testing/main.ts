@@ -128,7 +128,9 @@ export const skip = (ctx: Context, b: Builder) => {
     while (ctx.space?.(newCtx, []));
     ctx.p = newCtx.p
     const text = ctx.s.substring(prevPos, ctx.p)
-    b.push(CstLeaf(text))
+    if (text.length > 0) {
+        b.push(CstLeaf(text))
+    }
 }
 
 const stringify = (ctx: Context, b: Builder, rule: Rule): boolean => {

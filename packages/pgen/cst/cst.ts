@@ -1,6 +1,6 @@
 import * as t from '@babel/types';
 import * as g from './transform';
-import { log } from 'console';
+import {log} from 'console';
 
 export const generate = (node: g.Grammar): t.File => {
     return t.file(t.program(
@@ -47,6 +47,23 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
             return generateStringify(node)
         case 'Lex':
             return generateLex(node)
+        // TODO
+        // - transform rules to flat list
+        // - check escapes
+        // - positions
+        // - fix nesting
+        // - rules
+        //   - generics
+        //      - flatten rules must be generic as well
+        //   - optionals
+        //   - lookahead
+        //   - negate lookahead
+        //   - any
+        //   - char class
+        //      - [a-zA-Z]
+        //      - [^\n\r]
+        //      - ["{}]
+        //      - [^\n\r]
         default:
             throw new Error(`Unsupported expr: ${node.$}`)
     }
@@ -157,9 +174,13 @@ export const generateStringify = (node: g.Stringify): t.Statement[] => {
 
     // b.push(CstLeaf(text))
     stmts.push(t.expressionStatement(
-        t.callExpression(t.memberExpression(t.identifier("b"), t.identifier("push")), [
-            t.callExpression(t.identifier("CstLeaf"), [t.identifier("text")])
-        ])
+        t.callExpression(
+            t.memberExpression(
+                t.identifier("b"),
+                t.identifier("push")
+            ), [
+                t.callExpression(t.identifier("CstLeaf"), [t.identifier("text")])
+            ])
     ))
 
     // return r
@@ -200,9 +221,13 @@ export const generateStar = (node: g.Star): t.Statement[] => {
 
     // b.push(CstNode(b2))
     stmts.push(t.expressionStatement(
-        t.callExpression(t.memberExpression(t.identifier("b"), t.identifier("push")), [
-            t.callExpression(t.identifier("CstNode"), [builderName])
-        ])
+        t.callExpression(
+            t.memberExpression(
+                t.identifier("b"),
+                t.identifier("push"),
+            ), [
+                t.callExpression(t.identifier("CstNode"), [builderName])
+            ])
     ))
 
     stmts.push(t.returnStatement(t.identifier("true")))
@@ -256,9 +281,13 @@ export const generatePlus = (node: g.Plus): t.Statement[] => {
 
     // b.push(CstNode(b2))
     stmts.push(t.expressionStatement(
-        t.callExpression(t.memberExpression(t.identifier("b"), t.identifier("push")), [
-            t.callExpression(t.identifier("CstNode"), [builderName])
-        ])
+        t.callExpression(
+            t.memberExpression(
+                t.identifier("b"),
+                t.identifier("push")
+            ), [
+                t.callExpression(t.identifier("CstNode"), [builderName])
+            ])
     ))
 
     stmts.push(t.returnStatement(t.identifier("r")))
@@ -327,7 +356,6 @@ export const generateClass = (node: g.Class): t.Statement[] => {
     //     return true
     // }
     // return false
-
     stmts.push(t.ifStatement(
         t.binaryExpression(
             '!==',
@@ -335,7 +363,19 @@ export const generateClass = (node: g.Class): t.Statement[] => {
             t.identifier("undefined")
         ),
         t.blockStatement([
-            t.expressionStatement(t.callExpression(t.memberExpression(t.identifier("b"), t.identifier("push")), [t.callExpression(t.identifier("CstLeaf"), [t.identifier("c")])])),
+            t.expressionStatement(
+                t.callExpression(
+                    t.memberExpression(
+                        t.identifier("b"),
+                        t.identifier("push")
+                    ), [
+                        t.callExpression(
+                            t.identifier("CstLeaf"),
+                            [t.identifier("c")]
+                        )
+                    ]
+                )
+            ),
             t.returnStatement(t.identifier("true"))
         ]),
     ))
@@ -467,13 +507,13 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
 
     // Foo = A B
     // let r = A(ctx, b2)
-    // let r = consomeToken("")
+    // let r = consumeToken("some")
     stmts.push(t.variableDeclaration(
         'let',
         [
             t.variableDeclarator(
                 t.identifier("r"),
-                generateClause(head.expr)
+                generateClause(head.expr, t.identifier("b2"))
             )
         ]
     ))
@@ -486,16 +526,20 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
             t.logicalExpression(
                 "&&",
                 t.identifier("r"),
-                generateClause(clause.expr)
+                generateClause(clause.expr, t.identifier("b2"))
             )
         )))
     }
 
     // b.push(CstNode(b2))
     stmts.push(t.expressionStatement(
-        t.callExpression(t.memberExpression(t.identifier("b"), t.identifier("push")), [
-            t.callExpression(t.identifier("CstNode"), [builderName])
-        ])
+        t.callExpression(
+            t.memberExpression(
+                t.identifier("b"),
+                t.identifier("push")
+            ), [
+                t.callExpression(t.identifier("CstNode"), [builderName])
+            ])
     ))
 
     stmts.push(t.returnStatement(t.identifier("r")))
@@ -505,7 +549,7 @@ export const generateSeq = (node: g.Seq): t.Statement[] => {
 export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName?: t.Expression): t.Expression => {
     switch (expr.$) {
         case 'Terminal':
-            return compileTerminal(expr)
+            return compileTerminal(expr, builderName)
         case 'Call': {
             const args: t.Expression[] = [
                 ctxName ?? t.identifier("ctx"),
@@ -521,11 +565,11 @@ export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName
     }
 }
 
-const compileTerminal = (node: g.Terminal): t.Expression => {
+const compileTerminal = (node: g.Terminal, builderName?: t.Expression): t.Expression => {
     const body = node.value.map(char => compileChar(char)).join('');
     const value = JSON.parse(`"${body}"`);
     const wrapped = t.stringLiteral(value);
-    return emitCall('consumeString', [t.identifier("ctx"), t.identifier("b"), wrapped]);
+    return emitCall('consumeString', [t.identifier("ctx"), builderName ?? t.identifier("b"), wrapped]);
 };
 
 const compileChar = (node: g.Escape | g.Special | g.Char): string => {

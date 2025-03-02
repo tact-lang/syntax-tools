@@ -75,7 +75,9 @@ export const skip = (ctx: Context, b: Builder) => {
     while (ctx.space?.(newCtx, []));
     ctx.p = newCtx.p
     const text = ctx.s.substring(prevPos, ctx.p)
-    b.push(CstLeaf(text))
+    if (text.length > 0) {
+        b.push(CstLeaf(text))
+    }
 }
 
 const stringify = (ctx: Context, b: Builder, rule: Rule): boolean => {
@@ -129,14 +131,14 @@ export const Ident: Rule = (ctx, b) => {
 };
 export const Func: Rule = (ctx, b) => {
   const b2: Builder = [];
-  let r = consumeString(ctx, b, "fun");
+  let r = consumeString(ctx, b2, "fun");
   r = r && Ident(ctx, b2);
-  r = r && consumeString(ctx, b, "(");
+  r = r && consumeString(ctx, b2, "(");
   r = r && Params(ctx, b2);
-  r = r && consumeString(ctx, b, ")");
+  r = r && consumeString(ctx, b2, ")");
   r = r && Result(ctx, b2);
-  r = r && consumeString(ctx, b, "{");
-  r = r && consumeString(ctx, b, "}");
+  r = r && consumeString(ctx, b2, "{");
+  r = r && consumeString(ctx, b2, "}");
   b.push(CstNode(b2));
   return r;
 };
@@ -149,14 +151,14 @@ export const Params: Rule = (ctx, b) => {
 export const Param: Rule = (ctx, b) => {
   const b2: Builder = [];
   let r = Ident(ctx, b2);
-  r = r && consumeString(ctx, b, ":");
+  r = r && consumeString(ctx, b2, ":");
   r = r && Ident(ctx, b2);
   b.push(CstNode(b2));
   return r;
 };
 export const Result: Rule = (ctx, b) => {
   const b2: Builder = [];
-  let r = consumeString(ctx, b, ":");
+  let r = consumeString(ctx, b2, ":");
   r = r && Ident(ctx, b2);
   b.push(CstNode(b2));
   return r;
@@ -169,9 +171,9 @@ export const CommentContent: Rule = (ctx, b) => {
 };
 export const Comment: Rule = (ctx, b) => {
   const b2: Builder = [];
-  let r = consumeString(ctx, b, "// ");
+  let r = consumeString(ctx, b2, "// ");
   r = r && CommentContent(ctx, b2);
-  r = r && consumeString(ctx, b, "\n");
+  r = r && consumeString(ctx, b2, "\n");
   b.push(CstNode(b2));
   return r;
 };
