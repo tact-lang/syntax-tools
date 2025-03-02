@@ -62,17 +62,25 @@ const removeEmptyTypeNodes = (node: Cst): Cst => {
         return node;
     }
 
-    const children = node.children.flatMap(child => {
-        if (child.$ === "node" && (child.type === "" || child.type === "inter")) {
-            return child.children.map(c => removeEmptyTypeNodes(c))
-        }
-
-        return removeEmptyTypeNodes(child);
-    })
-
+    const processedChildren = node.children.map(child => removeEmptyTypeNodes(child));
+    
+    if (node.type === "" || isLowerCase(node.type[0])) {
+        const flattenedChildren = processedChildren.flatMap(child => {
+            if (child.$ === "node" && (child.type === "" || isLowerCase(child.type[0]))) {
+                return child.children;
+            }
+            return [child];
+        });
+        
+        return {
+            ...node,
+            children: flattenedChildren
+        };
+    }
+    
     return {
         ...node,
-        children
+        children: processedChildren
     };
 }
 
