@@ -1,6 +1,5 @@
 import * as t from '@babel/types';
 import * as g from './transform';
-import {Expression} from "@babel/types";
 
 export const generate = (node: g.Grammar): t.File => {
     return t.file(t.program(
@@ -81,11 +80,11 @@ export const generateExpr = (node: g.Expr, ruleName: string): t.Statement[] => {
         case 'Terminal':
             return generateSeq(g.Seq([g.SeqClause(node, undefined)]), ruleName)
         case 'Class':
-            return generateClass(node, ruleName)
+            return generateClass(node)
         case 'Stringify':
-            return generateStringify(node, ruleName)
+            return generateStringify(node)
         case 'Lex':
-            return generateLex(node, ruleName)
+            return generateLex(node)
         case 'Optional':
             return generateOptional(node, ruleName)
         case "Any":
@@ -93,9 +92,9 @@ export const generateExpr = (node: g.Expr, ruleName: string): t.Statement[] => {
         case "Call":
             return generateCall(node)
         case "LookNeg":
-            return generateLookNeg(node, ruleName)
+            return generateLookNeg(node)
         case "LookPos":
-            return generateLookPos(node, ruleName)
+            return generateLookPos(node)
         // TODO
         // - check escapes
         // - positions
@@ -192,7 +191,7 @@ const storeNodeIfNotEmpty = (nodeType: string) => t.ifStatement(
 //     ctx.p = p
 //     return r
 // }
-export const generateLookPos = (lookNeg: g.LookPos, ruleName: string): t.Statement[] => {
+export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const p = ctx.p
@@ -224,7 +223,7 @@ export const generateLookPos = (lookNeg: g.LookPos, ruleName: string): t.Stateme
 //     ctx.p = p
 //     return !r
 // }
-export const generateLookNeg = (lookNeg: g.LookNeg, ruleName: string): t.Statement[] => {
+export const generateLookNeg = (lookNeg: g.LookNeg): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const p = ctx.p
@@ -450,7 +449,7 @@ export const generateOptional = (node: g.Optional, ruleName: string): t.Statemen
 //    skip(ctx, b)
 //    return r
 // }
-export const generateLex = (node: g.Lex, ruleName: string): t.Statement[] => {
+export const generateLex = (node: g.Lex): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const newCtx = {
@@ -502,7 +501,7 @@ export const generateLex = (node: g.Lex, ruleName: string): t.Statement[] => {
 //     b.push(CstLeaf(text))
 //     return r
 // }
-export const generateStringify = (node: g.Stringify, ruleName: string): t.Statement[] => {
+export const generateStringify = (node: g.Stringify): t.Statement[] => {
     const stmts: t.Statement[] = []
 
     // const p = ctx.p
@@ -753,7 +752,7 @@ const compileClass = (node: g.Class, builderName: t.Expression, ctxName?: t.Expr
 // const A = (ctx, b) => {
 //     return consumeClass(ctx, b, (c) => c >= 'a' && c <= 'z')
 // }
-export const generateClass = (node: g.Class, ruleName: string): t.Statement[] => {
+export const generateClass = (node: g.Class): t.Statement[] => {
     const stmts: t.Statement[] = []
     const expr = compileClass(node, t.identifier("b"));
     stmts.push(t.returnStatement(expr))
