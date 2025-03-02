@@ -240,16 +240,11 @@ export const desugar = ({rules}: g.Grammar): Grammar => {
     return Grammar(allRules);
 };
 
-const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], ctx: Context, insideSeqAlt: boolean): Expr => {
+const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], ctx: Context, needExtract: boolean): Expr => {
     switch (expr.$) {
         case 'Alt':
             const altExprs = expr.exprs.map(e => processExpr(e, ruleName, formals, ctx, true));
-
-            if (insideSeqAlt && altExprs.length > 1) {
-                return extractRule(Alt(altExprs), 'alt', ruleName, formals, ctx);
-            }
-
-            return Alt(altExprs);
+            return extractRule(Alt(altExprs), 'alt', ruleName, formals, ctx, needExtract && altExprs.length > 1);
 
         case 'Seq':
             const seqClauses = expr.clauses.map(clause => ({
@@ -257,66 +252,38 @@ const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], c
                 name: clause.name
             }));
 
-            if (insideSeqAlt && seqClauses.length > 1) {
-                return extractRule(Seq(seqClauses), 'seq', ruleName, formals, ctx);
-            }
-
-            return Seq(seqClauses);
+            return extractRule(Seq(seqClauses), 'seq', ruleName, formals, ctx, needExtract && seqClauses.length > 1);
 
         case 'Star':
-            const starInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(starInner)) {
-                return extractRule(Star(starInner), 'star', ruleName, formals, ctx);
-            }
-            return Star(starInner);
+            const starInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(Star(starInner), 'star', ruleName, formals, ctx, needExtract);
 
         case 'Plus':
-            const plusInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(plusInner)) {
-                return extractRule(Plus(plusInner), 'plus', ruleName, formals, ctx);
-            }
-            return Plus(plusInner);
+            const plusInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(Plus(plusInner), 'plus', ruleName, formals, ctx, needExtract);
 
         case 'Optional':
-            const optInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(optInner)) {
-                return extractRule(Optional(optInner), 'opt', ruleName, formals, ctx);
-            }
-            return Optional(optInner);
+            const optInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(Optional(optInner), 'opt', ruleName, formals, ctx, needExtract);
 
         case 'LookPos':
-            const posInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(posInner)) {
-                return extractRule(LookPos(posInner), 'pos', ruleName, formals, ctx);
-            }
-            return LookPos(posInner);
+            const posInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(LookPos(posInner), 'pos', ruleName, formals, ctx, needExtract);
 
         case 'LookNeg':
-            const negInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(negInner)) {
-                return extractRule(LookNeg(negInner), 'neg', ruleName, formals, ctx);
-            }
-            return LookNeg(negInner);
+            const negInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(LookNeg(negInner), 'neg', ruleName, formals, ctx, needExtract);
 
         case 'Lex':
-            const lexInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(lexInner)) {
-                return extractRule(Lex(lexInner), 'lex', ruleName, formals, ctx);
-            }
-            return Lex(lexInner);
+            const lexInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(Lex(lexInner), 'lex', ruleName, formals, ctx, needExtract);
 
         case 'Stringify':
-            const stringifyInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-            if (insideSeqAlt || needsExtraction(stringifyInner)) {
-                return extractRule(Stringify(stringifyInner), 'stringify', ruleName, formals, ctx);
-            }
-            return Stringify(stringifyInner);
+            const stringifyInner = processExpr(expr.expr, ruleName, formals, ctx, true);
+            return extractRule(Stringify(stringifyInner), 'stringify', ruleName, formals, ctx, needExtract);
 
         case 'Class':
-            if (insideSeqAlt) {
-                return extractRule(Class(expr.seqs, expr.negated), 'class', ruleName, formals, ctx);
-            }
-            return expr;
+            return extractRule(Class(expr.seqs, expr.negated), 'class', ruleName, formals, ctx, needExtract);
 
         default:
             return expr;
@@ -328,31 +295,16 @@ const extractRule = (
     exprType: string,
     ruleName: string,
     formals: readonly string[],
-    ctx: Context
+    ctx: Context,
+    needExtract: boolean,
 ): Expr => {
+    if (!needExtract) {
+        return expr;
+    }
+
     const params = formals.map(it => Call(it, []));
     const innerName = `${ruleName}_${exprType}_${ctx.extraRules?.length || 0}`;
     ctx.extraRules = ctx.extraRules || [];
     ctx.extraRules.push(Rule(innerName, formals, expr, undefined));
     return Call(innerName, params);
-};
-
-const needsExtraction = (expr: Expr): boolean => {
-    if (expr.$ === 'Terminal' || expr.$ === 'Any' || expr.$ === 'Call') {
-        return false;
-    }
-
-    if (expr.$ === 'Class') {
-        return expr.seqs.length > 0;
-    }
-
-    return expr.$ === 'Seq' ||
-        expr.$ === 'Alt' ||
-        expr.$ === 'LookPos' ||
-        expr.$ === 'LookNeg' ||
-        expr.$ === 'Star' ||
-        expr.$ === 'Plus' ||
-        expr.$ === 'Stringify' ||
-        expr.$ === 'Optional' ||
-        expr.$ === 'Lex';
 };

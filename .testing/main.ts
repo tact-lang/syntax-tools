@@ -24,9 +24,7 @@ const ast = $.parse({
 File = Func*;
 
 Symbol = [a-zA-Z];
-Ident_1 = Symbol+;
-Ident_2 = $Ident_1;
-Ident = #Ident_2;
+Ident = #$(Symbol+);
 Func = "fun" Ident "(" Params ")" Result statements;
 Params = commaList<Param>?;
 Param = Ident ":" Type;
@@ -42,7 +40,6 @@ statement
 
 StatementLet        = "let" name:Ident "=" Ident semicolon;
 
-// nextBrace = &"}";
 semicolon = ";" / &"}";
 
 Comment = "//" $([^\\r\\n])*;
