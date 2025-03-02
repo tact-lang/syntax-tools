@@ -241,17 +241,12 @@ export const desugar = ({rules}: g.Grammar): Grammar => {
 };
 
 const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], ctx: Context, insideSeqAlt: boolean): Expr => {
-    const params = formals.map(it => Call(it, []))
-
     switch (expr.$) {
         case 'Alt':
             const altExprs = expr.exprs.map(e => processExpr(e, ruleName, formals, ctx, true));
 
             if (insideSeqAlt && altExprs.length > 1) {
-                const innerName = `${ruleName}_alt_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Alt(altExprs), undefined));
-                return Call(innerName, params);
+                return extractRule(Alt(altExprs), 'alt', ruleName, formals, ctx);
             }
 
             return Alt(altExprs);
@@ -263,111 +258,83 @@ const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], c
             }));
 
             if (insideSeqAlt && seqClauses.length > 1) {
-                const innerName = `${ruleName}_seq_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Seq(seqClauses), undefined));
-                return Call(innerName, params);
+                return extractRule(Seq(seqClauses), 'seq', ruleName, formals, ctx);
             }
 
             return Seq(seqClauses);
 
         case 'Star':
             const starInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(starInner)) {
-                const innerName = `${ruleName}_star_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Star(starInner), undefined));
-                return Call(innerName, params);
+                return extractRule(Star(starInner), 'star', ruleName, formals, ctx);
             }
-
             return Star(starInner);
 
         case 'Plus':
             const plusInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(plusInner)) {
-                const innerName = `${ruleName}_plus_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Plus(plusInner), undefined));
-                return Call(innerName, params);
+                return extractRule(Plus(plusInner), 'plus', ruleName, formals, ctx);
             }
-
             return Plus(plusInner);
 
         case 'Optional':
             const optInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(optInner)) {
-                const innerName = `${ruleName}_opt_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Optional(optInner), undefined));
-                return Call(innerName, params);
+                return extractRule(Optional(optInner), 'opt', ruleName, formals, ctx);
             }
-
             return Optional(optInner);
 
         case 'LookPos':
             const posInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(posInner)) {
-                const innerName = `${ruleName}_pos_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, LookPos(posInner), undefined));
-                return Call(innerName, params);
+                return extractRule(LookPos(posInner), 'pos', ruleName, formals, ctx);
             }
-
             return LookPos(posInner);
 
         case 'LookNeg':
             const negInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(negInner)) {
-                const innerName = `${ruleName}_neg_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, LookNeg(negInner), undefined));
-                return Call(innerName, params);
+                return extractRule(LookNeg(negInner), 'neg', ruleName, formals, ctx);
             }
-
             return LookNeg(negInner);
 
         case 'Lex':
             const lexInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(lexInner)) {
-                const innerName = `${ruleName}_lex_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Lex(lexInner), undefined));
-                return Call(innerName, params);
+                return extractRule(Lex(lexInner), 'lex', ruleName, formals, ctx);
             }
-
             return Lex(lexInner);
 
         case 'Stringify':
             const stringifyInner = processExpr(expr.expr, ruleName, formals, ctx, insideSeqAlt);
-
             if (insideSeqAlt || needsExtraction(stringifyInner)) {
-                const innerName = `${ruleName}_stringify_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Stringify(stringifyInner), undefined));
-                return Call(innerName, params);
+                return extractRule(Stringify(stringifyInner), 'stringify', ruleName, formals, ctx);
             }
-
             return Stringify(stringifyInner);
 
         case 'Class':
             if (insideSeqAlt) {
-                const innerName = `${ruleName}_class_${ctx.extraRules?.length || 0}`;
-                ctx.extraRules = ctx.extraRules || [];
-                ctx.extraRules.push(Rule(innerName, formals, Class(expr.seqs, expr.negated), undefined));
-                return Call(innerName, params);
+                return extractRule(Class(expr.seqs, expr.negated), 'class', ruleName, formals, ctx);
             }
-
             return expr;
 
         default:
             return expr;
     }
+};
+
+const extractRule = (
+    expr: Expr,
+    exprType: string,
+    ruleName: string,
+    formals: readonly string[],
+    ctx: Context
+): Expr => {
+    const params = formals.map(it => Call(it, []));
+    const innerName = `${ruleName}_${exprType}_${ctx.extraRules?.length || 0}`;
+    ctx.extraRules = ctx.extraRules || [];
+    ctx.extraRules.push(Rule(innerName, formals, expr, undefined));
+    return Call(innerName, params);
 };
 
 const needsExtraction = (expr: Expr): boolean => {
