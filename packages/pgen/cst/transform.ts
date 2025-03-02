@@ -230,64 +230,53 @@ export const desugar = ({rules}: g.Grammar): Grammar => {
         return transformRule(rule);
     });
 
-    const processedRules: Rule[] = [];
-    for (const rule of mainRules) {
+    const processedRules = mainRules.map(rule => {
         const processedBody = processExpr(rule.body, rule.name, rule.formals, ctx, false);
-        processedRules.push(Rule(rule.name, rule.formals, processedBody, rule.display));
-    }
+        return Rule(rule.name, rule.formals, processedBody, rule.display);
+    });
 
-    const allRules = [...processedRules, ...(ctx.extraRules ?? [])];
-    return Grammar(allRules);
+    return Grammar([...processedRules, ...(ctx.extraRules ?? [])]);
 };
 
 const processExpr = (expr: Expr, ruleName: string, formals: readonly string[], ctx: Context, needExtract: boolean): Expr => {
-    switch (expr.$) {
-        case 'Alt':
-            const altExprs = expr.exprs.map(e => processExpr(e, ruleName, formals, ctx, true));
-            return extractRule(Alt(altExprs), 'alt', ruleName, formals, ctx, needExtract && altExprs.length > 1);
-
-        case 'Seq':
-            const seqClauses = expr.clauses.map(clause => ({
-                expr: processExpr(clause.expr, ruleName, formals, ctx, true),
-                name: clause.name
-            }));
-
-            return extractRule(Seq(seqClauses), 'seq', ruleName, formals, ctx, needExtract && seqClauses.length > 1);
-
-        case 'Star':
-            const starInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(Star(starInner), 'star', ruleName, formals, ctx, needExtract);
-
-        case 'Plus':
-            const plusInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(Plus(plusInner), 'plus', ruleName, formals, ctx, needExtract);
-
-        case 'Optional':
-            const optInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(Optional(optInner), 'opt', ruleName, formals, ctx, needExtract);
-
-        case 'LookPos':
-            const posInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(LookPos(posInner), 'pos', ruleName, formals, ctx, needExtract);
-
-        case 'LookNeg':
-            const negInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(LookNeg(negInner), 'neg', ruleName, formals, ctx, needExtract);
-
-        case 'Lex':
-            const lexInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(Lex(lexInner), 'lex', ruleName, formals, ctx, needExtract);
-
-        case 'Stringify':
-            const stringifyInner = processExpr(expr.expr, ruleName, formals, ctx, true);
-            return extractRule(Stringify(stringifyInner), 'stringify', ruleName, formals, ctx, needExtract);
-
-        case 'Class':
-            return extractRule(Class(expr.seqs, expr.negated), 'class', ruleName, formals, ctx, needExtract);
-
-        default:
-            return expr;
+    if (expr.$ === 'Terminal' || expr.$ === 'Any' || expr.$ === 'Call') {
+        return expr;
     }
+
+    if (expr.$ === 'Class') {
+        return extractRule(Class(expr.seqs, expr.negated), 'class', ruleName, formals, ctx, needExtract);
+    }
+
+    if (expr.$ === 'Alt') {
+        const altExprs = expr.exprs.map(e => processExpr(e, ruleName, formals, ctx, true));
+        return extractRule(Alt(altExprs), 'alt', ruleName, formals, ctx, needExtract && altExprs.length > 1);
+    }
+
+    if (expr.$ === 'Seq') {
+        const seqClauses = expr.clauses.map(clause => ({
+            expr: processExpr(clause.expr, ruleName, formals, ctx, true),
+            name: clause.name
+        }));
+        return extractRule(Seq(seqClauses), 'seq', ruleName, formals, ctx, needExtract && seqClauses.length > 1);
+    }
+
+    const unaryTypes: Record<string, (inner: Expr) => Expr> = {
+        'Star': Star,
+        'Plus': Plus,
+        'Optional': Optional,
+        'LookPos': LookPos,
+        'LookNeg': LookNeg,
+        'Lex': Lex,
+        'Stringify': Stringify
+    };
+
+    if (expr.$ in unaryTypes) {
+        const inner = processExpr((expr as any).expr, ruleName, formals, ctx, true);
+        const constructor = unaryTypes[expr.$];
+        return extractRule(constructor(inner), expr.$.toLowerCase(), ruleName, formals, ctx, needExtract);
+    }
+
+    return expr;
 };
 
 const extractRule = (

@@ -224,7 +224,7 @@ export const semicolon: Rule = (ctx, b) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b, ";");
-  r = r || (ctx.p = p, semicolon_pos_2(ctx, b2));
+  r = r || (ctx.p = p, semicolon_lookpos_2(ctx, b2));
   b.push(CstNode(b2));
   return r;
 };
@@ -251,7 +251,7 @@ export const commaList: (T: Rule) => Rule = T => {
   return (ctx, b) => {
     const b2: Builder = [];
     let r = inter(T, (ctx, b) => consumeString(ctx, b, ","))(ctx, b2);
-    r = r && commaList_opt_10(T)(ctx, b2);
+    r = r && commaList_optional_10(T)(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2));
     }
@@ -293,7 +293,7 @@ export const Ident_stringify_1: Rule = (ctx, b) => {
   b.push(CstLeaf(text));
   return r;
 };
-export const semicolon_pos_2: Rule = (ctx, b) => {
+export const semicolon_lookpos_2: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = consumeString(ctx, b, "}");
   ctx.p = p;
@@ -320,7 +320,7 @@ export const Comment_stringify_5: Rule = (ctx, b) => {
   b.push(CstLeaf(text));
   return r;
 };
-export const multiLineComment_neg_6: Rule = (ctx, b) => {
+export const multiLineComment_lookneg_6: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = consumeString(ctx, b, "*/");
   ctx.p = p;
@@ -328,7 +328,7 @@ export const multiLineComment_neg_6: Rule = (ctx, b) => {
 };
 export const multiLineComment_seq_7: Rule = (ctx, b) => {
   const b2: Builder = [];
-  let r = multiLineComment_neg_6(ctx, b2);
+  let r = multiLineComment_lookneg_6(ctx, b2);
   r = r && consumeAny(ctx, b);
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
@@ -348,7 +348,7 @@ export const multiLineComment_stringify_9: Rule = (ctx, b) => {
   b.push(CstLeaf(text));
   return r;
 };
-export const commaList_opt_10: (T: Rule) => Rule = T => {
+export const commaList_optional_10: (T: Rule) => Rule = T => {
   return (ctx, b) => {
     const b2: Builder = [];
     const p = ctx.p;
