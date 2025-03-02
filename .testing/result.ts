@@ -185,21 +185,43 @@ export const Result_1: Rule = (ctx, b) => {
   }
   return r;
 };
+export const CommentSymbol: Rule = (ctx, b) => {
+  const c = consumeClass(ctx, c => !(c === "\r" || c === "\n"));
+  if (c !== undefined) {
+    b.push(CstLeaf(c));
+    return true;
+  }
+  return false;
+};
+export const CommentSymbol_1: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = CommentSymbol(ctx, []);
+  const text = ctx.s.substring(p, ctx.p);
+  b.push(CstLeaf(text));
+  return r;
+};
 export const CommentContent: Rule = (ctx, b) => {
   const b2: Builder = [];
-  while (Symbol(ctx, b2)) {}
+  while (CommentSymbol_1(ctx, b2)) {}
   b.push(CstNode(b2));
   return true;
 };
 export const Comment: Rule = (ctx, b) => {
   const b2: Builder = [];
-  let r = consumeString(ctx, b2, "// ");
+  let r = consumeString(ctx, b2, "//");
   r = r && CommentContent(ctx, b2);
-  r = r && consumeString(ctx, b2, "\n");
   if (r && b2.length > 0) {
     b.push(CstNode(b2));
   }
   return r;
+};
+export const some: Rule = (ctx, b) => {
+  const c = consumeClass(ctx, c => c === "a" || c === "b" || c === "c" || c === "{");
+  if (c !== undefined) {
+    b.push(CstLeaf(c));
+    return true;
+  }
+  return false;
 };
 export const space: Rule = (ctx, b) => {
   const b2: Builder = [];

@@ -3,7 +3,8 @@ import { inspect } from "util";
 const log = (obj: unknown) => console.log(inspect(obj, { colors: true, depth: Infinity }));
 
 const ctx = createContext(`
-// helloworld
+// hello world
+// some other comment
 fun bar(a: Int): string {}
 
 fun foo() {}

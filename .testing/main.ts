@@ -34,8 +34,10 @@ Param = Ident ":" Ident;
 Result = Result_1?;
 Result_1 = ":" Ident;
 
-CommentContent = Symbol*;
-Comment = "// " CommentContent "\\\\n";
+CommentSymbol = [^\\r\\n];
+CommentSymbol_1 = $CommentSymbol;
+CommentContent = CommentSymbol_1*;
+Comment = "//" CommentContent; // "// " CommentContent "\\\\n";
 
 space = " " / "\\\\n" / Comment;
 

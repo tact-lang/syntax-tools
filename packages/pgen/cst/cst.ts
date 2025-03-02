@@ -60,9 +60,7 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         //   - negate lookahead
         //   - any
         //   - char class
-        //      - [^\n\r]
-        //      - ["{}]
-        //      - [^\n\r]
+        //      - others
         default:
             throw new Error(`Unsupported expr: ${node.$}`)
     }
@@ -428,6 +426,21 @@ export const generateClass = (node: g.Class): t.Statement[] => {
                 )
                 break
             }
+            case "Named":
+                console.log(seq)
+                // \r, \n, \t
+                // c === "\r" || c === "\n" ...
+
+                thisExpr = t.binaryExpression(
+                    "===",
+                    t.identifier("c"),
+                    t.stringLiteral(seq.value === "n"
+                        ? "\n" : seq.value === "t"
+                            ? "\t" : seq.value === "r"
+                                ? "\r" : seq.value === "b"
+                                    ? "\b" : ""),
+                )
+                break
             default:
                 throw new Error(`Unsupported class: ${seq.$}`)
         }
@@ -447,6 +460,8 @@ export const generateClass = (node: g.Class): t.Statement[] => {
         throw new Error(`Something went wrong"`)
     }
 
+    const finalExpr = node.negated ? t.unaryExpression("!", expr) : expr
+
     // const c = consumeClass(ctx, (c) => c >= 'a' && c <= 'z')
     stmts.push(t.variableDeclaration(
         'const',
@@ -457,7 +472,7 @@ export const generateClass = (node: g.Class): t.Statement[] => {
                     t.identifier("ctx"),
                     t.arrowFunctionExpression(
                         [t.identifier("c")],
-                        expr,
+                        finalExpr,
                     )
                 ]
             ))
