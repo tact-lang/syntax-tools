@@ -97,11 +97,20 @@ const lex = (ctx: Context, b: Builder, rule: Rule): boolean => {
 }
 
 
-export const File: Rule = (ctx, b) => {
+export const Funcs: Rule = (ctx, b) => {
   const b2: Builder = [];
   while (Func(ctx, b2)) {}
   b.push(CstNode(b2));
   return true;
+};
+export const File: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  let r = Funcs(ctx, b2);
+  r = r && other(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
 };
 export const Symbol: Rule = (ctx, b) => {
   const c = consumeClass(ctx, c => c >= "a" && c <= "z" || c >= "A" && c <= "Z");
@@ -269,6 +278,29 @@ export const inter: (A: Rule, B: Rule) => Rule = (A, B) => {
     }
     return r;
   };
+};
+export const Any: Rule = (ctx, b) => {
+  if (ctx.p === ctx.l) {
+    b.push(CstLeaf(""));
+    return false;
+  }
+  const c = ctx.s[ctx.p];
+  b.push(CstLeaf(c));
+  ctx.p++;
+  return true;
+};
+export const Any_1: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  while (Any(ctx, b2)) {}
+  b.push(CstNode(b2));
+  return true;
+};
+export const other: Rule = (ctx, b) => {
+  const p = ctx.p;
+  const r = Any_1(ctx, []);
+  const text = ctx.s.substring(p, ctx.p);
+  b.push(CstLeaf(text));
+  return r;
 };
 export const space: Rule = (ctx, b) => {
   const b2: Builder = [];

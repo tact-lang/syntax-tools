@@ -16,7 +16,6 @@ export type Expr =
     | Stringify
 
 export type Escape = Named | Short | Long | Ascii;
-export type Mode = 'l' | 'r'
 
 export type SeqClause = {
     readonly expr: Expr,

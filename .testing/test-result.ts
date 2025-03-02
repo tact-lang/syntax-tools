@@ -6,6 +6,9 @@ const ctx = createContext(`
 // hello world
 // some other comment
 fun bar(a: Int, other: String): string {}
+
+
+aaaaaasafsfwe
 `, space);
 
 const b: Builder = []

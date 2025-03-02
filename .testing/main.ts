@@ -21,7 +21,8 @@ const ast = $.parse({
 // C = "world";
 // D = "Earth";
 
-File = Func*;
+Funcs = Func*;
+File = Funcs other;
 
 Symbol = [a-zA-Z];
 Ident_1 = Symbol+;
@@ -45,6 +46,10 @@ commaList<T> = inter<T, ","> optionalComme;
 interInner<A, B> = op:B right:A;
 interTail<A, B> = interInner<A, B>*;
 inter<A, B> = head:A tail:interTail<A, B>;
+
+Any = .;
+Any_1 = Any*;
+other = $(Any_1);
 
 space = " " / "\\\\n" / Comment;
 

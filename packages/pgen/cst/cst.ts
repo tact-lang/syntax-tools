@@ -87,6 +87,8 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
             return generateLex(node)
         case 'Optional':
             return generateOptional(node)
+        case "Any":
+            return generateAny()
         // TODO
         // - transform rules to flat list
         //   - flatten rules must be generic as well
@@ -97,7 +99,6 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
         //   - Type = Ident;
         //   - lookahead
         //   - negate lookahead
-        //   - any
         //   - char class
         //      - others
         default:
@@ -167,6 +168,66 @@ const storeNodeIfMatched = () => t.ifStatement(
         storeNodeFromBuilder("b2")
     ]),
 );
+
+// const A = (ctx: Context, b: Builder, rule: Rule): boolean => {
+//     if (ctx.p === ctx.l) {
+//         b.push(CstLeaf(""))
+//         return false
+//     }
+//
+//     const c = ctx.s[ctx.p]
+//     b.push(CstLeaf(c))
+//     ctx.p++
+//     return true
+// }
+export const generateAny = (): t.Statement[] => {
+    const stmts: t.Statement[] = []
+
+    // if (ctx.p === ctx.l) {
+    //     b.push(CstLeaf(""))
+    //     return false
+    // }
+    stmts.push(t.ifStatement(
+        t.binaryExpression(
+            '===',
+            t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+            t.memberExpression(t.identifier("ctx"), t.identifier("l"))
+        ),
+        t.blockStatement([
+            storeLeaf(t.stringLiteral("")),
+            t.returnStatement(t.booleanLiteral(false))
+        ])
+    ))
+
+    // const c = ctx.s[ctx.p]
+    stmts.push(t.variableDeclaration(
+        'const',
+        [
+            t.variableDeclarator(
+                t.identifier("c"), 
+                t.memberExpression(
+                    t.memberExpression(t.identifier("ctx"), t.identifier("s")), 
+                    t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+                    true,
+                )
+            )
+        ]
+    ))
+
+    // b.push(CstLeaf(c))
+    stmts.push(storeLeaf(t.identifier("c")))
+
+    // ctx.p++
+    stmts.push(t.expressionStatement(t.updateExpression(
+        '++',
+        t.memberExpression(t.identifier("ctx"), t.identifier("p")),
+        false
+    )))
+
+    // return true
+    stmts.push(t.returnStatement(t.booleanLiteral(true)))
+    return stmts
+}
 
 // A = B?
 //
