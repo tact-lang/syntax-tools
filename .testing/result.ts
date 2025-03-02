@@ -152,9 +152,13 @@ export const Func: Rule = (ctx, b) => {
 };
 export const Params: Rule = (ctx, b) => {
   const b2: Builder = [];
-  while (Param(ctx, b2)) {}
-  b.push(CstNode(b2));
-  return true;
+  const p = ctx.p;
+  let r = commaList(Param)(ctx, b2);
+  r = r || (ctx.p = p, true);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
+  }
+  return r;
 };
 export const Param: Rule = (ctx, b) => {
   const b2: Builder = [];
@@ -215,13 +219,56 @@ export const Comment: Rule = (ctx, b) => {
   }
   return r;
 };
-export const some: Rule = (ctx, b) => {
-  const c = consumeClass(ctx, c => c === "a" || c === "b" || c === "c" || c === "{");
-  if (c !== undefined) {
-    b.push(CstLeaf(c));
-    return true;
+export const optionalComme: Rule = (ctx, b) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = consumeString(ctx, b2, ",");
+  r = r || (ctx.p = p, true);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2));
   }
-  return false;
+  return r;
+};
+export const commaList: (T: Rule) => Rule = T => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    let r = inter(T, (ctx, b) => consumeString(ctx, b, ","))(ctx, b2);
+    r = r && optionalComme(ctx, b2);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2));
+    }
+    return r;
+  };
+};
+export const interInner: (A: Rule, B: Rule) => Rule = (A, B) => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    let r = B(ctx, b2);
+    r = r && A(ctx, b2);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2));
+    }
+    return r;
+  };
+};
+export const interTail: (A: Rule, B: Rule) => Rule = (A, B) => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    while (interInner(A, B)(ctx, b2)) {}
+    b.push(CstNode(b2));
+    return true;
+  };
+};
+export const inter: (A: Rule, B: Rule) => Rule = (A, B) => {
+  return (ctx, b) => {
+    const b2: Builder = [];
+    let r = A(ctx, b2);
+    r = r && interTail(A, B)(ctx, b2);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2));
+    }
+    return r;
+  };
 };
 export const space: Rule = (ctx, b) => {
   const b2: Builder = [];

@@ -28,7 +28,7 @@ Ident_1 = Symbol+;
 Ident_2 = $Ident_1;
 Ident = #Ident_2;
 Func = "fun" Ident "(" Params ")" Result "{" "}";
-Params = Param*;
+Params = commaList<Param>?;
 Param = Ident ":" Ident;
 // Type = Ident;
 Result = Result_1?;
@@ -37,7 +37,14 @@ Result_1 = ":" Ident;
 CommentSymbol = [^\\r\\n];
 CommentSymbol_1 = $CommentSymbol;
 CommentContent = CommentSymbol_1*;
-Comment = "//" CommentContent; // "// " CommentContent "\\\\n";
+Comment = "//" CommentContent;
+
+optionalComme = ","?;
+commaList<T> = inter<T, ","> optionalComme;
+
+interInner<A, B> = op:B right:A;
+interTail<A, B> = interInner<A, B>*;
+inter<A, B> = head:A tail:interTail<A, B>;
 
 space = " " / "\\\\n" / Comment;
 

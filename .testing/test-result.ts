@@ -5,9 +5,7 @@ const log = (obj: unknown) => console.log(inspect(obj, { colors: true, depth: In
 const ctx = createContext(`
 // hello world
 // some other comment
-fun bar(a: Int): string {}
-
-fun foo() {}
+fun bar(a: Int, other: String): string {}
 `, space);
 
 const b: Builder = []

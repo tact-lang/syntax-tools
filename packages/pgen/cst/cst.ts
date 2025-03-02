@@ -9,20 +9,59 @@ export const generate = (node: g.Grammar): t.File => {
 
 export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
     const name = t.identifier(node.name);
-    name.typeAnnotation = t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Rule")))
+
+    if (node.formals.length > 0) {
+        name.typeAnnotation = t.tsTypeAnnotation(t.tsFunctionType(
+            undefined,
+            node.formals.map(it => {
+                const ident = t.identifier(it);
+                ident.typeAnnotation = t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Rule")))
+                return ident
+            }),
+            t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Rule")))
+        ))
+    } else {
+        name.typeAnnotation = t.tsTypeAnnotation(t.tsTypeReference(t.identifier("Rule")))
+    }
+
+    const arrowFunction = t.arrowFunctionExpression(
+        [
+            t.identifier("ctx"),
+            t.identifier("b"),
+        ],
+        t.blockStatement(generateExpr(node.body))
+    );
+
+    // export const commaList: (T: Rule) => Rule = (T: Rule) => {
+    //     return (ctx, b) => { ... }
+    // }
+    if (node.formals.length > 0) {
+        return t.exportNamedDeclaration(t.variableDeclaration(
+            'const',
+            [
+                t.variableDeclarator(
+                    name,
+                    t.arrowFunctionExpression(
+                        node.formals.map(it => t.identifier(it)),
+                        t.blockStatement(
+                            [
+                                t.returnStatement(
+                                    arrowFunction
+                                )
+                            ]
+                        )
+                    ),
+                )
+            ]
+        ))
+    }
 
     return t.exportNamedDeclaration(t.variableDeclaration(
         'const',
         [
             t.variableDeclarator(
                 name,
-                t.arrowFunctionExpression(
-                    [
-                        t.identifier("ctx"),
-                        t.identifier("b"),
-                    ],
-                    t.blockStatement(generateExpr(node.body))
-                ),
+                arrowFunction,
             )
         ]
     ))
@@ -50,12 +89,12 @@ export const generateExpr = (node: g.Expr): t.Statement[] => {
             return generateOptional(node)
         // TODO
         // - transform rules to flat list
+        //   - flatten rules must be generic as well
         // - check escapes
         // - positions
         // - fix nesting
         // - rules
-        //   - generics
-        //      - flatten rules must be generic as well
+        //   - Type = Ident;
         //   - lookahead
         //   - negate lookahead
         //   - any
@@ -700,9 +739,27 @@ export const generateClause = (expr: g.Expr, builderName?: t.Expression, ctxName
                 ctxName ?? t.identifier("ctx"),
                 builderName ?? t.identifier("b2"),
             ]
-            // if (expr.params.length !== 0) {
-            //     return t.callExpression(emitCall(expr.name, expr.params.map((p) => generateClause(p))), args)
-            // }
+            if (expr.params.length !== 0) {
+                // commaList(Foo)(args)
+                const params = expr.params.map(param => {
+                    if (param.$ === "Call") {
+                        return t.identifier(param.name)
+                    }
+                    if (param.$ === "Terminal") {
+                        // (ctx, b) => consumeToken(ctx, b, <param>)
+                        return t.arrowFunctionExpression(
+                            [
+                                t.identifier("ctx"),
+                                t.identifier("b"),
+                            ],
+                            compileTerminal(param)
+                        )
+                    }
+                    throw new Error("unsupported param")
+                })
+
+                return t.callExpression(emitCall(expr.name, params), args)
+            }
             return t.callExpression(t.identifier(expr.name), args)
         }
         default:
