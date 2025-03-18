@@ -7,12 +7,8 @@ import {formatAscription} from "./format-types";
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     code.add("{").newLine().indent();
 
-    // Process all children in order to preserve comments
-    for (const child of node.children) {
-        if (child.$ === "leaf") {
-            if (!/[^\s]/.test(child.text)) continue;
-            code.add(child.text);
-        } else if (child.type === "Comment") {
+    for (const child of node.children.filter(it => it.$ === "node")) {
+        if (child.type === "Comment") {
             code.add(visit(child));
         } else if (child.group === "statement") {
             formatStatement(code, child);

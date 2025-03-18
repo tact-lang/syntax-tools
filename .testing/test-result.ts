@@ -1,7 +1,7 @@
 import {createContext, Builder, space, skip, Module, Cst, CstNode} from "./result";
 import {inspect} from "util";
 import * as fs from "fs";
-import {format, formatFunction} from "./formatter/formatter";
+import {format} from "./formatter/formatter";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
@@ -13,10 +13,9 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-fun some(param: Int) {
-    // comment
-    "hello\\nworld"; // comment 2
-    let s = param /* hello there */ + 1; // comment 3
+fun some() {
+    Foo { name: "" 
+    };
 }
 
 `;

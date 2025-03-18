@@ -605,7 +605,7 @@ export const assemblyItem: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = assemblyItem_seq_34(ctx, b2);
-  r = r || (ctx.p = p, comment(ctx, b2));
+  r = r || (ctx.p = p, Comment(ctx, b2));
   r = r || (ctx.p = p, assemblyItem_seq_36(ctx, b2));
   r = r || (ctx.p = p, assemblyItem_plus_40(ctx, b2));
   pushGroupTo(b, b2, "assemblyItem");
@@ -1201,11 +1201,23 @@ export const StructInstance: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = TypeId(ctx, b2, "type");
-  r = r && consumeString(ctx, b2, "{");
-  r = r && StructInstance_optional_67(ctx, b2, "fields");
-  r = r && consumeString(ctx, b2, "}");
+  r = r && StructInstanceFields(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StructInstance", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
+  }
+  return r;
+};
+export const StructInstanceFields: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = consumeString(ctx, b2, "{");
+  r = r && StructInstanceFields_optional_67(ctx, b2, "fields");
+  r = r && consumeString(ctx, b2, "}");
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "StructInstanceFields", field ?? ""));
   }
   if (!r) {
     ctx.p = p;
@@ -2267,7 +2279,7 @@ export const Suffix_star_66: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const StructInstance_optional_67: Rule = (ctx, b, field) => {
+export const StructInstanceFields_optional_67: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = commaList(StructFieldInitializer)(ctx, b2);

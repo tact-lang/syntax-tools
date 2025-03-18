@@ -164,7 +164,7 @@ assembly = #$assemblySequence;
 assemblySequence = assemblyItem*;
 assemblyItem
     = "{" assemblySequence "}"
-    / comment
+    / Comment
     / "\"" [^"]* "\""
     / (!(["{}] / "//" / "/*") .)+;
 
@@ -270,7 +270,8 @@ Null = keyword<"null">;
 parens = "(" @expression ")";
 Parens = child:parens;
 
-StructInstance = type:TypeId "{" fields:commaList<StructFieldInitializer>? "}";
+StructInstance = type:TypeId StructInstanceFields;
+StructInstanceFields = "{" fields:commaList<StructFieldInitializer>? "}";
 InitOf = keyword<"initOf"> name:Id params:ParameterList<expression>;
 CodeOf = "codeOf" name:Id;
 

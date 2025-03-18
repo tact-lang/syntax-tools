@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childrenByType, visit} from "../cst-helpers";
+import {childByField, childByType, childrenByType, idText, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList} from "./format-helpers";
 
@@ -10,6 +10,9 @@ export const formatType = (code: CodeBuilder, node: Cst): void => {
     }
 
     switch (node.type) {
+        case "TypeRegular":
+            formatTypeRegular(code, node);
+            break;
         case "TypeGeneric":
             formatTypeGeneric(code, node);
             break;
@@ -38,6 +41,22 @@ export const formatAscription = (code: CodeBuilder, node: Cst): void => {
     formatType(code, type);
 };
 
+const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
+    code.add(idText(node.children[0]))
+
+    const trailingComments = node.children.slice(1).filter(child => child.$ === "node" && child.type === "Comment");
+    if (trailingComments.length > 0) {
+        code.space();
+        for (const comment of trailingComments) {
+            const index = trailingComments.indexOf(comment);
+            code.add(visit(comment));
+            if (index < trailingComments.length - 1) {
+                code.space();
+            }
+        }
+    }
+};
+
 const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
     const args = childByField(node, "args");
@@ -55,10 +74,10 @@ const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
         return argCode.toString();
     });
 
-    formatCommaSeparatedList(code, argStrings, {
-        wrapperLeft: "<",
-        wrapperRight: ">"
-    });
+    // formatCommaSeparatedList(code, argStrings, {
+    //     wrapperLeft: "<",
+    //     wrapperRight: ">"
+    // });
 };
 
 const formatTypeAs = (code: CodeBuilder, node: CstNode): void => {

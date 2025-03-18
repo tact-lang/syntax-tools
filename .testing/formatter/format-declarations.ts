@@ -15,7 +15,6 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid function node");
     }
 
-    // Format attributes if present
     const attributes = childByField(node, "attributes");
     if (attributes) {
         const attrs = childrenByType(attributes, "FunctionAttribute");
@@ -28,32 +27,16 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         if (attrs.length > 0) code.newLine();
     }
 
-    // Add function declaration
     code.add("fun").space().add(visit(name));
 
-    // Format parameters
-    const params = childrenByType(parameters, "Parameter");
-    const paramStrings = params.map(param => {
+    formatCommaSeparatedList(code, parameters, (code, param) => {
         const paramName = childByField(param, "name");
         const paramType = childByField(param, "type");
         if (!paramName || !paramType) {
             throw new Error("Invalid parameter node");
         }
-        const paramCode = new CodeBuilder();
-        paramCode.add(visit(paramName));
-        formatAscription(paramCode, paramType);
-        return paramCode.toString();
-    });
-
-    // Add comments between parameters
-    const paramComments = params.map((param, i) => {
-        const nextParam = params[i + 1];
-        if (!nextParam) return [];
-        return getCommentsBetween(parameters, param, nextParam);
-    }).flat();
-
-    formatCommaSeparatedList(code, paramStrings, {
-        forceMultiline: paramComments.length > 0
+        code.add(visit(paramName));
+        formatAscription(code, paramType);
     });
 
     // Add return type if present
@@ -62,10 +45,11 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         formatAscription(code, returnType);
     }
 
-    // Format body
-    if (body.type === "FunctionDefinition") {
+    const bodyNode = body.children[0]
+
+    if (bodyNode.$ === "node" && bodyNode.type === "FunctionDefinition") {
         code.space();
-        formatStatements(code, body);
+        formatStatements(code, bodyNode);
     } else {
         code.add(";");
     }

@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childrenByType, visit} from "../cst-helpers";
+import {childByField, childByType, childrenByType, idText, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList} from "./format-helpers";
 import {formatType} from "./format-types";
@@ -8,7 +8,10 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
     if (node.$ === "node") {
         switch (node.type) {
             case "StringLiteral":
-                code.add(visit(node));
+                code.add(visit(node).trim());
+                return
+            case "IntegerLiteral":
+                code.add(visit(node).trim());
                 return
             case "StructInstance":
                 formatStructInstance(code, node);
@@ -16,6 +19,42 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             case "SuffixCall":
                 formatSuffixCall(code, node);
                 return
+            case "Binary": {
+                const elements = node.children.filter(it => it.$ === "node")
+                if (elements.length === 1) {
+                    formatExpression(code, elements[0]);
+                    return
+                }
+                code.add(visit(node));
+                return
+            }
+            case "Unary": {
+                const elements = node.children.filter(it => it.$ === "node")
+                if (elements.length === 1) {
+                    formatExpression(code, elements[0]);
+                    return
+                }
+                code.add(visit(node));
+                return
+            }
+            case "Suffix": {
+                const elements = node.children.filter(it => it.$ === "node")
+                if (elements.length === 1) {
+                    formatExpression(code, elements[0]);
+                    return
+                }
+                code.add(visit(node).trim());
+                return
+            }
+            case "Conditional": {
+                const elements = node.children.filter(it => it.$ === "node")
+                if (elements.length === 1) {
+                    formatExpression(code, elements[0]);
+                    return
+                }
+                code.add(visit(node));
+                return
+            }
         }
     }
 
@@ -24,32 +63,31 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
 
 const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
     const type = childByField(node, "type");
-    const fields = childByField(node, "fields");
+    const fields = childByType(node, "StructInstanceFields");
 
-    if (!type || !fields) {
+    if (!type || !fields || fields.$ === "leaf") {
         throw new Error("Invalid struct instance");
     }
 
     formatType(code, type);
+    code.space()
 
-    const fieldNodes = childrenByType(fields, "StructFieldInitializer");
-    const fieldStrings = fieldNodes.map(field => {
+    formatCommaSeparatedList(code, fields, (code, field) => {
         const name = childByField(field, "name");
-        const init = childByField(field, "init");
+        const init = childByType(field, "init");
         if (!name) throw new Error("Invalid field initializer");
 
-        const fieldCode = new CodeBuilder();
-        fieldCode.add(visit(name));
-        if (init) {
-            fieldCode.add(":").space();
-            formatExpression(fieldCode, init);
+        code.add(idText(name));
+        if (init && init.$ === "node") {
+            code.add(":").space();
+            formatExpression(code, init.children.at(-1));
         }
-        return fieldCode.toString();
-    });
-
-    formatCommaSeparatedList(code, fieldStrings, {
+    }, {
+        startIndex: 1,
+        endIndex: -1,
         wrapperLeft: "{",
-        wrapperRight: "}"
+        wrapperRight: "}",
+        extraWrapperSpace: " ",
     });
 };
 
@@ -59,12 +97,7 @@ const formatSuffixCall = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid call expression");
     }
 
-    const argNodes = childrenByType(args, "expression");
-    const argStrings = argNodes.map(arg => {
-        const argCode = new CodeBuilder();
-        formatExpression(argCode, arg);
-        return argCode.toString();
+    formatCommaSeparatedList(code, args, (code, arg) => {
+        formatExpression(code, arg);
     });
-
-    formatCommaSeparatedList(code, argStrings);
 }; 
