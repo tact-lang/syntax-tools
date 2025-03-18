@@ -12,7 +12,9 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
+// some comment
 fun some(param: Int) {
+    "hello\\nworld";
     let s = param + 1;
 }
 

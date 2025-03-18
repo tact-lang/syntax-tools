@@ -85,7 +85,7 @@ export const generateExpr = (node: g.Expr, ruleName: string): t.Statement[] => {
         case 'Stringify':
             return generateStringify(node)
         case 'Lex':
-            return generateLex(node)
+            return generateLex(node, ruleName)
         case 'Optional':
             return generateOptional(node, ruleName)
         case "Any":
@@ -138,7 +138,7 @@ const storeNodeFromBuilder = (name: string, nodeType: string) => t.expressionSta
         ), [
             t.callExpression(t.identifier("CstNode"), [
                 t.identifier(name),
-                t.stringLiteral(nodeType)
+                ...(nodeType.length > 0 && !isLowerCase(nodeType[0]) ? [t.stringLiteral(nodeType)] : [t.stringLiteral("")])
             ])
         ])
 );
@@ -444,14 +444,20 @@ export const generateOptional = (node: g.Optional, ruleName: string): t.Statemen
 //        ...ctx,
 //        space: undefined,
 //    }
-// 
-//    const r = A(newCtx, b)
+//
+//    const b2: Builder = []
+//    const r = A(newCtx, b2)
+//    if (r) { b.push(CstNode(b2)) }
+//
 //    ctx.p = newCtx.p
 //    skip(ctx, b)
 //    return r
 // }
-export const generateLex = (node: g.Lex): t.Statement[] => {
+export const generateLex = (node: g.Lex, ruleName: string): t.Statement[] => {
     const stmts: t.Statement[] = []
+
+    // const b2: Builder = []
+    stmts.push(createEmptyBuilder("b2"))
 
     // const newCtx = {
     //     ...ctx,
@@ -469,12 +475,20 @@ export const generateLex = (node: g.Lex): t.Statement[] => {
         ]
     ))
 
-    // const r = A(newCtx, b)
+    // const r = A(newCtx, b2)
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b"), t.identifier("newCtx")))
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b2"), t.identifier("newCtx")))
         ]
+    ))
+
+    // if (r) { b.push(CstNode(b2)) }
+    stmts.push(t.ifStatement(t.identifier("r"),
+        t.blockStatement([
+            // b.push(CstNode(b2))
+            storeNodeFromBuilder("b2", ruleName)
+        ])
     ))
 
     // ctx.p = newCtx.p
