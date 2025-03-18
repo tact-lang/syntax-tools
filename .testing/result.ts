@@ -29,6 +29,7 @@ export type CstNode = {
     readonly $: "node",
     readonly id: number,
     readonly type: string,
+    readonly group: string,
     readonly children: readonly Cst[],
 }
 
@@ -38,7 +39,7 @@ export const CstLeaf = (text: string): CstLeaf => ({
     text,
 });
 
-export const CstNode = (children: readonly Cst[], type: string = "unknown"): CstNode => {
+export const CstNode = (children: readonly Cst[], type: string = "unknown", group: string = ""): CstNode => {
   if (children.length === 1 && children[0].$ === "node" && children[0].type === "") {
     return CstNode(children[0].children, type)
   }
@@ -56,8 +57,20 @@ export const CstNode = (children: readonly Cst[], type: string = "unknown"): Cst
     $: "node",
     id: nextId++,
     type,
+    group,
     children: processedChildren,
   }
+}
+
+const pushGroupTo = (b: Builder, source: Builder, group: string) => {
+  if (source.length === 0) return
+  b.push(...source.map(it => {
+    if (it.$ === "leaf") return it
+    return {
+      ...it,
+      group,
+    }
+  }))
 }
 
 export type Builder = Cst[]
@@ -168,9 +181,7 @@ export const moduleItem: Rule = (ctx, b) => {
   r = r || (ctx.p = p, MessageDecl(ctx, b2));
   r = r || (ctx.p = p, Contract(ctx, b2));
   r = r || (ctx.p = p, Trait(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "moduleItem"));
-  }
+  pushGroupTo(b, b2, "moduleItem");
   return r;
 };
 export const contractItemDecl: Rule = (ctx, b) => {
@@ -181,9 +192,7 @@ export const contractItemDecl: Rule = (ctx, b) => {
   r = r || (ctx.p = p, $Function(ctx, b2));
   r = r || (ctx.p = p, Constant(ctx, b2));
   r = r || (ctx.p = p, storageVar(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "contractItemDecl"));
-  }
+  pushGroupTo(b, b2, "contractItemDecl");
   return r;
 };
 export const traitItemDecl: Rule = (ctx, b) => {
@@ -193,9 +202,7 @@ export const traitItemDecl: Rule = (ctx, b) => {
   r = r || (ctx.p = p, $Function(ctx, b2));
   r = r || (ctx.p = p, Constant(ctx, b2));
   r = r || (ctx.p = p, storageVar(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "traitItemDecl"));
-  }
+  pushGroupTo(b, b2, "traitItemDecl");
   return r;
 };
 export const PrimitiveTypeDecl: Rule = (ctx, b) => {
@@ -580,9 +587,7 @@ export const assemblyItem: Rule = (ctx, b) => {
   r = r || (ctx.p = p, comment(ctx, b2));
   r = r || (ctx.p = p, assemblyItem_seq_36(ctx, b2));
   r = r || (ctx.p = p, assemblyItem_plus_40(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "assemblyItem"));
-  }
+  pushGroupTo(b, b2, "assemblyItem");
   return r;
 };
 export const ascription: Rule = (ctx, b) => {
@@ -632,9 +637,7 @@ export const typePrimary: Rule = (ctx, b) => {
   const p = ctx.p;
   let r = TypeGeneric(ctx, b2);
   r = r || (ctx.p = p, TypeRegular(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "typePrimary"));
-  }
+  pushGroupTo(b, b2, "typePrimary");
   return r;
 };
 export const TypeRegular: Rule = (ctx, b) => {
@@ -695,9 +698,7 @@ export const statement: Rule = (ctx, b) => {
   r = r || (ctx.p = p, StatementForEach(ctx, b2));
   r = r || (ctx.p = p, StatementExpression(ctx, b2));
   r = r || (ctx.p = p, StatementAssign(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "statement"));
-  }
+  pushGroupTo(b, b2, "statement");
   return r;
 };
 export const statements: Rule = (ctx, b) => {
@@ -898,9 +899,7 @@ export const augmentedOp: Rule = (ctx, b) => {
   r = r || (ctx.p = p, consumeString(ctx, b2, ">>"));
   r = r || (ctx.p = p, consumeString(ctx, b2, "<<"));
   r = r || (ctx.p = p, consumeClass(ctx, b2, c => c === "-" || c === "+" || c === "*" || c === "/" || c === "%" || c === "|" || c === "&" || c === "^"));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "augmentedOp"));
-  }
+  pushGroupTo(b, b2, "augmentedOp");
   return r;
 };
 export const FalseBranch: Rule = (ctx, b) => {
@@ -911,9 +910,7 @@ export const semicolon: Rule = (ctx, b) => {
   const p = ctx.p;
   let r = consumeString(ctx, b2, ";");
   r = r || (ctx.p = p, semicolon_lookpos_57(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "semicolon"));
-  }
+  pushGroupTo(b, b2, "semicolon");
   return r;
 };
 export const destructItem: Rule = (ctx, b) => {
@@ -921,9 +918,7 @@ export const destructItem: Rule = (ctx, b) => {
   const p = ctx.p;
   let r = RegularField(ctx, b2);
   r = r || (ctx.p = p, PunnedField(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "destructItem"));
-  }
+  pushGroupTo(b, b2, "destructItem");
   return r;
 };
 export const RegularField: Rule = (ctx, b) => {
@@ -948,9 +943,7 @@ export const optionalRest: Rule = (ctx, b) => {
   const p = ctx.p;
   let r = optionalRest_seq_58(ctx, b2);
   r = r || (ctx.p = p, NoRestArgument(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "optionalRest"));
-  }
+  pushGroupTo(b, b2, "optionalRest");
   return r;
 };
 export const RestArgument: Rule = (ctx, b) => {
@@ -1063,9 +1056,7 @@ export const suffix: Rule = (ctx, b) => {
   let r = SuffixUnboxNotNull(ctx, b2);
   r = r || (ctx.p = p, SuffixCall(ctx, b2));
   r = r || (ctx.p = p, SuffixFieldAccess(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "suffix"));
-  }
+  pushGroupTo(b, b2, "suffix");
   return r;
 };
 export const SuffixUnboxNotNull: Rule = (ctx, b) => {
@@ -1108,9 +1099,7 @@ export const primary: Rule = (ctx, b) => {
   r = r || (ctx.p = p, Null(ctx, b2));
   r = r || (ctx.p = p, StringLiteral(ctx, b2));
   r = r || (ctx.p = p, Id(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "primary"));
-  }
+  pushGroupTo(b, b2, "primary");
   return r;
 };
 export const Null: Rule = (ctx, b) => {
@@ -1288,8 +1277,10 @@ export const underscored: (T: Rule) => Rule = T => {
   return (ctx, b) => {
     const p = ctx.p;
     const r = underscored_seq_78(T)(ctx, []);
-    const text = ctx.s.substring(p, ctx.p);
-    b.push(CstLeaf(text));
+    if (r) {
+      const text = ctx.s.substring(p, ctx.p);
+      b.push(CstLeaf(text));
+    }
     return r;
   };
 };
@@ -1352,9 +1343,7 @@ export const escapeChar: Rule = (ctx, b) => {
   r = r || (ctx.p = p, escapeChar_seq_103(ctx, b2));
   r = r || (ctx.p = p, escapeChar_seq_106(ctx, b2));
   r = r || (ctx.p = p, escapeChar_seq_109(ctx, b2));
-  if (b2.length > 0) {
-    b.push(CstNode(b2, "escapeChar"));
-  }
+  pushGroupTo(b, b2, "escapeChar");
   return r;
 };
 export const hexDigit: Rule = (ctx, b) => {
@@ -1445,7 +1434,7 @@ export const inter: (A: Rule, B: Rule) => Rule = (A, B) => {
     let r = A(ctx, b2);
     r = r && inter_star_126(A, B)(ctx, b2);
     if (r && b2.length > 0) {
-      b.push(CstNode(b2, ""));
+      b.push(CstNode(b2, "inter"));
     }
     if (!r) {
       ctx.p = p;
@@ -1803,8 +1792,10 @@ export const receiverParam_alt_32: Rule = (ctx, b) => {
 export const assembly_stringify_33: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = assemblySequence(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const assemblyItem_seq_34: Rule = (ctx, b) => {
@@ -1958,8 +1949,10 @@ export const TypeId_seq_46: Rule = (ctx, b) => {
 export const TypeId_stringify_47: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = TypeId_seq_46(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const statements_star_48: Rule = (ctx, b) => {
@@ -2353,8 +2346,10 @@ export const Id_seq_81: Rule = (ctx, b) => {
 export const Id_stringify_82: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = Id_seq_81(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const FuncId_optional_83: Rule = (ctx, b) => {
@@ -2420,8 +2415,10 @@ export const FuncId_alt_87: Rule = (ctx, b) => {
 export const FuncId_stringify_88: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = FuncId_alt_87(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const BoolLiteral_alt_89: Rule = (ctx, b) => {
@@ -2476,8 +2473,10 @@ export const StringLiteral_star_93: Rule = (ctx, b) => {
 export const StringLiteral_stringify_94: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = StringLiteral_star_93(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const StringLiteral_seq_95: Rule = (ctx, b) => {
@@ -2564,8 +2563,10 @@ export const escapeChar_seq_101: Rule = (ctx, b) => {
 export const escapeChar_stringify_102: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = escapeChar_seq_101(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const escapeChar_seq_103: Rule = (ctx, b) => {
@@ -2600,8 +2601,10 @@ export const escapeChar_seq_104: Rule = (ctx, b) => {
 export const escapeChar_stringify_105: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = escapeChar_seq_104(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const escapeChar_seq_106: Rule = (ctx, b) => {
@@ -2633,8 +2636,10 @@ export const escapeChar_seq_107: Rule = (ctx, b) => {
 export const escapeChar_stringify_108: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = escapeChar_seq_107(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const escapeChar_seq_109: Rule = (ctx, b) => {
@@ -2729,8 +2734,10 @@ export const space_plus_113: Rule = (ctx, b) => {
 export const space_stringify_114: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = space_plus_113(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const space_lex_115: Rule = (ctx, b) => {
@@ -2785,8 +2792,10 @@ export const multiLineComment_star_119: Rule = (ctx, b) => {
 export const multiLineComment_stringify_120: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = multiLineComment_star_119(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const singleLineComment_star_121: Rule = (ctx, b) => {
@@ -2802,8 +2811,10 @@ export const singleLineComment_star_121: Rule = (ctx, b) => {
 export const singleLineComment_stringify_122: Rule = (ctx, b) => {
   const p = ctx.p;
   const r = singleLineComment_star_121(ctx, []);
-  const text = ctx.s.substring(p, ctx.p);
-  b.push(CstLeaf(text));
+  if (r) {
+    const text = ctx.s.substring(p, ctx.p);
+    b.push(CstLeaf(text));
+  }
   return r;
 };
 export const JustImports_star_123: Rule = (ctx, b) => {

@@ -1,5 +1,6 @@
 import * as t from '@babel/types';
 import * as g from './transform';
+import {expressionStatement} from "@babel/types";
 
 export const generate = (node: g.Grammar): t.File => {
     return t.file(t.program(
@@ -497,8 +498,10 @@ export const generateLex = (node: g.Lex): t.Statement[] => {
 // const A = (ctx, b) => {
 //     const p = ctx.p
 //     const r = B(ctx, []);
-//     const text = ctx.s.substring(p, ctx.p)
-//     b.push(CstLeaf(text))
+//     if (r) {
+//         const text = ctx.s.substring(p, ctx.p)
+//         b.push(CstLeaf(text))
+//     }
 //     return r
 // }
 export const generateStringify = (node: g.Stringify): t.Statement[] => {
@@ -515,27 +518,30 @@ export const generateStringify = (node: g.Stringify): t.Statement[] => {
         ]
     ))
 
-    // const text = ctx.s.substring(p, ctx.p)
-    stmts.push(t.variableDeclaration(
-        'const',
-        [
-            t.variableDeclarator(
-                t.identifier("text"),
-                t.callExpression(
-                    t.memberExpression(
-                        t.memberExpression(t.identifier("ctx"), t.identifier("s")),
-                        t.identifier("substring"),
-                    ),
-                    [
-                        t.identifier("p"),
-                        t.memberExpression(t.identifier("ctx"), t.identifier("p"))
-                    ])
-            )
-        ]
+    stmts.push(t.ifStatement(t.identifier("r"),
+        t.blockStatement([
+            // const text = ctx.s.substring(p, ctx.p)
+            t.variableDeclaration(
+                'const',
+                [
+                    t.variableDeclarator(
+                        t.identifier("text"),
+                        t.callExpression(
+                            t.memberExpression(
+                                t.memberExpression(t.identifier("ctx"), t.identifier("s")),
+                                t.identifier("substring"),
+                            ),
+                            [
+                                t.identifier("p"),
+                                t.memberExpression(t.identifier("ctx"), t.identifier("p"))
+                            ])
+                    )
+                ]
+            ),
+            // b.push(CstLeaf(text))
+            storeLeaf(t.identifier("text")),
+        ])
     ))
-
-    // b.push(CstLeaf(text))
-    stmts.push(storeLeaf(t.identifier("text")))
 
     // return r
     stmts.push(t.returnStatement(t.identifier("r")))
@@ -759,6 +765,11 @@ export const generateClass = (node: g.Class): t.Statement[] => {
     return stmts
 }
 
+function isLowerCase(str: string) {
+    return str === str.toLowerCase() &&
+        str !== str.toUpperCase();
+}
+
 // // Or = A | B
 // const Or = (ctx: Context, b: Builder): boolean => {
 //    const b2: Builder = []
@@ -822,10 +833,20 @@ export const generateAlt = (node: g.Alt, ruleName: string): t.Statement[] => {
         )))
     }
 
-    // if (b2.length > 0) {
-    //     b.push(CstNode(b2))
-    // }
-    stmts.push(storeNodeIfNotEmpty(ruleName))
+    if (ruleName.length > 0 && isLowerCase(ruleName[0])) {
+        // pushGroupTo(b, b2, "moduleItem")
+        stmts.push(expressionStatement(t.callExpression(
+            t.identifier("pushGroupTo"), [
+                t.identifier("b"),
+                t.identifier("b2"),
+                t.stringLiteral(ruleName),
+            ])))
+    } else {
+        // if (b2.length > 0) {
+        //     b.push(CstNode(b2))
+        // }
+        stmts.push(storeNodeIfNotEmpty(ruleName))
+    }
 
     stmts.push(t.returnStatement(t.identifier("r")))
     return stmts

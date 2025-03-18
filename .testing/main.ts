@@ -53,6 +53,7 @@ export type CstNode = {
     readonly $: "node",
     readonly id: number,
     readonly type: string,
+    readonly group: string,
     readonly children: readonly Cst[],
 }
 
@@ -62,7 +63,7 @@ export const CstLeaf = (text: string): CstLeaf => ({
     text,
 });
 
-export const CstNode = (children: readonly Cst[], type: string = "unknown"): CstNode => {
+export const CstNode = (children: readonly Cst[], type: string = "unknown", group: string = ""): CstNode => {
   if (children.length === 1 && children[0].$ === "node" && children[0].type === "") {
     return CstNode(children[0].children, type)
   }
@@ -80,11 +81,21 @@ export const CstNode = (children: readonly Cst[], type: string = "unknown"): Cst
     $: "node",
     id: nextId++,
     type,
+    group,
     children: processedChildren,
   }
 }
 
-export type Result = [boolean, Cst]
+const pushGroupTo = (b: Builder, source: Builder, group: string) => {
+  if (source.length === 0) return
+  b.push(...source.map(it => {
+    if (it.$ === "leaf") return it
+    return {
+      ...it,
+      group,
+    }
+  }))
+}
 
 export type Builder = Cst[]
 

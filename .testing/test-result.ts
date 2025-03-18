@@ -6,10 +6,14 @@ const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Inf
 
 const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 
+    // struct Foo {
+    //     name: String;
+    //     value: Int;
+    // }
+
 `
-struct Foo {
-    name: String;
-    value: Int;
+fun some(param: Int) {
+    let s = param + 1;
 }
 
 `;
@@ -93,11 +97,35 @@ const visit = (node: Cst): string => {
     return node.children.map(it => visit(it)).join("")
 }
 
-const rootCst = CstNode(b, "Root");
+const childByType = (node: Cst, type: string): undefined | Cst => {
+    if (node.$ === "leaf") {
+        return undefined
+    }
 
-console.log(visualizeCST(rootCst));
-fs.writeFileSync("out.json", JSON.stringify(rootCst, null, 4));
-console.log(visit(rootCst));
+    return node.children.find(c => c.$ === "node" && c.type === type)
+}
+
+const childrenByType = (node: Cst, type: string): Cst[] => {
+    if (node.$ === "leaf") {
+        return []
+    }
+
+    return node.children.filter(c => c.$ === "node" && c.type === type)
+}
+
+const childrenByGroup = (node: Cst, group: string): Cst[] => {
+    if (node.$ === "leaf") {
+        return []
+    }
+
+    return node.children.filter(c => c.$ === "node" && c.group === group)
+}
+
+const root = CstNode(b, "Root");
+
+console.log(visualizeCST(root));
+fs.writeFileSync("out.json", JSON.stringify(root, null, 4));
+console.log(visit(root));
 
 // const files = fs.globSync("**/*.tact", {
 //     cwd: "/Users/petrmakhnev/tact",
@@ -123,6 +151,29 @@ console.log(visit(rootCst));
 //     }
 // })
 
-console.log(visit(CstNode(b, "Root")) === code)
+fs.writeFileSync("out.tact", visit(root))
+console.log(visit(root) === code)
 
-fs.writeFileSync("out.tact", visit(CstNode(b, "Root")))
+const module = childByType(root, "Module")!
+const items = childrenByGroup(module, "moduleItem")!
+
+for (const item of items) {
+    if (item.$ === "node" && item.type === "StructDecl") {
+        console.log(item.children[2])
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
