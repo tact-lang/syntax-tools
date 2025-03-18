@@ -328,8 +328,8 @@ reservedWord "reserved word" = keyword<(
     "inline" / "const"
 )>;
 
-space "space" = [ \t\r\n] / comment;
-comment = multiLineComment / singleLineComment;
+space "space" = (#$([ \t\r\n]+) / Comment)+;
+Comment = multiLineComment / singleLineComment;
 multiLineComment = "/*" @$(!"*/" .)* "*/";
 singleLineComment = "//" @$[^\r\n]*;
 

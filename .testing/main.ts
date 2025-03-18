@@ -11,38 +11,6 @@ const ast = $.parse({
     grammar: G.Grammar,
     space: G.space,
     text: fs.readFileSync("grammar.gg", "utf8"),
-//
-//         `
-// File = Func*;
-//
-// Ident = #$([a-zA-Z]+);
-// Func = "fun" Ident "(" Params ")" Result statements;
-// Params = commaList<Param>?;
-// Param = Ident ":" Type;
-// Type = Ident;
-// Result = (":" Type)?;
-//
-// statementsList = statement*;
-// statements = "{" statementsList "}";
-//
-// statement
-//     = StatementLet;
-//
-// StatementLet        = "let" name:Ident "=" Ident semicolon;
-//
-// semicolon = ";" / &"}";
-//
-// Comment = "//" $([^\\r\\n])*;
-//
-// multiLineComment = "/*" $(!"*/" .)* "*/";
-//
-// commaList<T> = inter<T, ","> ","?;
-//
-// inter<A, B> = head:A tail:(op:B right:A)*;
-//
-// space = " " / "\\\\n" / Comment / multiLineComment;
-//
-//     `,
 });
 if (ast.$ === 'error') {
     console.error(ast.error);
@@ -52,12 +20,9 @@ if (ast.$ === 'error') {
 const transformed = desugar(ast.value);
 log(transformed)
 
-const ast2 = g.generate(transformed)
-// log(ast2)
+const parserAst = g.generate(transformed);
 
-const generated = generate(ast2, { minified: false }).code;
-
-const header = `
+const PARSER_HEADER = `
 let nextId = 0
 
 export const createContext = (s: string, space: Rule) => ({
@@ -97,12 +62,27 @@ export const CstLeaf = (text: string): CstLeaf => ({
     text,
 });
 
-export const CstNode = (children: readonly Cst[], type: string = "unknown"): CstNode => ({
+export const CstNode = (children: readonly Cst[], type: string = "unknown"): CstNode => {
+  if (children.length === 1 && children[0].$ === "node" && children[0].type === "") {
+    return CstNode(children[0].children, type)
+  }
+
+  const process = (ch: Cst): readonly Cst[] => {
+    if (ch.$ === "node" && ch.type === "") {
+      return ch.children.flatMap(ch => process(ch))
+    }
+    return [ch]
+  }
+
+  const processedChildren = children.flatMap(ch => process(ch))
+
+  return {
     $: "node",
     id: nextId++,
     type,
-    children,
-});
+    children: processedChildren,
+  }
+}
 
 export type Result = [boolean, Cst]
 
@@ -152,17 +132,12 @@ export const consumeAny = (ctx: Context, b: Builder) => {
 };
 
 export const skip = (ctx: Context, b: Builder) => {
-    const prevPos = ctx.p
     const newCtx = {
         ...ctx,
         space: undefined,
     }
-    while (ctx.space?.(newCtx, []));
+    ctx.space?.(newCtx, b);
     ctx.p = newCtx.p
-    const text = ctx.s.substring(prevPos, ctx.p)
-    if (text.length > 0) {
-        b.push(CstLeaf(text))
-    }
 }
 
 const stringify = (ctx: Context, b: Builder, rule: Rule): boolean => {
@@ -180,10 +155,8 @@ const lex = (ctx: Context, b: Builder, rule: Rule): boolean => {
 
     return rule(newCtx, b)
 }
+`;
 
-
-`
-
-const result = header + generated
-
-fs.writeFileSync(__dirname + "/result.ts", result)
+const parserGenerated = generate(parserAst, { minified: false }).code;
+const parserResult = PARSER_HEADER + parserGenerated;
+fs.writeFileSync(__dirname + "/result.ts", parserResult);

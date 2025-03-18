@@ -4,85 +4,19 @@ import * as fs from "fs";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
-const code = fs.readFileSync("jetton_wallet.tact", "utf8");
+const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 
 `
-// hello world
-// some other comment
-fun bar(a: Int, other: String /* comment */): String {
-    let some: Int = other;
+struct Foo {
+    name: String;
+    value: Int;
 }
-
-/* 
-
-some comment
-
-*/
 
 `;
 
 const ctx = createContext(code, space);
 
 const b: Builder = []
-
-const flattenSingleChildNodes = (node: Cst): Cst => {
-    if (node.$ === "leaf") {
-        return node;
-    }
-
-    const processedChildren = node.children.map(c => flattenSingleChildNodes(c));
-
-    if (
-        processedChildren.length === 1 &&
-        processedChildren[0].$ === "leaf" &&
-        (node.type === "" || isLowerCase(node.type[0]))
-    ) {
-        return processedChildren[0]
-    }
-
-    if (
-        processedChildren.length === 1 &&
-        processedChildren[0].$ !== "leaf" &&
-        (processedChildren[0].type === "" || isLowerCase(processedChildren[0].type[0]))
-    ) {
-        return {
-            ...processedChildren[0],
-            type: node.type.length === 0 ? processedChildren[0].type : node.type
-        };
-    }
-
-    return {
-        ...node,
-        children: processedChildren
-    };
-};
-
-const removeEmptyTypeNodes = (node: Cst): Cst => {
-    if (node.$ === "leaf") {
-        return node;
-    }
-
-    const processedChildren = node.children.map(child => removeEmptyTypeNodes(child));
-    
-    if (node.type === "" || isLowerCase(node.type[0])) {
-        const flattenedChildren = processedChildren.flatMap(child => {
-            if (child.$ === "node" && (child.type === "" || isLowerCase(child.type[0]))) {
-                return child.children;
-            }
-            return [child];
-        });
-        
-        return {
-            ...node,
-            children: flattenedChildren
-        };
-    }
-    
-    return {
-        ...node,
-        children: processedChildren
-    };
-}
 
 const visualizeCST = (node: Cst, indent: string = ""): string => {
     if (node.$ === "leaf") {
@@ -160,13 +94,10 @@ const visit = (node: Cst): string => {
 }
 
 const rootCst = CstNode(b, "Root");
-const flattenedCst = removeEmptyTypeNodes(flattenSingleChildNodes(rootCst));
 
-console.log(visualizeCST(flattenedCst));
-fs.writeFileSync("out.json", JSON.stringify(flattenedCst, null, 4));
-console.log(visit(flattenedCst));
-
-// console.log(cstToSExpr(flattenedCst));
+console.log(visualizeCST(rootCst));
+fs.writeFileSync("out.json", JSON.stringify(rootCst, null, 4));
+console.log(visit(rootCst));
 
 // const files = fs.globSync("**/*.tact", {
 //     cwd: "/Users/petrmakhnev/tact",
