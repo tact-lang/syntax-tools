@@ -39,7 +39,7 @@ export type Context = {
     space: undefined | Rule,
 }
 
-export type Rule = (ctx: Context, b: Builder) => boolean
+export type Rule = (ctx: Context, b: Builder, field?: string) => boolean
 
 export type Cst = CstLeaf | CstNode
 
@@ -54,6 +54,7 @@ export type CstNode = {
     readonly id: number,
     readonly type: string,
     readonly group: string,
+    readonly field: string,
     readonly children: readonly Cst[],
 }
 
@@ -63,7 +64,7 @@ export const CstLeaf = (text: string): CstLeaf => ({
     text,
 });
 
-export const CstNode = (children: readonly Cst[], type: string = "unknown", group: string = ""): CstNode => {
+export const CstNode = (children: readonly Cst[], type: string = "unknown", field: string = "", group: string = ""): CstNode => {
   if (children.length === 1 && children[0].$ === "node" && children[0].type === "") {
     return CstNode(children[0].children, type)
   }
@@ -82,6 +83,7 @@ export const CstNode = (children: readonly Cst[], type: string = "unknown", grou
     id: nextId++,
     type,
     group,
+    field,
     children: processedChildren,
   }
 }

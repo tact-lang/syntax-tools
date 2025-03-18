@@ -123,6 +123,25 @@ const childrenByGroup = (node: Cst, group: string): Cst[] => {
     return node.children.filter(c => c.$ === "node" && c.group === group)
 }
 
+const childByField = (node: Cst, field: string): undefined | CstNode => {
+    if (node.$ === "leaf") {
+        return undefined
+    }
+
+    const res = node.children.find(c => c.$ === "node" && c.field === field)
+    if (res.$ === "node") {
+        return res
+    }
+    return undefined
+}
+
+const idText = (node: Cst): string => {
+    if (node.$ === "leaf") return node.text
+    if (node.type !== "Id") return ""
+    const first = node.children[0]
+    return first.$ === "leaf" ? first.text : ""
+}
+
 const root = CstNode(b, "Root");
 
 console.log(visualizeCST(root));
@@ -157,11 +176,16 @@ fs.writeFileSync("out.tact", visit(root))
 console.log(visit(root) === code)
 
 const module = childByType(root, "Module")!
-const items = childrenByGroup(module, "moduleItem")!
+const itemsNode = childByField(module, "items")
+const items = childrenByGroup(itemsNode, "moduleItem")!
 
 for (const item of items) {
-    if (item.$ === "node" && item.type === "StructDecl") {
-        console.log(item.children[2])
+    if (item.$ === "node" && item.type === "$Function") {
+        console.log(idText(childByField(item, "name")))
+        const paramsNode = childByField(item, "parameters");
+        console.log(childrenByType(paramsNode, "Parameter").map(p => {
+            return idText(childByField(p, "name"))
+        }))
     }
 }
 

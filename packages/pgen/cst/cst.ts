@@ -29,6 +29,7 @@ export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
         [
             t.identifier("ctx"),
             t.identifier("b"),
+            t.identifier("field"),
         ],
         t.blockStatement(generateExpr(node.body, node.isPrivate ? "" : node.name))
     );
@@ -138,7 +139,10 @@ const storeNodeFromBuilder = (name: string, nodeType: string) => t.expressionSta
         ), [
             t.callExpression(t.identifier("CstNode"), [
                 t.identifier(name),
-                ...(nodeType.length > 0 && !isLowerCase(nodeType[0]) ? [t.stringLiteral(nodeType)] : [t.stringLiteral("")])
+                ...(nodeType.length > 0 && !isLowerCase(nodeType[0])
+                    ? [t.stringLiteral(nodeType)]
+                    : [t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))]),
+                t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))
             ])
         ])
 );
@@ -202,7 +206,7 @@ export const generateLookPos = (lookNeg: g.LookPos): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, t.arrayExpression([])))
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, undefined, t.arrayExpression([])))
         ]
     ))
 
@@ -234,7 +238,7 @@ export const generateLookNeg = (lookNeg: g.LookNeg): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, t.identifier("b")))
+            t.variableDeclarator(t.identifier("r"), generateClause(lookNeg.expr, undefined, t.identifier("b")))
         ]
     ))
 
@@ -404,7 +408,7 @@ export const generateOptional = (node: g.Optional, ruleName: string): t.Statemen
     stmts.push(t.variableDeclaration(
         'let',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b2")))
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, undefined, t.identifier("b2")))
         ]
     ))
 
@@ -479,7 +483,7 @@ export const generateLex = (node: g.Lex, ruleName: string): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b2"), t.identifier("newCtx")))
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, undefined, t.identifier("b2"), t.identifier("newCtx")))
         ]
     ))
 
@@ -528,7 +532,7 @@ export const generateStringify = (node: g.Stringify): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.arrayExpression([])))
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, undefined, t.arrayExpression([])))
         ]
     ))
 
@@ -595,7 +599,7 @@ export const generateStar = (node: g.Star, ruleName: string): t.Statement[] => {
                     t.identifier("p"),
                     t.memberExpression(t.identifier("ctx"), t.identifier("p")),
                 ),
-                generateClause(node.expr, t.identifier("b2")),
+                generateClause(node.expr, undefined, t.identifier("b2")),
             ]
         ),
         t.blockStatement([])
@@ -640,11 +644,11 @@ export const generatePlus = (node: g.Plus, ruleName: string): t.Statement[] => {
     stmts.push(t.variableDeclaration(
         'const',
         [
-            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, t.identifier("b2")))
+            t.variableDeclarator(t.identifier("r"), generateClause(node.expr, undefined, t.identifier("b2")))
         ]
     ))
 
-    const clause = generateClause(node.expr, t.identifier("b2"))
+    const clause = generateClause(node.expr, undefined, t.identifier("b2"))
 
     stmts.push(
         t.ifStatement(
@@ -820,7 +824,7 @@ export const generateAlt = (node: g.Alt, ruleName: string): t.Statement[] => {
         [
             t.variableDeclarator(
                 t.identifier("r"),
-                generateClause(head, t.identifier("b2"))
+                generateClause(head, undefined, t.identifier("b2"))
             )
         ]
     ))
@@ -840,7 +844,7 @@ export const generateAlt = (node: g.Alt, ruleName: string): t.Statement[] => {
                             t.memberExpression(t.identifier("ctx"), t.identifier("p")),
                             t.identifier("p")
                         ),
-                        generateClause(clause, t.identifier("b2"))
+                        generateClause(clause, undefined, t.identifier("b2"))
                     ]
                 )
             )
@@ -906,7 +910,7 @@ export const generateSeq = (node: g.Seq, ruleName: string): t.Statement[] => {
         [
             t.variableDeclarator(
                 t.identifier("r"),
-                generateClause(head.expr, t.identifier("b2"))
+                generateClause(head.expr, head.name, t.identifier("b2"))
             )
         ]
     ))
@@ -919,7 +923,7 @@ export const generateSeq = (node: g.Seq, ruleName: string): t.Statement[] => {
             t.logicalExpression(
                 "&&",
                 t.identifier("r"),
-                generateClause(clause.expr, t.identifier("b2"))
+                generateClause(clause.expr, clause.name, t.identifier("b2"))
             )
         )))
     }
@@ -954,12 +958,17 @@ function compileAny(builderName: t.Expression, ctxName?: t.Expression) {
     ]);
 }
 
-export const generateClause = (expr: g.Expr, builderName: t.Expression, ctxName?: t.Expression): t.Expression => {
+export const generateClause = (expr: g.Expr,
+                               fieldName: undefined | string,
+                               builderName: t.Expression,
+                               ctxName?:
+                               t.Expression): t.Expression => {
     switch (expr.$) {
         case 'Call': {
             const args: t.Expression[] = [
                 ctxName ?? t.identifier("ctx"),
                 builderName,
+                ...(fieldName ? [t.stringLiteral(fieldName)] : []),
             ]
             return t.callExpression(compileCall(expr), args)
         }
