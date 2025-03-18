@@ -1,6 +1,7 @@
 import {createContext, Builder, space, skip, Module, Cst, CstNode} from "./result";
 import {inspect} from "util";
 import * as fs from "fs";
+import {format, formatFunction} from "./formatter/formatter";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
@@ -12,10 +13,10 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-// some comment
 fun some(param: Int) {
-    "hello\\nworld";
-    let s = param + 1;
+    // comment
+    "hello\\nworld"; // comment 2
+    let s = param /* hello there */ + 1; // comment 3
 }
 
 `;
@@ -24,13 +25,14 @@ const ctx = createContext(code, space);
 
 const b: Builder = []
 
-const visualizeCST = (node: Cst, indent: string = ""): string => {
+const visualizeCST = (node: Cst, field: undefined | string, indent: string = ""): string => {
+    const fieldRepr = field ? `${field}: ` : ""
     if (node.$ === "leaf") {
         const text = node.text.replace(/\n/g, "\\n").substring(0, 30);
-        return `${indent}"${text}${node.text.length > 30 ? "..." : ""}"`;
+        return `${indent}${fieldRepr}"${text}${node.text.length > 30 ? "..." : ""}"`;
     }
 
-    let result = `${indent}${node.type}`;
+    let result = `${indent}${fieldRepr}${node.type}`;
 
     if (node.children.length === 0) {
         return `${result} (empty)`;
@@ -39,7 +41,7 @@ const visualizeCST = (node: Cst, indent: string = ""): string => {
     result += "\n";
 
     const childrenOutput = node.children
-        .map(child => visualizeCST(child, indent + "  "))
+        .map(child => visualizeCST(child, child.$ === "node" ? child.field : undefined, indent + "  "))
         .join("\n");
 
     return result + childrenOutput;
@@ -144,7 +146,7 @@ const idText = (node: Cst): string => {
 
 const root = CstNode(b, "Root");
 
-console.log(visualizeCST(root));
+console.log(visualizeCST(root, undefined));
 fs.writeFileSync("out.json", JSON.stringify(root, null, 4));
 console.log(visit(root));
 
@@ -181,6 +183,8 @@ const items = childrenByGroup(itemsNode, "moduleItem")!
 
 for (const item of items) {
     if (item.$ === "node" && item.type === "$Function") {
+        console.log(format(item));
+
         console.log(idText(childByField(item, "name")))
         const paramsNode = childByField(item, "parameters");
         console.log(childrenByType(paramsNode, "Parameter").map(p => {

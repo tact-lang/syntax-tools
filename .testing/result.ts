@@ -239,10 +239,20 @@ export const $Function: Rule = (ctx, b, field) => {
   return r;
 };
 export const FunctionDefinition: Rule = (ctx, b, field) => {
-  return statements(ctx, b);
+  const b2: Builder = [];
+  const r = statements(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "FunctionDefinition", field ?? ""));
+  }
+  return r;
 };
 export const FunctionDeclaration: Rule = (ctx, b, field) => {
-  return semicolon(ctx, b);
+  const b2: Builder = [];
+  const r = semicolon(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "FunctionDeclaration", field ?? ""));
+  }
+  return r;
 };
 export const AsmFunction: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -343,7 +353,12 @@ export const ConstantDefinition: Rule = (ctx, b, field) => {
   return r;
 };
 export const ConstantDeclaration: Rule = (ctx, b, field) => {
-  return semicolon(ctx, b);
+  const b2: Builder = [];
+  const r = semicolon(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "ConstantDeclaration", field ?? ""));
+  }
+  return r;
 };
 export const storageVar: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -610,7 +625,7 @@ export const ascription: Rule = (ctx, b, field) => {
   return r;
 };
 export const $type: Rule = (ctx, b, field) => {
-  return TypeAs(ctx, b);
+  return TypeAs(ctx, b, field);
 };
 export const TypeAs: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -647,7 +662,12 @@ export const typePrimary: Rule = (ctx, b, field) => {
   return r;
 };
 export const TypeRegular: Rule = (ctx, b, field) => {
-  return TypeId(ctx, b);
+  const b2: Builder = [];
+  const r = TypeId(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "TypeRegular", field ?? ""));
+  }
+  return r;
 };
 export const TypeGeneric: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -665,7 +685,12 @@ export const TypeGeneric: Rule = (ctx, b, field) => {
   return r;
 };
 export const MapKeyword: Rule = (ctx, b, field) => {
-  return keyword((ctx, b) => consumeString(ctx, b, "map"))(ctx, b);
+  const b2: Builder = [];
+  const r = keyword((ctx, b) => consumeString(ctx, b, "map"))(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "MapKeyword", field ?? ""));
+  }
+  return r;
 };
 export const Bounced: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -763,7 +788,12 @@ export const StatementDestruct: Rule = (ctx, b, field) => {
   return r;
 };
 export const StatementBlock: Rule = (ctx, b, field) => {
-  return statements(ctx, b);
+  const b2: Builder = [];
+  const r = statements(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "StatementBlock", field ?? ""));
+  }
+  return r;
 };
 export const StatementReturn: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -913,7 +943,12 @@ export const augmentedOp: Rule = (ctx, b, field) => {
   return r;
 };
 export const FalseBranch: Rule = (ctx, b, field) => {
-  return statements(ctx, b);
+  const b2: Builder = [];
+  const r = statements(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "FalseBranch", field ?? ""));
+  }
+  return r;
 };
 export const semicolon: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -946,7 +981,12 @@ export const RegularField: Rule = (ctx, b, field) => {
   return r;
 };
 export const PunnedField: Rule = (ctx, b, field) => {
-  return Id(ctx, b);
+  const b2: Builder = [];
+  const r = Id(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "PunnedField", field ?? ""));
+  }
+  return r;
 };
 export const optionalRest: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -979,7 +1019,7 @@ export const NoRestArgument: Rule = (ctx, b, field) => {
   return r;
 };
 export const expression: Rule = (ctx, b, field) => {
-  return Conditional(ctx, b);
+  return Conditional(ctx, b, field);
 };
 export const Conditional: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -995,34 +1035,34 @@ export const Conditional: Rule = (ctx, b, field) => {
   return r;
 };
 export const or: Rule = (ctx, b, field) => {
-  return Binary(and, (ctx, b) => consumeString(ctx, b, "||"))(ctx, b);
+  return Binary(and, (ctx, b) => consumeString(ctx, b, "||"))(ctx, b, field);
 };
 export const and: Rule = (ctx, b, field) => {
-  return Binary(bitwiseOr, (ctx, b) => consumeString(ctx, b, "&&"))(ctx, b);
+  return Binary(bitwiseOr, (ctx, b) => consumeString(ctx, b, "&&"))(ctx, b, field);
 };
 export const bitwiseOr: Rule = (ctx, b, field) => {
-  return Binary(bitwiseXor, (ctx, b) => consumeString(ctx, b, "|"))(ctx, b);
+  return Binary(bitwiseXor, (ctx, b) => consumeString(ctx, b, "|"))(ctx, b, field);
 };
 export const bitwiseXor: Rule = (ctx, b, field) => {
-  return Binary(bitwiseAnd, (ctx, b) => consumeString(ctx, b, "^"))(ctx, b);
+  return Binary(bitwiseAnd, (ctx, b) => consumeString(ctx, b, "^"))(ctx, b, field);
 };
 export const bitwiseAnd: Rule = (ctx, b, field) => {
-  return Binary(equality, (ctx, b) => consumeString(ctx, b, "&"))(ctx, b);
+  return Binary(equality, (ctx, b) => consumeString(ctx, b, "&"))(ctx, b, field);
 };
 export const equality: Rule = (ctx, b, field) => {
-  return Binary(compare, equality_alt_61)(ctx, b);
+  return Binary(compare, equality_alt_61)(ctx, b, field);
 };
 export const compare: Rule = (ctx, b, field) => {
-  return Binary(bitwiseShift, compare_alt_62)(ctx, b);
+  return Binary(bitwiseShift, compare_alt_62)(ctx, b, field);
 };
 export const bitwiseShift: Rule = (ctx, b, field) => {
-  return Binary(add, bitwiseShift_alt_63)(ctx, b);
+  return Binary(add, bitwiseShift_alt_63)(ctx, b, field);
 };
 export const add: Rule = (ctx, b, field) => {
-  return Binary(mul, add_alt_64)(ctx, b);
+  return Binary(mul, add_alt_64)(ctx, b, field);
 };
 export const mul: Rule = (ctx, b, field) => {
-  return Binary(Unary, (ctx, b) => consumeClass(ctx, b, c => c === "*" || c === "/" || c === "%"))(ctx, b);
+  return Binary(Unary, (ctx, b) => consumeClass(ctx, b, c => c === "*" || c === "/" || c === "%"))(ctx, b, field);
 };
 export const Unary: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -1052,12 +1092,22 @@ export const Suffix: Rule = (ctx, b, field) => {
 };
 export const Binary: (T: Rule, U: Rule) => Rule = (T, U) => {
   return (ctx, b, field) => {
-    return inter(T, Operator(U))(ctx, b);
+    const b2: Builder = [];
+    const r = inter(T, Operator(U))(ctx, b2);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2, "Binary", field ?? ""));
+    }
+    return r;
   };
 };
 export const Operator: (U: Rule) => Rule = U => {
   return (ctx, b, field) => {
-    return U(ctx, b);
+    const b2: Builder = [];
+    const r = U(ctx, b2);
+    if (r && b2.length > 0) {
+      b.push(CstNode(b2, "Operator", field ?? ""));
+    }
+    return r;
   };
 };
 export const suffix: Rule = (ctx, b, field) => {
@@ -1082,7 +1132,12 @@ export const SuffixUnboxNotNull: Rule = (ctx, b, field) => {
   return r;
 };
 export const SuffixCall: Rule = (ctx, b, field) => {
-  return ParameterList(expression)(ctx, b);
+  const b2: Builder = [];
+  const r = ParameterList(expression)(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "SuffixCall", field ?? ""));
+  }
+  return r;
 };
 export const SuffixFieldAccess: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -1113,7 +1168,12 @@ export const primary: Rule = (ctx, b, field) => {
   return r;
 };
 export const Null: Rule = (ctx, b, field) => {
-  return keyword((ctx, b) => consumeString(ctx, b, "null"))(ctx, b);
+  const b2: Builder = [];
+  const r = keyword((ctx, b) => consumeString(ctx, b, "null"))(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "Null", field ?? ""));
+  }
+  return r;
 };
 export const parens: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -1130,7 +1190,12 @@ export const parens: Rule = (ctx, b, field) => {
   return r;
 };
 export const Parens: Rule = (ctx, b, field) => {
-  return parens(ctx, b);
+  const b2: Builder = [];
+  const r = parens(ctx, b2);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, "Parens", field ?? ""));
+  }
+  return r;
 };
 export const StructInstance: Rule = (ctx, b, field) => {
   const b2: Builder = [];
@@ -1400,7 +1465,7 @@ export const keyword: (T: Rule) => Rule = T => {
   };
 };
 export const reservedWord: Rule = (ctx, b, field) => {
-  return keyword(reservedWord_alt_112)(ctx, b);
+  return keyword(reservedWord_alt_112)(ctx, b, field);
 };
 export const space: Rule = (ctx, b, field) => {
   const b2: Builder = [];

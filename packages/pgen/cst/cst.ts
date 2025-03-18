@@ -31,7 +31,7 @@ export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
             t.identifier("b"),
             t.identifier("field"),
         ],
-        t.blockStatement(generateExpr(node.body, node.isPrivate ? "" : node.name))
+        t.blockStatement(generateExpr(node.body, node.isPrivate ? "" : node.name, undefined))
     );
 
     // export const commaList: (T: Rule) => Rule = (T: Rule) => {
@@ -69,7 +69,7 @@ export const generateRule = (node: g.Rule): t.ExportNamedDeclaration => {
     ))
 }
 
-export const generateExpr = (node: g.Expr, ruleName: string): t.Statement[] => {
+export const generateExpr = (node: g.Expr, ruleName: string, fieldName: undefined | string): t.Statement[] => {
     switch (node.$) {
         case 'Seq':
             return generateSeq(node, ruleName)
@@ -92,7 +92,7 @@ export const generateExpr = (node: g.Expr, ruleName: string): t.Statement[] => {
         case "Any":
             return generateAny()
         case "Call":
-            return generateCall(node)
+            return generateCall(node, ruleName, fieldName)
         case "LookNeg":
             return generateLookNeg(node)
         case "LookPos":
@@ -132,6 +132,22 @@ const saveCurrentPosition = () => t.variableDeclaration(
 
 // b.push(CstNode(b2))
 const storeNodeFromBuilder = (name: string, nodeType: string) => t.expressionStatement(
+    t.callExpression(
+        t.memberExpression(
+            t.identifier("b"),
+            t.identifier("push")
+        ), [
+            t.callExpression(t.identifier("CstNode"), [
+                t.identifier(name),
+                ...(nodeType.length > 0 && !isLowerCase(nodeType[0])
+                    ? [t.stringLiteral(nodeType)]
+                    : [t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))]),
+                t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))
+            ])
+        ])
+);
+
+const storeNodeFromBuilder2 = (name: string, nodeType: string) => t.expressionStatement(
     t.callExpression(
         t.memberExpression(
             t.identifier("b"),
@@ -299,24 +315,85 @@ export const compileCall = (call: g.Call): t.Expression => {
     return t.identifier(call.name)
 }
 
-// const A = (ctx: Context, b: Builder): boolean => {
-//     return B(ctx, b)
-// }
-export const generateCall = (call: g.Call): t.Statement[] => {
+// export const FunctionDefinition: Rule = (ctx, b, field) => {
+//     const b2: Builder = [];
+//     const r = statements(ctx, b2);
+//     if (r) {
+//         b.push(CstNode(b2, ruleName, field ?? ""));
+//     }
+//     return r;
+// };
+export const generateCall = (call: g.Call, ruleName: string, fieldName: undefined | string): t.Statement[] => {
     const stmts: t.Statement[] = []
+
+    if (ruleName.length > 0 && (isLowerCase(ruleName[0]) || ruleName[0] === "$")) {
+        const stmts: t.Statement[] = []
+
+        const expr = compileCall(call)
+
+        // return B(ctx, b)
+        stmts.push(t.returnStatement(
+            t.callExpression(
+                expr,
+                [
+                    t.identifier("ctx"),
+                    t.identifier("b"),
+                    t.identifier("field"),
+                ]
+            )
+        ))
+
+        return stmts
+    }
+
+    // const b2: Builder = []
+    stmts.push(createEmptyBuilder("b2"))
 
     const expr = compileCall(call)
 
-    // return B(ctx, b)
-    stmts.push(t.returnStatement(
-        t.callExpression(
-            expr,
-            [
-                t.identifier("ctx"),
-                t.identifier("b")
-            ]
-        )
+    const callExpr = t.callExpression(
+        expr,
+        [
+            t.identifier("ctx"),
+            t.identifier("b2"),
+            ...(fieldName ? [t.stringLiteral(fieldName)] : []),
+        ]
+    )
+
+    stmts.push(t.variableDeclaration(
+        'const',
+        [
+            t.variableDeclarator(t.identifier("r"), callExpr)
+        ]
     ))
+
+    stmts.push(t.ifStatement(
+        t.logicalExpression(
+            "&&",
+            t.identifier("r"),
+            t.binaryExpression(
+                '>',
+                t.memberExpression(t.identifier("b2"), t.identifier("length")),
+                t.numericLiteral(0)
+            )
+        ),
+        t.blockStatement([
+            t.expressionStatement(t.callExpression(
+                t.memberExpression(
+                    t.identifier("b"),
+                    t.identifier("push")
+                ), [
+                    t.callExpression(t.identifier("CstNode"), [
+                        t.identifier("b2"),
+                        t.stringLiteral(ruleName),
+                        t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))
+                    ])
+                ]))
+        ]),
+    ))
+
+    // return r
+    stmts.push(t.returnStatement(t.identifier("r")))
 
     return stmts
 }
