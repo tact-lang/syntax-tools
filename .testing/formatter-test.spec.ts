@@ -299,4 +299,37 @@ message Foo {
     age: Int;
 }`));
     });
+
+    describe('types', () => {
+        it('simple type', intact(`
+fun foo(param: String) {}`));
+
+        it('generic type', intact(`
+fun foo(param: map<Int, String>) {}`));
+
+        it('optional type', intact(`
+fun foo(param: String?) {}`));
+
+        it('type with as', intact(`
+fun foo(param: Int as int64) {}`));
+
+        it('complex type', intact(`
+fun foo(param: map<Int as int64, String>) {}`));
+
+        it('format type with extra spaces', test(`
+fun foo(param:    String    ) {}`, `
+fun foo(param: String) {}`));
+
+        it('format generic type with extra spaces', test(`
+fun foo(param:    map    <    Int    ,    String    >    ) {}`, `
+fun foo(param: map<Int, String>) {}`));
+
+        it('format optional type with extra spaces', test(`
+fun foo(param:    String    ?    ) {}`, `
+fun foo(param: String?) {}`));
+
+        it('format type with as and extra spaces', test(`
+fun foo(param:    String    as    Int    ) {}`, `
+fun foo(param: String as Int) {}`));
+    });
 });

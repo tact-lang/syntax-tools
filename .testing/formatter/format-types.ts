@@ -1,6 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, childrenByType, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
+import {idText} from "./format-helpers";
 
 export const formatType = (code: CodeBuilder, node: Cst): void => {
     if (node.$ !== "node") {
@@ -24,6 +25,9 @@ export const formatType = (code: CodeBuilder, node: Cst): void => {
         case "TypeId":
             code.add(textOfId(node))
             break;
+        case "name":
+            code.add(visit(node).trim())
+            break;
         default:
             code.add(visit(node));
     }
@@ -45,6 +49,9 @@ export const formatAscription = (code: CodeBuilder, node: Cst): void => {
 
 const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
     const child = childByField(node, "child");
+    if (!child) {
+        throw new Error("Invalid regular type");
+    }
 
     code.add(textOfId(child))
 
@@ -63,7 +70,7 @@ const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
 
 const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
-    const args = childByField(node, "args");
+    const args = childByType(node, "args");
 
     if (!name || !args) {
         throw new Error("Invalid generic type");
@@ -71,22 +78,22 @@ const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
 
     formatType(code, name);
 
-    const typeArgs = childrenByType(args, "type");
-    const argStrings = typeArgs.map(arg => {
-        const argCode = new CodeBuilder();
-        formatType(argCode, arg);
-        return argCode.toString();
-    });
-
-    // formatCommaSeparatedList(code, argStrings, {
-    //     wrapperLeft: "<",
-    //     wrapperRight: ">"
-    // });
+    const typeArgs = childrenByType(args, "TypeAs");
+    if (typeArgs.length > 0) {
+        code.add("<");
+        typeArgs.forEach((arg, i) => {
+            formatType(code, arg);
+            if (i < typeArgs.length - 1) {
+                code.add(",").space();
+            }
+        })
+        code.add(">");
+    }
 };
 
 const formatTypeAs = (code: CodeBuilder, node: CstNode): void => {
     const type = childByField(node, "type");
-    const asTypes = childrenByType(node, "Id");
+    const asTypes = childByType(node, "as") as CstNode
 
     if (!type) {
         throw new Error("Invalid 'as' type");
@@ -94,22 +101,28 @@ const formatTypeAs = (code: CodeBuilder, node: CstNode): void => {
 
     formatType(code, type);
 
-    for (const asType of asTypes) {
-        code.space().add("as").space();
-        formatType(code, asType);
+    if (asTypes) {
+        const children = asTypes.children.find((child) => child.$ === "node");
+
+        if (children) {
+            code.space().add("as").space();
+            code.add(idText(children))
+        }
     }
 };
 
 const formatTypeOptional = (code: CodeBuilder, node: CstNode): void => {
     const type = childByType(node, "TypeRegular");
-    const optionals = childrenByType(node, "optionals");
-
-    if (!type) {
-        throw new Error("Invalid optional type");
+    if (type) {
+        formatType(code, type);
     }
 
-    formatType(code, type);
+    const typeGeneric = childByType(node, "TypeGeneric");
+    if (typeGeneric) {
+        formatType(code, typeGeneric);
+    }
 
+    const optionals = childrenByType(node, "optionals");
     for (const _ of optionals) {
         code.add("?");
     }

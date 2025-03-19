@@ -17,7 +17,7 @@ export const simplifyCst = (node: Cst): Cst => {
         }
     }
 
-   if (node.type === "traits" || node.type === "fields") {
+   if (node.type === "traits" || node.type === "fields" || node.type === "args") {
         return {
             ...node,
             children: node.children.flatMap(it => {

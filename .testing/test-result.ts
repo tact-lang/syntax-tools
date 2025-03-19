@@ -14,24 +14,20 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-struct Foo {
-    value:   Int = 10;
-    value:   Int;
-    value:   Int;
-}
+fun foo(p: map   <Int, String>) {}
 
-message(100 + 200) Foo {
-    value: Int = 0;
-}
-
-inline fun some() {
-    Foo { name };
-    foo()
-        .other(
-        1, 2, bar()
-        .some().param)
-        .call();
-}
+// message(100 + 200) Foo {
+//     value: Int = 0;
+// }
+//
+// inline fun some() {
+//     Foo { name };
+//     foo()
+//         .other(
+//         1, 2, bar()
+//         .some().param)
+//         .call();
+// }
 
 `;
 
