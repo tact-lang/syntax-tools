@@ -1,7 +1,8 @@
-import {createContext, Builder, space, skip, Module, Cst, CstNode} from "./result";
+import {Builder, createContext, Cst, CstNode, Module, skip, space} from "./result";
 import {inspect} from "util";
 import * as fs from "fs";
 import {format} from "./formatter/formatter";
+import {simplifyCst} from "./simplify-cst";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
@@ -14,13 +15,9 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 
 `
 fun some() {
-    if /* comment */ (a > 10) {
-        return 1;
-    } else if (a < 200) {
-        return 2;
-    } else {
-        return 3;
-    }
+    foo()
+        .other()
+        .call();
 }
 
 `;
@@ -148,7 +145,7 @@ const idText = (node: Cst): string => {
     return first.$ === "leaf" ? first.text : ""
 }
 
-const root = CstNode(b, "Root");
+const root = simplifyCst(CstNode(b, "Root"));
 
 console.log(visualizeCST(root, undefined));
 fs.writeFileSync("out.json", JSON.stringify(root, null, 4));

@@ -210,6 +210,15 @@ const transformSeq = ({ exprs }: g.Seq): Transform<Expr> => (ctx) => {
     };
 
     if (exprs.length === 1 && exprs[0]) {
+        if (exprs[0].selector !== undefined) {
+            return Seq(
+                exprs.map(({ expr, selector }) => ({
+                    expr: transformExpr(expr)(opts),
+                    name: selector?.$ === "Name" ? selector.name : undefined,
+                }))
+            );
+        }
+
         return transformExpr(exprs[0].expr)(opts)
     }
 

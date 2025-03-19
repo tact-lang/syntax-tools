@@ -1,7 +1,6 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, childrenByType, idText, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatCommaSeparatedList} from "./format-helpers";
 
 export const formatType = (code: CodeBuilder, node: Cst): void => {
     if (node.$ !== "node") {
@@ -42,9 +41,11 @@ export const formatAscription = (code: CodeBuilder, node: Cst): void => {
 };
 
 const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
-    code.add(idText(node.children[0]))
+    const child = childByField(node, "child");
 
-    const trailingComments = node.children.slice(1).filter(child => child.$ === "node" && child.type === "Comment");
+    code.add(idText(child))
+
+    const trailingComments = child.children.slice(1).filter(child => child.$ === "node" && child.type === "Comment");
     if (trailingComments.length > 0) {
         code.space();
         for (const comment of trailingComments) {

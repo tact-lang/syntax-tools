@@ -1,5 +1,6 @@
 import {Builder, createContext, CstNode, Module, space} from "./result";
 import {format} from "./formatter/formatter";
+import {simplifyCst} from "./simplify-cst";
 
 describe('should format', () => {
     const test = (input: string, output: string) => {
@@ -8,7 +9,7 @@ describe('should format', () => {
             const b: Builder = []
             const res = Module(ctx, b)
             expect(res).toBe(true);
-            const root = CstNode(b, "Root");
+            const root = simplifyCst(CstNode(b, "Root")) as CstNode;
 
             const target = ((root.children[0] as CstNode).children[0] as CstNode).children[0];
             const formatted = format(target)

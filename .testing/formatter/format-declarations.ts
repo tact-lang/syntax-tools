@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childrenByType, visit} from "../cst-helpers";
+import {childByField, childByType, childrenByType, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList} from "./format-helpers";
 import {formatAscription} from "./format-types";
@@ -8,7 +8,7 @@ import {formatStatements} from "./format-statements";
 export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
     const parameters = childByField(node, "parameters");
-    const returnType = childByField(node, "returnType");
+    const returnType = childByType(node, "returnType");
     const body = childByField(node, "body");
 
     if (!name || !parameters || !body) {
@@ -41,7 +41,6 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
 
     // Add return type if present
     if (returnType) {
-        code.space();
         formatAscription(code, returnType);
     }
 
@@ -49,7 +48,7 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
 
     if (bodyNode.$ === "node" && bodyNode.type === "FunctionDefinition") {
         code.space();
-        formatStatements(code, bodyNode);
+        formatStatements(code, childByField(bodyNode, "body"));
     } else {
         code.add(";");
     }

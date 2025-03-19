@@ -240,9 +240,13 @@ export const $Function: Rule = (ctx, b, field) => {
 };
 export const FunctionDefinition: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = statements(ctx, b2);
+  const p = ctx.p;
+  let r = statements(ctx, b2, "body");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "FunctionDefinition", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -330,11 +334,12 @@ export const Constant: Rule = (ctx, b, field) => {
 export const ConstantAttribute: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = keyword((ctx, b) => consumeString(ctx, b, "virtual"))(ctx, b2);
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "override"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "abstract"))(ctx, b2));
-  if (b2.length > 0) {
+  let r = ConstantAttribute_alt_17(ctx, b2, "name");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "ConstantAttribute", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -393,7 +398,7 @@ export const MessageDecl: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "message");
-  r = r && MessageDecl_optional_18(ctx, b2, "opcode");
+  r = r && MessageDecl_optional_19(ctx, b2, "opcode");
   r = r && TypeId(ctx, b2, "name");
   r = r && consumeString(ctx, b2, "{");
   r = r && structFields(ctx, b2, "fields");
@@ -409,8 +414,8 @@ export const MessageDecl: Rule = (ctx, b, field) => {
 export const structFields: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = structFields_optional_19(ctx, b2);
-  r = r && structFields_optional_20(ctx, b2);
+  let r = structFields_optional_20(ctx, b2);
+  r = r && structFields_optional_21(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -424,7 +429,7 @@ export const FieldDecl: Rule = (ctx, b, field) => {
   const p = ctx.p;
   let r = Id(ctx, b2, "name");
   r = r && ascription(ctx, b2, "type");
-  r = r && FieldDecl_optional_22(ctx, b2, "expression");
+  r = r && FieldDecl_optional_23(ctx, b2, "expression");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "FieldDecl", field ?? ""));
   }
@@ -436,13 +441,13 @@ export const FieldDecl: Rule = (ctx, b, field) => {
 export const Contract: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = Contract_star_23(ctx, b2, "attributes");
+  let r = Contract_star_24(ctx, b2, "attributes");
   r = r && keyword((ctx, b) => consumeString(ctx, b, "contract"))(ctx, b2);
   r = r && Id(ctx, b2, "name");
-  r = r && Contract_optional_24(ctx, b2, "parameters");
-  r = r && Contract_optional_25(ctx, b2, "traits");
+  r = r && Contract_optional_25(ctx, b2, "parameters");
+  r = r && Contract_optional_26(ctx, b2, "traits");
   r = r && consumeString(ctx, b2, "{");
-  r = r && Contract_star_26(ctx, b2, "declarations");
+  r = r && Contract_star_27(ctx, b2, "declarations");
   r = r && consumeString(ctx, b2, "}");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "Contract", field ?? ""));
@@ -455,12 +460,12 @@ export const Contract: Rule = (ctx, b, field) => {
 export const Trait: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = Trait_star_27(ctx, b2, "attributes");
+  let r = Trait_star_28(ctx, b2, "attributes");
   r = r && keyword((ctx, b) => consumeString(ctx, b, "trait"))(ctx, b2);
   r = r && Id(ctx, b2, "name");
-  r = r && Trait_optional_28(ctx, b2, "traits");
+  r = r && Trait_optional_29(ctx, b2, "traits");
   r = r && consumeString(ctx, b2, "{");
-  r = r && Trait_star_29(ctx, b2, "declarations");
+  r = r && Trait_star_30(ctx, b2, "declarations");
   r = r && consumeString(ctx, b2, "}");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "Trait", field ?? ""));
@@ -515,15 +520,12 @@ export const ContractAttribute: Rule = (ctx, b, field) => {
 export const FunctionAttribute: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = GetAttribute(ctx, b2);
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "mutates"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "extends"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "virtual"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "override"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "inline"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "abstract"))(ctx, b2));
-  if (b2.length > 0) {
+  let r = FunctionAttribute_alt_31(ctx, b2, "name");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "FunctionAttribute", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -531,7 +533,7 @@ export const GetAttribute: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "get");
-  r = r && GetAttribute_optional_31(ctx, b2, "methodId");
+  r = r && GetAttribute_optional_33(ctx, b2, "methodId");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "GetAttribute", field ?? ""));
   }
@@ -559,21 +561,24 @@ export const Receiver: Rule = (ctx, b, field) => {
 export const ReceiverType: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = consumeString(ctx, b2, "bounced");
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "receive"))(ctx, b2));
-  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "external"))(ctx, b2));
-  if (b2.length > 0) {
+  let r = ReceiverType_alt_34(ctx, b2, "name");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "ReceiverType", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
 export const receiverParam: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = receiverParam_alt_32(ctx, b2);
-  r = r || (ctx.p = p, true);
+  let r = receiverParam_optional_36(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -583,7 +588,7 @@ export const assembly: Rule = (ctx, b, field) => {
     ...ctx,
     space: undefined
   };
-  const r = assembly_stringify_33(newCtx, b2);
+  const r = assembly_stringify_37(newCtx, b2);
   if (r) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -604,10 +609,10 @@ export const assemblySequence: Rule = (ctx, b, field) => {
 export const assemblyItem: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = assemblyItem_seq_34(ctx, b2);
+  let r = assemblyItem_seq_38(ctx, b2);
   r = r || (ctx.p = p, Comment(ctx, b2));
-  r = r || (ctx.p = p, assemblyItem_seq_36(ctx, b2));
-  r = r || (ctx.p = p, assemblyItem_plus_40(ctx, b2));
+  r = r || (ctx.p = p, assemblyItem_seq_40(ctx, b2));
+  r = r || (ctx.p = p, assemblyItem_plus_44(ctx, b2));
   pushGroupTo(b, b2, "assemblyItem");
   return r;
 };
@@ -631,7 +636,7 @@ export const TypeAs: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = TypeOptional(ctx, b2, "type");
-  r = r && TypeAs_star_42(ctx, b2, "as");
+  r = r && TypeAs_star_46(ctx, b2, "as");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "TypeAs", field ?? ""));
   }
@@ -644,7 +649,7 @@ export const TypeOptional: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = typePrimary(ctx, b2, "type");
-  r = r && TypeOptional_star_43(ctx, b2, "optionals");
+  r = r && TypeOptional_star_47(ctx, b2, "optionals");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "TypeOptional", field ?? ""));
   }
@@ -663,16 +668,20 @@ export const typePrimary: Rule = (ctx, b, field) => {
 };
 export const TypeRegular: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = TypeId(ctx, b2);
+  const p = ctx.p;
+  let r = TypeId(ctx, b2, "child");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "TypeRegular", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
 export const TypeGeneric: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = TypeGeneric_alt_44(ctx, b2, "name");
+  let r = TypeGeneric_alt_48(ctx, b2, "name");
   r = r && consumeString(ctx, b2, "<");
   r = r && commaList($type)(ctx, b2, "args");
   r = r && consumeString(ctx, b2, ">");
@@ -706,16 +715,14 @@ export const Bounced: Rule = (ctx, b, field) => {
 };
 export const TypeId: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = TypeId_stringify_47(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = TypeId_lex_52(ctx, b2, "name");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "TypeId", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const statement: Rule = (ctx, b, field) => {
@@ -740,7 +747,7 @@ export const statements: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "{");
-  r = r && statements_star_48(ctx, b2);
+  r = r && statements_star_53(ctx, b2);
   r = r && consumeString(ctx, b2, "}");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -755,7 +762,7 @@ export const StatementLet: Rule = (ctx, b, field) => {
   const p = ctx.p;
   let r = keyword((ctx, b) => consumeString(ctx, b, "let"))(ctx, b2);
   r = r && Id(ctx, b2, "name");
-  r = r && StatementLet_optional_49(ctx, b2, "type");
+  r = r && StatementLet_optional_54(ctx, b2, "type");
   r = r && consumeString(ctx, b2, "=");
   r = r && expression(ctx, b2, "init");
   r = r && semicolon(ctx, b2);
@@ -789,9 +796,13 @@ export const StatementDestruct: Rule = (ctx, b, field) => {
 };
 export const StatementBlock: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = statements(ctx, b2);
+  const p = ctx.p;
+  let r = statements(ctx, b2, "body");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StatementBlock", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -799,7 +810,7 @@ export const StatementReturn: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = keyword((ctx, b) => consumeString(ctx, b, "return"))(ctx, b2);
-  r = r && StatementReturn_optional_50(ctx, b2, "expression");
+  r = r && StatementReturn_optional_55(ctx, b2, "expression");
   r = r && semicolon(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StatementReturn", field ?? ""));
@@ -826,7 +837,7 @@ export const StatementAssign: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = expression(ctx, b2, "left");
-  r = r && StatementAssign_optional_51(ctx, b2, "operator");
+  r = r && StatementAssign_optional_56(ctx, b2, "operator");
   r = r && consumeString(ctx, b2, "=");
   r = r && expression(ctx, b2, "right");
   r = r && semicolon(ctx, b2);
@@ -844,7 +855,7 @@ export const StatementCondition: Rule = (ctx, b, field) => {
   let r = keyword((ctx, b) => consumeString(ctx, b, "if"))(ctx, b2);
   r = r && expression(ctx, b2, "condition");
   r = r && statements(ctx, b2, "trueBranch");
-  r = r && StatementCondition_optional_54(ctx, b2, "falseBranch");
+  r = r && StatementCondition_optional_59(ctx, b2, "falseBranch");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StatementCondition", field ?? ""));
   }
@@ -902,7 +913,7 @@ export const StatementTry: Rule = (ctx, b, field) => {
   const p = ctx.p;
   let r = keyword((ctx, b) => consumeString(ctx, b, "try"))(ctx, b2);
   r = r && statements(ctx, b2, "body");
-  r = r && StatementTry_optional_56(ctx, b2, "handler");
+  r = r && StatementTry_optional_61(ctx, b2, "handler");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StatementTry", field ?? ""));
   }
@@ -944,9 +955,13 @@ export const augmentedOp: Rule = (ctx, b, field) => {
 };
 export const FalseBranch: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = statements(ctx, b2);
+  const p = ctx.p;
+  let r = statements(ctx, b2, "body");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "FalseBranch", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -954,7 +969,7 @@ export const semicolon: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, ";");
-  r = r || (ctx.p = p, semicolon_lookpos_57(ctx, b2));
+  r = r || (ctx.p = p, semicolon_lookpos_62(ctx, b2));
   pushGroupTo(b, b2, "semicolon");
   return r;
 };
@@ -982,16 +997,20 @@ export const RegularField: Rule = (ctx, b, field) => {
 };
 export const PunnedField: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = Id(ctx, b2);
+  const p = ctx.p;
+  let r = Id(ctx, b2, "name");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "PunnedField", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
 export const optionalRest: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = optionalRest_seq_58(ctx, b2);
+  let r = optionalRest_seq_63(ctx, b2);
   r = r || (ctx.p = p, NoRestArgument(ctx, b2));
   pushGroupTo(b, b2, "optionalRest");
   return r;
@@ -1025,9 +1044,9 @@ export const Conditional: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = or(ctx, b2, "head");
-  r = r && Conditional_optional_60(ctx, b2, "tail");
+  r = r && Conditional_optional_65(ctx, b2, "tail");
   if (r && b2.length > 0) {
-    b.push(CstNode(b2, "Conditional", field ?? ""));
+      b.push(CstNode(b2, "Conditional", field ?? ""));
   }
   if (!r) {
     ctx.p = p;
@@ -1050,16 +1069,16 @@ export const bitwiseAnd: Rule = (ctx, b, field) => {
   return Binary(equality, (ctx, b) => consumeString(ctx, b, "&"))(ctx, b, field);
 };
 export const equality: Rule = (ctx, b, field) => {
-  return Binary(compare, equality_alt_61)(ctx, b, field);
+  return Binary(compare, equality_alt_66)(ctx, b, field);
 };
 export const compare: Rule = (ctx, b, field) => {
-  return Binary(bitwiseShift, compare_alt_62)(ctx, b, field);
+  return Binary(bitwiseShift, compare_alt_67)(ctx, b, field);
 };
 export const bitwiseShift: Rule = (ctx, b, field) => {
-  return Binary(add, bitwiseShift_alt_63)(ctx, b, field);
+  return Binary(add, bitwiseShift_alt_68)(ctx, b, field);
 };
 export const add: Rule = (ctx, b, field) => {
-  return Binary(mul, add_alt_64)(ctx, b, field);
+  return Binary(mul, add_alt_69)(ctx, b, field);
 };
 export const mul: Rule = (ctx, b, field) => {
   return Binary(Unary, (ctx, b) => consumeClass(ctx, b, c => c === "*" || c === "/" || c === "%"))(ctx, b, field);
@@ -1067,10 +1086,10 @@ export const mul: Rule = (ctx, b, field) => {
 export const Unary: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = Unary_star_65(ctx, b2, "prefixes");
+  let r = Unary_star_70(ctx, b2, "prefixes");
   r = r && Suffix(ctx, b2, "expression");
   if (r && b2.length > 0) {
-    b.push(CstNode(b2, "Unary", field ?? ""));
+     b.push(CstNode(b2, "Unary", field ?? ""));
   }
   if (!r) {
     ctx.p = p;
@@ -1081,9 +1100,9 @@ export const Suffix: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = primary(ctx, b2, "expression");
-  r = r && Suffix_star_66(ctx, b2, "suffixes");
+  r = r && Suffix_star_71(ctx, b2, "suffixes");
   if (r && b2.length > 0) {
-    b.push(CstNode(b2, "Suffix", field ?? ""));
+      b.push(CstNode(b2, "Suffix", field ?? ""));
   }
   if (!r) {
     ctx.p = p;
@@ -1093,9 +1112,13 @@ export const Suffix: Rule = (ctx, b, field) => {
 export const Binary: (T: Rule, U: Rule) => Rule = (T, U) => {
   return (ctx, b, field) => {
     const b2: Builder = [];
-    const r = inter(T, Operator(U))(ctx, b2);
-    if (r && b2.length > 0) {
+    const p = ctx.p;
+    let r = inter(T, Operator(U))(ctx, b2, "");
+    if (r) {
       b.push(CstNode(b2, "Binary", field ?? ""));
+    }
+    if (!r) {
+      ctx.p = p;
     }
     return r;
   };
@@ -1103,9 +1126,13 @@ export const Binary: (T: Rule, U: Rule) => Rule = (T, U) => {
 export const Operator: (U: Rule) => Rule = U => {
   return (ctx, b, field) => {
     const b2: Builder = [];
-    const r = U(ctx, b2);
+    const p = ctx.p;
+    let r = U(ctx, b2, "name");
     if (r && b2.length > 0) {
       b.push(CstNode(b2, "Operator", field ?? ""));
+    }
+    if (!r) {
+      ctx.p = p;
     }
     return r;
   };
@@ -1133,9 +1160,13 @@ export const SuffixUnboxNotNull: Rule = (ctx, b, field) => {
 };
 export const SuffixCall: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = ParameterList(expression)(ctx, b2);
+  const p = ctx.p;
+  let r = ParameterList(expression)(ctx, b2, "params");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "SuffixCall", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -1191,9 +1222,13 @@ export const parens: Rule = (ctx, b, field) => {
 };
 export const Parens: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = parens(ctx, b2);
+  const p = ctx.p;
+  let r = parens(ctx, b2, "child");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "Parens", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
@@ -1214,7 +1249,7 @@ export const StructInstanceFields: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "{");
-  r = r && StructInstanceFields_optional_67(ctx, b2, "fields");
+  r = r && StructInstanceFields_optional_72(ctx, b2, "fields");
   r = r && consumeString(ctx, b2, "}");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StructInstanceFields", field ?? ""));
@@ -1255,7 +1290,7 @@ export const StructFieldInitializer: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = Id(ctx, b2, "name");
-  r = r && StructFieldInitializer_optional_69(ctx, b2, "init");
+  r = r && StructFieldInitializer_optional_74(ctx, b2, "init");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "StructFieldInitializer", field ?? ""));
   }
@@ -1269,7 +1304,7 @@ export const ParameterList: (T: Rule) => Rule = T => {
     const b2: Builder = [];
     const p = ctx.p;
     let r = consumeString(ctx, b2, "(");
-    r = r && ParameterList_optional_70(T)(ctx, b2);
+    r = r && ParameterList_optional_75(T)(ctx, b2);
     r = r && consumeString(ctx, b2, ")");
     if (r && b2.length > 0) {
       b.push(CstNode(b2, "ParameterList", field ?? ""));
@@ -1298,7 +1333,7 @@ export const commaList: (T: Rule) => Rule = T => {
     const b2: Builder = [];
     const p = ctx.p;
     let r = inter(T, (ctx, b) => consumeString(ctx, b, ","))(ctx, b2);
-    r = r && commaList_optional_71(T)(ctx, b2);
+    r = r && commaList_optional_76(T)(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
     }
@@ -1311,75 +1346,67 @@ export const commaList: (T: Rule) => Rule = T => {
 export const IntegerLiteral: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = IntegerLiteralHex(ctx, b2);
-  r = r || (ctx.p = p, IntegerLiteralBin(ctx, b2));
-  r = r || (ctx.p = p, IntegerLiteralOct(ctx, b2));
-  r = r || (ctx.p = p, IntegerLiteralDec(ctx, b2));
-  if (b2.length > 0) {
+  let r = IntegerLiteral_alt_77(ctx, b2, "value");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "IntegerLiteral", field ?? ""));
+  }
+  if (!r) {
+    ctx.p = p;
   }
   return r;
 };
 export const IntegerLiteralDec: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = underscored(digit)(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = IntegerLiteralDec_lex_78(ctx, b2, "digits");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "IntegerLiteralDec", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const IntegerLiteralHex: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = IntegerLiteralHex_seq_72(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = IntegerLiteralHex_lex_80(ctx, b2, "digits");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "IntegerLiteralHex", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const IntegerLiteralBin: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = IntegerLiteralBin_seq_73(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = IntegerLiteralBin_lex_82(ctx, b2, "digits");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "IntegerLiteralBin", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const IntegerLiteralOct: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = IntegerLiteralOct_seq_74(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = IntegerLiteralOct_lex_84(ctx, b2, "digits");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "IntegerLiteralOct", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const underscored: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const p = ctx.p;
-    const r = underscored_seq_78(T)(ctx, []);
+    const r = underscored_seq_88(T)(ctx, []);
     if (r) {
       const text = ctx.s.substring(p, ctx.p);
       b.push(CstLeaf(text));
@@ -1395,23 +1422,21 @@ export const idPart: Rule = (ctx, b, field) => {
 };
 export const Id: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = Id_stringify_82(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = Id_lex_93(ctx, b2, "name");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "Id", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const FuncId: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = FuncId_optional_83(ctx, b2, "accessor");
-  r = r && FuncId_stringify_88(ctx, b2, "id");
+  let r = FuncId_optional_94(ctx, b2, "accessor");
+  r = r && FuncId_stringify_99(ctx, b2, "id");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "FuncId", field ?? ""));
   }
@@ -1423,8 +1448,8 @@ export const FuncId: Rule = (ctx, b, field) => {
 export const BoolLiteral: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = BoolLiteral_alt_89(ctx, b2, "value");
-  r = r && BoolLiteral_lookneg_90(ctx, b2);
+  let r = BoolLiteral_alt_100(ctx, b2, "value");
+  r = r && BoolLiteral_lookneg_101(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "BoolLiteral", field ?? ""));
   }
@@ -1435,25 +1460,23 @@ export const BoolLiteral: Rule = (ctx, b, field) => {
 };
 export const StringLiteral: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const newCtx = {
-    ...ctx,
-    space: undefined
-  };
-  const r = StringLiteral_seq_95(newCtx, b2);
-  if (r) {
+  const p = ctx.p;
+  let r = StringLiteral_lex_107(ctx, b2, "value");
+  if (r && b2.length > 0) {
     b.push(CstNode(b2, "StringLiteral", field ?? ""));
   }
-  ctx.p = newCtx.p;
-  skip(ctx, b);
+  if (!r) {
+    ctx.p = p;
+  }
   return r;
 };
 export const escapeChar: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeClass(ctx, b2, c => c === "\\" || c === "\"" || c === "n" || c === "r" || c === "t" || c === "v" || c === "b" || c === "f");
-  r = r || (ctx.p = p, escapeChar_seq_103(ctx, b2));
-  r = r || (ctx.p = p, escapeChar_seq_106(ctx, b2));
-  r = r || (ctx.p = p, escapeChar_seq_109(ctx, b2));
+  r = r || (ctx.p = p, escapeChar_seq_115(ctx, b2));
+  r = r || (ctx.p = p, escapeChar_seq_118(ctx, b2));
+  r = r || (ctx.p = p, escapeChar_seq_121(ctx, b2));
   pushGroupTo(b, b2, "escapeChar");
   return r;
 };
@@ -1467,7 +1490,7 @@ export const keyword: (T: Rule) => Rule = T => {
       ...ctx,
       space: undefined
     };
-    const r = keyword_seq_111(T)(newCtx, b2);
+    const r = keyword_seq_123(T)(newCtx, b2);
     if (r) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
     }
@@ -1477,14 +1500,14 @@ export const keyword: (T: Rule) => Rule = T => {
   };
 };
 export const reservedWord: Rule = (ctx, b, field) => {
-  return keyword(reservedWord_alt_112)(ctx, b, field);
+  return keyword(reservedWord_alt_124)(ctx, b, field);
 };
 export const space: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = space_alt_116(ctx, b2);
+  const r = space_alt_128(ctx, b2);
   if (r) {
     let p = ctx.p;
-    while (p = ctx.p, space_alt_116(ctx, b2)) {}
+    while (p = ctx.p, space_alt_128(ctx, b2)) {}
     ctx.p = p;
   }
   if (b2.length > 0) {
@@ -1506,7 +1529,7 @@ export const multiLineComment: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "/*");
-  r = r && multiLineComment_stringify_120(ctx, b2);
+  r = r && multiLineComment_stringify_132(ctx, b2);
   r = r && consumeString(ctx, b2, "*/");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -1520,7 +1543,7 @@ export const singleLineComment: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "//");
-  r = r && singleLineComment_stringify_122(ctx, b2);
+  r = r && singleLineComment_stringify_134(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -1532,8 +1555,8 @@ export const singleLineComment: Rule = (ctx, b, field) => {
 export const JustImports: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = JustImports_star_123(ctx, b2, "imports");
-  r = r && JustImports_star_124(ctx, b2);
+  let r = JustImports_star_135(ctx, b2, "imports");
+  r = r && JustImports_star_136(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, "JustImports", field ?? ""));
   }
@@ -1547,7 +1570,7 @@ export const inter: (A: Rule, B: Rule) => Rule = (A, B) => {
     const b2: Builder = [];
     const p = ctx.p;
     let r = A(ctx, b2, "head");
-    r = r && inter_star_126(A, B)(ctx, b2, "tail");
+    r = r && inter_star_138(A, B)(ctx, b2, "tail");
     if (r && b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
     }
@@ -1737,7 +1760,18 @@ export const Constant_alt_16: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const MessageDecl_seq_17: Rule = (ctx, b, field) => {
+export const ConstantAttribute_alt_17: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = keyword((ctx, b) => consumeString(ctx, b, "virtual"))(ctx, b2);
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "override"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "abstract"))(ctx, b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  return r;
+};
+export const MessageDecl_seq_18: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "(");
@@ -1751,20 +1785,10 @@ export const MessageDecl_seq_17: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const MessageDecl_optional_18: Rule = (ctx, b, field) => {
+export const MessageDecl_optional_19: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = MessageDecl_seq_17(ctx, b2);
-  r = r || (ctx.p = p, true);
-  if (r && b2.length > 0) {
-    b.push(CstNode(b2, field ?? "", field ?? ""));
-  }
-  return r;
-};
-export const structFields_optional_19: Rule = (ctx, b, field) => {
-  const b2: Builder = [];
-  const p = ctx.p;
-  let r = inter(FieldDecl, (ctx, b) => consumeString(ctx, b, ";"))(ctx, b2);
+  let r = MessageDecl_seq_18(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -1774,6 +1798,16 @@ export const structFields_optional_19: Rule = (ctx, b, field) => {
 export const structFields_optional_20: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
+  let r = inter(FieldDecl, (ctx, b) => consumeString(ctx, b, ";"))(ctx, b2);
+  r = r || (ctx.p = p, true);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  return r;
+};
+export const structFields_optional_21: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
   let r = consumeString(ctx, b2, ";");
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
@@ -1781,7 +1815,7 @@ export const structFields_optional_20: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const FieldDecl_seq_21: Rule = (ctx, b, field) => {
+export const FieldDecl_seq_22: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "=");
@@ -1794,17 +1828,17 @@ export const FieldDecl_seq_21: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const FieldDecl_optional_22: Rule = (ctx, b, field) => {
+export const FieldDecl_optional_23: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = FieldDecl_seq_21(ctx, b2);
+  let r = FieldDecl_seq_22(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const Contract_star_23: Rule = (ctx, b, field) => {
+export const Contract_star_24: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, ContractAttribute(ctx, b2)) {}
@@ -1814,7 +1848,7 @@ export const Contract_star_23: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const Contract_optional_24: Rule = (ctx, b, field) => {
+export const Contract_optional_25: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = ParameterList(Parameter)(ctx, b2);
@@ -1824,7 +1858,7 @@ export const Contract_optional_24: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Contract_optional_25: Rule = (ctx, b, field) => {
+export const Contract_optional_26: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = inheritedTraits(ctx, b2);
@@ -1834,7 +1868,7 @@ export const Contract_optional_25: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Contract_star_26: Rule = (ctx, b, field) => {
+export const Contract_star_27: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, contractItemDecl(ctx, b2)) {}
@@ -1844,7 +1878,7 @@ export const Contract_star_26: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const Trait_star_27: Rule = (ctx, b, field) => {
+export const Trait_star_28: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, ContractAttribute(ctx, b2)) {}
@@ -1854,7 +1888,7 @@ export const Trait_star_27: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const Trait_optional_28: Rule = (ctx, b, field) => {
+export const Trait_optional_29: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = inheritedTraits(ctx, b2);
@@ -1864,7 +1898,7 @@ export const Trait_optional_28: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Trait_star_29: Rule = (ctx, b, field) => {
+export const Trait_star_30: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, traitItemDecl(ctx, b2)) {}
@@ -1874,7 +1908,22 @@ export const Trait_star_29: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const GetAttribute_seq_30: Rule = (ctx, b, field) => {
+export const FunctionAttribute_alt_31: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = GetAttribute(ctx, b2);
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "mutates"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "extends"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "virtual"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "override"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "inline"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "abstract"))(ctx, b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  return r;
+};
+export const GetAttribute_seq_32: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "(");
@@ -1888,17 +1937,28 @@ export const GetAttribute_seq_30: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const GetAttribute_optional_31: Rule = (ctx, b, field) => {
+export const GetAttribute_optional_33: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = GetAttribute_seq_30(ctx, b2);
+  let r = GetAttribute_seq_32(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const receiverParam_alt_32: Rule = (ctx, b, field) => {
+export const ReceiverType_alt_34: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = consumeString(ctx, b2, "bounced");
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "receive"))(ctx, b2));
+  r = r || (ctx.p = p, keyword((ctx, b) => consumeString(ctx, b, "external"))(ctx, b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  return r;
+};
+export const receiverParam_alt_35: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = Parameter(ctx, b2);
@@ -1908,7 +1968,17 @@ export const receiverParam_alt_32: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const assembly_stringify_33: Rule = (ctx, b, field) => {
+export const receiverParam_optional_36: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = receiverParam_alt_35(ctx, b2);
+  r = r || (ctx.p = p, true);
+  if (r && b2.length > 0) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  return r;
+};
+export const assembly_stringify_37: Rule = (ctx, b, field) => {
   const p = ctx.p;
   const r = assemblySequence(ctx, []);
   if (r) {
@@ -1917,7 +1987,7 @@ export const assembly_stringify_33: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const assemblyItem_seq_34: Rule = (ctx, b, field) => {
+export const assemblyItem_seq_38: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "{");
@@ -1931,7 +2001,7 @@ export const assemblyItem_seq_34: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const assemblyItem_star_35: Rule = (ctx, b, field) => {
+export const assemblyItem_star_39: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, consumeClass(ctx, b2, c => !(c === "\""))) {}
@@ -1941,11 +2011,11 @@ export const assemblyItem_star_35: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const assemblyItem_seq_36: Rule = (ctx, b, field) => {
+export const assemblyItem_seq_40: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "\"");
-  r = r && assemblyItem_star_35(ctx, b2);
+  r = r && assemblyItem_star_39(ctx, b2);
   r = r && consumeString(ctx, b2, "\"");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -1955,7 +2025,7 @@ export const assemblyItem_seq_36: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const assemblyItem_alt_37: Rule = (ctx, b, field) => {
+export const assemblyItem_alt_41: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeClass(ctx, b2, c => c === "\"" || c === "{" || c === "}");
@@ -1966,16 +2036,16 @@ export const assemblyItem_alt_37: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const assemblyItem_lookneg_38: Rule = (ctx, b, field) => {
+export const assemblyItem_lookneg_42: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = assemblyItem_alt_37(ctx, b);
+  const r = assemblyItem_alt_41(ctx, b);
   ctx.p = p;
   return !r;
 };
-export const assemblyItem_seq_39: Rule = (ctx, b, field) => {
+export const assemblyItem_seq_43: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = assemblyItem_lookneg_38(ctx, b2);
+  let r = assemblyItem_lookneg_42(ctx, b2);
   r = r && consumeAny(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -1985,12 +2055,12 @@ export const assemblyItem_seq_39: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const assemblyItem_plus_40: Rule = (ctx, b, field) => {
+export const assemblyItem_plus_44: Rule = (ctx, b, field) => {
   const b2: Builder = [];
-  const r = assemblyItem_seq_39(ctx, b2);
+  const r = assemblyItem_seq_43(ctx, b2);
   if (r) {
     let p = ctx.p;
-    while (p = ctx.p, assemblyItem_seq_39(ctx, b2)) {}
+    while (p = ctx.p, assemblyItem_seq_43(ctx, b2)) {}
     ctx.p = p;
   }
   if (b2.length > 0) {
@@ -1998,7 +2068,7 @@ export const assemblyItem_plus_40: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const TypeAs_seq_41: Rule = (ctx, b, field) => {
+export const TypeAs_seq_45: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = keyword((ctx, b) => consumeString(ctx, b, "as"))(ctx, b2);
@@ -2011,17 +2081,17 @@ export const TypeAs_seq_41: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const TypeAs_star_42: Rule = (ctx, b, field) => {
+export const TypeAs_star_46: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
-  while (p = ctx.p, TypeAs_seq_41(ctx, b2)) {}
+  while (p = ctx.p, TypeAs_seq_45(ctx, b2)) {}
   ctx.p = p;
   if (b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return true;
 };
-export const TypeOptional_star_43: Rule = (ctx, b, field) => {
+export const TypeOptional_star_47: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, consumeString(ctx, b2, "?")) {}
@@ -2031,7 +2101,7 @@ export const TypeOptional_star_43: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const TypeGeneric_alt_44: Rule = (ctx, b, field) => {
+export const TypeGeneric_alt_48: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = MapKeyword(ctx, b2);
@@ -2042,7 +2112,7 @@ export const TypeGeneric_alt_44: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const TypeId_star_45: Rule = (ctx, b, field) => {
+export const TypeId_star_49: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, consumeClass(ctx, b2, c => c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c >= "0" && c <= "9" || c === "_")) {}
@@ -2052,11 +2122,11 @@ export const TypeId_star_45: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const TypeId_seq_46: Rule = (ctx, b, field) => {
+export const TypeId_seq_50: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeClass(ctx, b2, c => c >= "A" && c <= "Z");
-  r = r && TypeId_star_45(ctx, b2);
+  r = r && TypeId_star_49(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2065,16 +2135,30 @@ export const TypeId_seq_46: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const TypeId_stringify_47: Rule = (ctx, b, field) => {
+export const TypeId_stringify_51: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = TypeId_seq_46(ctx, []);
+  const r = TypeId_seq_50(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const statements_star_48: Rule = (ctx, b, field) => {
+export const TypeId_lex_52: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = TypeId_stringify_51(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const statements_star_53: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, statement(ctx, b2)) {}
@@ -2084,7 +2168,7 @@ export const statements_star_48: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const StatementLet_optional_49: Rule = (ctx, b, field) => {
+export const StatementLet_optional_54: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = ascription(ctx, b2);
@@ -2094,7 +2178,7 @@ export const StatementLet_optional_49: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StatementReturn_optional_50: Rule = (ctx, b, field) => {
+export const StatementReturn_optional_55: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = expression(ctx, b2);
@@ -2104,7 +2188,7 @@ export const StatementReturn_optional_50: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StatementAssign_optional_51: Rule = (ctx, b, field) => {
+export const StatementAssign_optional_56: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = augmentedOp(ctx, b2);
@@ -2114,7 +2198,7 @@ export const StatementAssign_optional_51: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StatementCondition_alt_52: Rule = (ctx, b, field) => {
+export const StatementCondition_alt_57: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = FalseBranch(ctx, b2);
@@ -2124,11 +2208,11 @@ export const StatementCondition_alt_52: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StatementCondition_seq_53: Rule = (ctx, b, field) => {
+export const StatementCondition_seq_58: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = keyword((ctx, b) => consumeString(ctx, b, "else"))(ctx, b2);
-  r = r && StatementCondition_alt_52(ctx, b2);
+  r = r && StatementCondition_alt_57(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2137,17 +2221,17 @@ export const StatementCondition_seq_53: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StatementCondition_optional_54: Rule = (ctx, b, field) => {
+export const StatementCondition_optional_59: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = StatementCondition_seq_53(ctx, b2);
+  let r = StatementCondition_seq_58(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const StatementTry_seq_55: Rule = (ctx, b, field) => {
+export const StatementTry_seq_60: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = keyword((ctx, b) => consumeString(ctx, b, "catch"))(ctx, b2);
@@ -2163,23 +2247,23 @@ export const StatementTry_seq_55: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StatementTry_optional_56: Rule = (ctx, b, field) => {
+export const StatementTry_optional_61: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = StatementTry_seq_55(ctx, b2);
+  let r = StatementTry_seq_60(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const semicolon_lookpos_57: Rule = (ctx, b, field) => {
+export const semicolon_lookpos_62: Rule = (ctx, b, field) => {
   const p = ctx.p;
   const r = consumeString(ctx, [], "}");
   ctx.p = p;
   return r;
 };
-export const optionalRest_seq_58: Rule = (ctx, b, field) => {
+export const optionalRest_seq_63: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, ",");
@@ -2192,7 +2276,7 @@ export const optionalRest_seq_58: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Conditional_seq_59: Rule = (ctx, b, field) => {
+export const Conditional_seq_64: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "?");
@@ -2207,17 +2291,17 @@ export const Conditional_seq_59: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Conditional_optional_60: Rule = (ctx, b, field) => {
+export const Conditional_optional_65: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = Conditional_seq_59(ctx, b2);
+  let r = Conditional_seq_64(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const equality_alt_61: Rule = (ctx, b, field) => {
+export const equality_alt_66: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "!=");
@@ -2227,7 +2311,7 @@ export const equality_alt_61: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const compare_alt_62: Rule = (ctx, b, field) => {
+export const compare_alt_67: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "<=");
@@ -2239,7 +2323,7 @@ export const compare_alt_62: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const bitwiseShift_alt_63: Rule = (ctx, b, field) => {
+export const bitwiseShift_alt_68: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "<<");
@@ -2249,7 +2333,7 @@ export const bitwiseShift_alt_63: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const add_alt_64: Rule = (ctx, b, field) => {
+export const add_alt_69: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "+");
@@ -2259,7 +2343,7 @@ export const add_alt_64: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Unary_star_65: Rule = (ctx, b, field) => {
+export const Unary_star_70: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, Operator((ctx, b) => consumeClass(ctx, b, c => c === "-" || c === "+" || c === "!" || c === "~"))(ctx, b2)) {}
@@ -2269,7 +2353,7 @@ export const Unary_star_65: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const Suffix_star_66: Rule = (ctx, b, field) => {
+export const Suffix_star_71: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, suffix(ctx, b2)) {}
@@ -2279,7 +2363,7 @@ export const Suffix_star_66: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const StructInstanceFields_optional_67: Rule = (ctx, b, field) => {
+export const StructInstanceFields_optional_72: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = commaList(StructFieldInitializer)(ctx, b2);
@@ -2289,7 +2373,7 @@ export const StructInstanceFields_optional_67: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StructFieldInitializer_seq_68: Rule = (ctx, b, field) => {
+export const StructFieldInitializer_seq_73: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, ":");
@@ -2302,17 +2386,17 @@ export const StructFieldInitializer_seq_68: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StructFieldInitializer_optional_69: Rule = (ctx, b, field) => {
+export const StructFieldInitializer_optional_74: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = StructFieldInitializer_seq_68(ctx, b2);
+  let r = StructFieldInitializer_seq_73(ctx, b2);
   r = r || (ctx.p = p, true);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const ParameterList_optional_70: (T: Rule) => Rule = T => {
+export const ParameterList_optional_75: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
@@ -2324,7 +2408,7 @@ export const ParameterList_optional_70: (T: Rule) => Rule = T => {
     return r;
   };
 };
-export const commaList_optional_71: (T: Rule) => Rule = T => {
+export const commaList_optional_76: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
@@ -2336,7 +2420,33 @@ export const commaList_optional_71: (T: Rule) => Rule = T => {
     return r;
   };
 };
-export const IntegerLiteralHex_seq_72: Rule = (ctx, b, field) => {
+export const IntegerLiteral_alt_77: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const p = ctx.p;
+  let r = IntegerLiteralHex(ctx, b2);
+  r = r || (ctx.p = p, IntegerLiteralBin(ctx, b2));
+  r = r || (ctx.p = p, IntegerLiteralOct(ctx, b2));
+  r = r || (ctx.p = p, IntegerLiteralDec(ctx, b2));
+  if (b2.length > 0) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  return r;
+};
+export const IntegerLiteralDec_lex_78: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = underscored(digit)(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const IntegerLiteralHex_seq_79: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "0");
@@ -2350,7 +2460,21 @@ export const IntegerLiteralHex_seq_72: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const IntegerLiteralBin_seq_73: Rule = (ctx, b, field) => {
+export const IntegerLiteralHex_lex_80: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = IntegerLiteralHex_seq_79(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const IntegerLiteralBin_seq_81: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "0");
@@ -2364,7 +2488,21 @@ export const IntegerLiteralBin_seq_73: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const IntegerLiteralOct_seq_74: Rule = (ctx, b, field) => {
+export const IntegerLiteralBin_lex_82: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = IntegerLiteralBin_seq_81(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const IntegerLiteralOct_seq_83: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "0");
@@ -2378,7 +2516,21 @@ export const IntegerLiteralOct_seq_74: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const underscored_optional_75: (T: Rule) => Rule = T => {
+export const IntegerLiteralOct_lex_84: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = IntegerLiteralOct_seq_83(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const underscored_optional_85: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
@@ -2390,11 +2542,11 @@ export const underscored_optional_75: (T: Rule) => Rule = T => {
     return r;
   };
 };
-export const underscored_seq_76: (T: Rule) => Rule = T => {
+export const underscored_seq_86: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
-    let r = underscored_optional_75(T)(ctx, b2);
+    let r = underscored_optional_85(T)(ctx, b2);
     r = r && T(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -2405,11 +2557,11 @@ export const underscored_seq_76: (T: Rule) => Rule = T => {
     return r;
   };
 };
-export const underscored_star_77: (T: Rule) => Rule = T => {
+export const underscored_star_87: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     let p = ctx.p;
-    while (p = ctx.p, underscored_seq_76(T)(ctx, b2)) {}
+    while (p = ctx.p, underscored_seq_86(T)(ctx, b2)) {}
     ctx.p = p;
     if (b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -2417,12 +2569,12 @@ export const underscored_star_77: (T: Rule) => Rule = T => {
     return true;
   };
 };
-export const underscored_seq_78: (T: Rule) => Rule = T => {
+export const underscored_seq_88: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
     let r = T(ctx, b2);
-    r = r && underscored_star_77(T)(ctx, b2);
+    r = r && underscored_star_87(T)(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
     }
@@ -2432,13 +2584,13 @@ export const underscored_seq_78: (T: Rule) => Rule = T => {
     return r;
   };
 };
-export const Id_lookneg_79: Rule = (ctx, b, field) => {
+export const Id_lookneg_89: Rule = (ctx, b, field) => {
   const p = ctx.p;
   const r = reservedWord(ctx, b);
   ctx.p = p;
   return !r;
 };
-export const Id_star_80: Rule = (ctx, b, field) => {
+export const Id_star_90: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, idPart(ctx, b2)) {}
@@ -2448,12 +2600,12 @@ export const Id_star_80: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const Id_seq_81: Rule = (ctx, b, field) => {
+export const Id_seq_91: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = Id_lookneg_79(ctx, b2);
+  let r = Id_lookneg_89(ctx, b2);
   r = r && consumeClass(ctx, b2, c => c >= "a" && c <= "z" || c >= "A" && c <= "Z" || c === "_");
-  r = r && Id_star_80(ctx, b2);
+  r = r && Id_star_90(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2462,16 +2614,30 @@ export const Id_seq_81: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const Id_stringify_82: Rule = (ctx, b, field) => {
+export const Id_stringify_92: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = Id_seq_81(ctx, []);
+  const r = Id_seq_91(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const FuncId_optional_83: Rule = (ctx, b, field) => {
+export const Id_lex_93: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = Id_stringify_92(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const FuncId_optional_94: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeClass(ctx, b2, c => c === "." || c === "~");
@@ -2481,7 +2647,7 @@ export const FuncId_optional_83: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const FuncId_plus_84: Rule = (ctx, b, field) => {
+export const FuncId_plus_95: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const r = consumeClass(ctx, b2, c => !(c === "`" || c === "\r" || c === "\n"));
   if (r) {
@@ -2494,11 +2660,11 @@ export const FuncId_plus_84: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const FuncId_seq_85: Rule = (ctx, b, field) => {
+export const FuncId_seq_96: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "`");
-  r = r && FuncId_plus_84(ctx, b2);
+  r = r && FuncId_plus_95(ctx, b2);
   r = r && consumeString(ctx, b2, "`");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -2508,7 +2674,7 @@ export const FuncId_seq_85: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const FuncId_plus_86: Rule = (ctx, b, field) => {
+export const FuncId_plus_97: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const r = consumeClass(ctx, b2, c => !(c === " " || c === "\t" || c === "\r" || c === "\n" || c === "(" || c === ")" || c === "[" || c === "\"\\]\"" || c === "," || c === "." || c === ";" || c === "~"));
   if (r) {
@@ -2521,26 +2687,26 @@ export const FuncId_plus_86: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const FuncId_alt_87: Rule = (ctx, b, field) => {
+export const FuncId_alt_98: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = FuncId_seq_85(ctx, b2);
-  r = r || (ctx.p = p, FuncId_plus_86(ctx, b2));
+  let r = FuncId_seq_96(ctx, b2);
+  r = r || (ctx.p = p, FuncId_plus_97(ctx, b2));
   if (b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const FuncId_stringify_88: Rule = (ctx, b, field) => {
+export const FuncId_stringify_99: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = FuncId_alt_87(ctx, []);
+  const r = FuncId_alt_98(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const BoolLiteral_alt_89: Rule = (ctx, b, field) => {
+export const BoolLiteral_alt_100: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "true");
@@ -2550,13 +2716,13 @@ export const BoolLiteral_alt_89: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const BoolLiteral_lookneg_90: Rule = (ctx, b, field) => {
+export const BoolLiteral_lookneg_101: Rule = (ctx, b, field) => {
   const p = ctx.p;
   const r = idPart(ctx, b);
   ctx.p = p;
   return !r;
 };
-export const StringLiteral_seq_91: Rule = (ctx, b, field) => {
+export const StringLiteral_seq_102: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "\\");
@@ -2569,40 +2735,40 @@ export const StringLiteral_seq_91: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const StringLiteral_alt_92: Rule = (ctx, b, field) => {
+export const StringLiteral_alt_103: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeClass(ctx, b2, c => !(c === "\"" || c === "\\"));
-  r = r || (ctx.p = p, StringLiteral_seq_91(ctx, b2));
+  r = r || (ctx.p = p, StringLiteral_seq_102(ctx, b2));
   if (b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const StringLiteral_star_93: Rule = (ctx, b, field) => {
+export const StringLiteral_star_104: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
-  while (p = ctx.p, StringLiteral_alt_92(ctx, b2)) {}
+  while (p = ctx.p, StringLiteral_alt_103(ctx, b2)) {}
   ctx.p = p;
   if (b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return true;
 };
-export const StringLiteral_stringify_94: Rule = (ctx, b, field) => {
+export const StringLiteral_stringify_105: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = StringLiteral_star_93(ctx, []);
+  const r = StringLiteral_star_104(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const StringLiteral_seq_95: Rule = (ctx, b, field) => {
+export const StringLiteral_seq_106: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "\"");
-  r = r && StringLiteral_stringify_94(ctx, b2);
+  r = r && StringLiteral_stringify_105(ctx, b2);
   r = r && consumeString(ctx, b2, "\"");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -2612,7 +2778,21 @@ export const StringLiteral_seq_95: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_optional_96: Rule = (ctx, b, field) => {
+export const StringLiteral_lex_107: Rule = (ctx, b, field) => {
+  const b2: Builder = [];
+  const newCtx = {
+    ...ctx,
+    space: undefined
+  };
+  const r = StringLiteral_seq_106(newCtx, b2);
+  if (r) {
+    b.push(CstNode(b2, field ?? "", field ?? ""));
+  }
+  ctx.p = newCtx.p;
+  skip(ctx, b);
+  return r;
+};
+export const escapeChar_optional_108: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2622,7 +2802,7 @@ export const escapeChar_optional_96: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_optional_97: Rule = (ctx, b, field) => {
+export const escapeChar_optional_109: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2632,7 +2812,7 @@ export const escapeChar_optional_97: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_optional_98: Rule = (ctx, b, field) => {
+export const escapeChar_optional_110: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2642,7 +2822,7 @@ export const escapeChar_optional_98: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_optional_99: Rule = (ctx, b, field) => {
+export const escapeChar_optional_111: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2652,7 +2832,7 @@ export const escapeChar_optional_99: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_optional_100: Rule = (ctx, b, field) => {
+export const escapeChar_optional_112: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2662,15 +2842,15 @@ export const escapeChar_optional_100: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_seq_101: Rule = (ctx, b, field) => {
+export const escapeChar_seq_113: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
-  r = r && escapeChar_optional_96(ctx, b2);
-  r = r && escapeChar_optional_97(ctx, b2);
-  r = r && escapeChar_optional_98(ctx, b2);
-  r = r && escapeChar_optional_99(ctx, b2);
-  r = r && escapeChar_optional_100(ctx, b2);
+  r = r && escapeChar_optional_108(ctx, b2);
+  r = r && escapeChar_optional_109(ctx, b2);
+  r = r && escapeChar_optional_110(ctx, b2);
+  r = r && escapeChar_optional_111(ctx, b2);
+  r = r && escapeChar_optional_112(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2679,20 +2859,20 @@ export const escapeChar_seq_101: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_stringify_102: Rule = (ctx, b, field) => {
+export const escapeChar_stringify_114: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = escapeChar_seq_101(ctx, []);
+  const r = escapeChar_seq_113(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const escapeChar_seq_103: Rule = (ctx, b, field) => {
+export const escapeChar_seq_115: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "u{");
-  r = r && escapeChar_stringify_102(ctx, b2);
+  r = r && escapeChar_stringify_114(ctx, b2);
   r = r && consumeString(ctx, b2, "}");
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -2702,7 +2882,7 @@ export const escapeChar_seq_103: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_seq_104: Rule = (ctx, b, field) => {
+export const escapeChar_seq_116: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2717,20 +2897,20 @@ export const escapeChar_seq_104: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_stringify_105: Rule = (ctx, b, field) => {
+export const escapeChar_stringify_117: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = escapeChar_seq_104(ctx, []);
+  const r = escapeChar_seq_116(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const escapeChar_seq_106: Rule = (ctx, b, field) => {
+export const escapeChar_seq_118: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "u");
-  r = r && escapeChar_stringify_105(ctx, b2);
+  r = r && escapeChar_stringify_117(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2739,7 +2919,7 @@ export const escapeChar_seq_106: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_seq_107: Rule = (ctx, b, field) => {
+export const escapeChar_seq_119: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = hexDigit(ctx, b2);
@@ -2752,20 +2932,20 @@ export const escapeChar_seq_107: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const escapeChar_stringify_108: Rule = (ctx, b, field) => {
+export const escapeChar_stringify_120: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = escapeChar_seq_107(ctx, []);
+  const r = escapeChar_seq_119(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const escapeChar_seq_109: Rule = (ctx, b, field) => {
+export const escapeChar_seq_121: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "x");
-  r = r && escapeChar_stringify_108(ctx, b2);
+  r = r && escapeChar_stringify_120(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2774,7 +2954,7 @@ export const escapeChar_seq_109: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const keyword_lookneg_110: (T: Rule) => Rule = T => {
+export const keyword_lookneg_122: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const p = ctx.p;
     const r = idPart(ctx, b);
@@ -2782,12 +2962,12 @@ export const keyword_lookneg_110: (T: Rule) => Rule = T => {
     return !r;
   };
 };
-export const keyword_seq_111: (T: Rule) => Rule = T => {
+export const keyword_seq_123: (T: Rule) => Rule = T => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
     let r = T(ctx, b2);
-    r = r && keyword_lookneg_110(T)(ctx, b2);
+    r = r && keyword_lookneg_122(T)(ctx, b2);
     if (r && b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
     }
@@ -2797,7 +2977,7 @@ export const keyword_seq_111: (T: Rule) => Rule = T => {
     return r;
   };
 };
-export const reservedWord_alt_112: Rule = (ctx, b, field) => {
+export const reservedWord_alt_124: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
   let r = consumeString(ctx, b2, "extend");
@@ -2837,7 +3017,7 @@ export const reservedWord_alt_112: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const space_plus_113: Rule = (ctx, b, field) => {
+export const space_plus_125: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const r = consumeClass(ctx, b2, c => c === " " || c === "\t" || c === "\r" || c === "\n");
   if (r) {
@@ -2850,22 +3030,22 @@ export const space_plus_113: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const space_stringify_114: Rule = (ctx, b, field) => {
+export const space_stringify_126: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = space_plus_113(ctx, []);
+  const r = space_plus_125(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const space_lex_115: Rule = (ctx, b, field) => {
+export const space_lex_127: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const newCtx = {
     ...ctx,
     space: undefined
   };
-  const r = space_stringify_114(newCtx, b2);
+  const r = space_stringify_126(newCtx, b2);
   if (r) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
@@ -2873,26 +3053,26 @@ export const space_lex_115: Rule = (ctx, b, field) => {
   skip(ctx, b);
   return r;
 };
-export const space_alt_116: Rule = (ctx, b, field) => {
+export const space_alt_128: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = space_lex_115(ctx, b2);
+  let r = space_lex_127(ctx, b2);
   r = r || (ctx.p = p, Comment(ctx, b2));
   if (b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return r;
 };
-export const multiLineComment_lookneg_117: Rule = (ctx, b, field) => {
+export const multiLineComment_lookneg_129: Rule = (ctx, b, field) => {
   const p = ctx.p;
   const r = consumeString(ctx, b, "*/");
   ctx.p = p;
   return !r;
 };
-export const multiLineComment_seq_118: Rule = (ctx, b, field) => {
+export const multiLineComment_seq_130: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   const p = ctx.p;
-  let r = multiLineComment_lookneg_117(ctx, b2);
+  let r = multiLineComment_lookneg_129(ctx, b2);
   r = r && consumeAny(ctx, b2);
   if (r && b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
@@ -2902,26 +3082,26 @@ export const multiLineComment_seq_118: Rule = (ctx, b, field) => {
   }
   return r;
 };
-export const multiLineComment_star_119: Rule = (ctx, b, field) => {
+export const multiLineComment_star_131: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
-  while (p = ctx.p, multiLineComment_seq_118(ctx, b2)) {}
+  while (p = ctx.p, multiLineComment_seq_130(ctx, b2)) {}
   ctx.p = p;
   if (b2.length > 0) {
     b.push(CstNode(b2, field ?? "", field ?? ""));
   }
   return true;
 };
-export const multiLineComment_stringify_120: Rule = (ctx, b, field) => {
+export const multiLineComment_stringify_132: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = multiLineComment_star_119(ctx, []);
+  const r = multiLineComment_star_131(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const singleLineComment_star_121: Rule = (ctx, b, field) => {
+export const singleLineComment_star_133: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, consumeClass(ctx, b2, c => !(c === "\r" || c === "\n"))) {}
@@ -2931,16 +3111,16 @@ export const singleLineComment_star_121: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const singleLineComment_stringify_122: Rule = (ctx, b, field) => {
+export const singleLineComment_stringify_134: Rule = (ctx, b, field) => {
   const p = ctx.p;
-  const r = singleLineComment_star_121(ctx, []);
+  const r = singleLineComment_star_133(ctx, []);
   if (r) {
     const text = ctx.s.substring(p, ctx.p);
     b.push(CstLeaf(text));
   }
   return r;
 };
-export const JustImports_star_123: Rule = (ctx, b, field) => {
+export const JustImports_star_135: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, Import(ctx, b2)) {}
@@ -2950,7 +3130,7 @@ export const JustImports_star_123: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const JustImports_star_124: Rule = (ctx, b, field) => {
+export const JustImports_star_136: Rule = (ctx, b, field) => {
   const b2: Builder = [];
   let p = ctx.p;
   while (p = ctx.p, consumeAny(ctx, b2)) {}
@@ -2960,7 +3140,7 @@ export const JustImports_star_124: Rule = (ctx, b, field) => {
   }
   return true;
 };
-export const inter_seq_125: (A: Rule, B: Rule) => Rule = (A, B) => {
+export const inter_seq_137: (A: Rule, B: Rule) => Rule = (A, B) => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     const p = ctx.p;
@@ -2975,11 +3155,11 @@ export const inter_seq_125: (A: Rule, B: Rule) => Rule = (A, B) => {
     return r;
   };
 };
-export const inter_star_126: (A: Rule, B: Rule) => Rule = (A, B) => {
+export const inter_star_138: (A: Rule, B: Rule) => Rule = (A, B) => {
   return (ctx, b, field) => {
     const b2: Builder = [];
     let p = ctx.p;
-    while (p = ctx.p, inter_seq_125(A, B)(ctx, b2)) {}
+    while (p = ctx.p, inter_seq_137(A, B)(ctx, b2)) {}
     ctx.p = p;
     if (b2.length > 0) {
       b.push(CstNode(b2, field ?? "", field ?? ""));
