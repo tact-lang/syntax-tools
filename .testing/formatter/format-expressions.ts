@@ -204,6 +204,9 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             case "IntegerLiteral":
                 code.add(visit(node).trim());
                 return
+            case "BoolLiteral":
+                code.add(visit(node).trim());
+                return
             case "StructInstance":
                 formatStructInstance(code, node);
                 return

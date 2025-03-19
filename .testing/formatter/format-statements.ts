@@ -2,8 +2,8 @@ import {Cst, CstNode} from "../result";
 import {childByField, childByType, childLeafWithText, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
-import {formatAscription} from "./format-types";
-import {getCommentsBetween} from "./format-helpers";
+import {formatAscription, formatType} from "./format-types";
+import {getCommentsBetween, idText} from "./format-helpers";
 
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const statements = node.children.filter(it => it.$ === "node");
@@ -35,6 +35,9 @@ export const formatStatement = (code: CodeBuilder, node: Cst): void => {
         case "StatementLet":
             formatLetStatement(code, node);
             break;
+        case "StatementDestruct":
+            formatDestructStatement(code, node);
+            break;
         case "StatementReturn":
             formatReturnStatement(code, node);
             break;
@@ -49,6 +52,18 @@ export const formatStatement = (code: CodeBuilder, node: Cst): void => {
             break;
         case "StatementWhile":
             formatWhileStatement(code, node);
+            break;
+        case "StatementRepeat":
+            formatRepeatStatement(code, node);
+            break;
+        case "StatementUntil":
+            formatUntilStatement(code, node);
+            break;
+        case "StatementTry":
+            formatTryStatement(code, node);
+            break;
+        case "StatementForEach":
+            formatForEachStatement(code, node);
             break;
         case "StatementBlock":
             formatStatements(code, node);
@@ -181,5 +196,126 @@ const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
     code.add("while").space();
     formatExpression(code, condition);
     code.space();
+    formatStatements(code, body);
+};
+
+const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
+    const type = childByField(node, "type");
+    const fields = childByField(node, "fields");
+    const rest = childByType(node, "RestArgument");
+    const assign = childLeafWithText(node, "=");
+    const init = childByField(node, "init");
+
+    if (!type || !fields || !assign || !init) {
+        throw new Error("Invalid destruct statement");
+    }
+
+    code.add("let").space();
+    formatType(code, type);
+    code.space().add("{").space();
+
+    const fieldsNode = fields.children.filter(field => field.$ === "node");
+    fieldsNode.forEach((field, index) => {
+        if (field.type === "RegularField") {
+            const fieldName = childByField(field, "fieldName");
+            const varName = childByField(field, "varName");
+            if (!fieldName || !varName) {
+                throw new Error("Invalid regular field in destruct");
+            }
+            code.add(idText(fieldName)).add(":").space().add(idText(varName));
+        } else if (field.type === "PunnedField") {
+            const name = childByField(field, "name");
+            if (!name) {
+                throw new Error("Invalid punned field in destruct");
+            }
+            code.add(idText(name));
+        }
+        if (index < fieldsNode.length - 1) {
+            code.add(",").space();
+        }
+    });
+
+    if (rest && rest.$ === "node" && rest.type === "RestArgument") {
+        if (fieldsNode.length > 0) {
+            code.add(",").space();
+        }
+        code.add("..");
+    }
+
+    code.space().add("}").space().add("=").space();
+    formatExpression(code, init);
+    code.add(";");
+};
+
+const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
+    const condition = childByField(node, "condition");
+    const body = childByField(node, "body");
+
+    if (!condition || !body) {
+        throw new Error("Invalid repeat statement");
+    }
+
+    code.add("repeat").space();
+    formatExpression(code, condition);
+    code.space();
+    formatStatements(code, body);
+};
+
+const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
+    const body = childByField(node, "body");
+    const conditionNode = childByField(node, "condition");
+
+    if (!body || !conditionNode) {
+        throw new Error("Invalid until statement");
+    }
+
+    const condition = conditionNode.children.find(child => child.$ === "node");
+
+    code.add("do").space();
+    formatStatements(code, body);
+    code.space().add("until (");
+    formatExpression(code, condition);
+    code.add(")");
+    code.add(";");
+};
+
+const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
+    const body = childByField(node, "body");
+    const handler = childByType(node, "handler");
+
+    if (!body) {
+        throw new Error("Invalid try statement");
+    }
+
+    code.add("try").space();
+    formatStatements(code, body);
+
+    if (handler && handler.$ === "node") {
+        const name = childByField(handler, "name");
+        const handlerBody = childByField(handler, "body");
+
+        if (!name || !handlerBody) {
+            throw new Error("Invalid catch handler");
+        }
+
+        code.space().add("catch").space().add("(").add(idText(name)).add(")").space();
+        formatStatements(code, handlerBody);
+    }
+};
+
+const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
+    const key = childByField(node, "key");
+    const value = childByField(node, "value");
+    const expression = childByField(node, "expression");
+    const body = childByField(node, "body");
+
+    if (!key || !value || !expression || !body) {
+        throw new Error("Invalid forEach statement");
+    }
+
+    code.add("foreach").space().add("(");
+    code.add(idText(key)).add(",").space().add(idText(value)).space().add("in").space();
+    formatExpression(code, expression);
+    code.add(")").space();
     formatStatements(code, body);
 }; 

@@ -14,7 +14,12 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-fun foo(p: map   <Int, String>) {}
+
+fun foo() {
+    do    {
+        body;
+    }    until    (    true    )    ;
+}
 
 // message(100 + 200) Foo {
 //     value: Int = 0;

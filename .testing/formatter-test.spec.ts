@@ -332,4 +332,157 @@ fun foo(param: String?) {}`));
 fun foo(param:    String    as    Int    ) {}`, `
 fun foo(param: String as Int) {}`));
     });
+
+    describe('destruct statement', () => {
+        it('simple destruct', intact(`
+fun foo() {
+    let Foo { name } = value;
+}`));
+
+        it('destruct with field mapping', intact(`
+fun foo() {
+    let Foo { name: myName } = value;
+}`));
+
+        it('destruct with multiple fields', intact(`
+fun foo() {
+    let Foo { name, age: myAge } = value;
+}`));
+
+        it('destruct with rest argument', intact(`
+fun foo() {
+    let Foo { name, .. } = value;
+}`));
+
+        it('destruct with rest argument and fields', intact(`
+fun foo() {
+    let Foo { name, age, .. } = value;
+}`));
+
+        it('format destruct with extra spaces', test(`
+fun foo() {
+    let    Foo    {    name    ,    age    }    =    value;
+}`, `
+fun foo() {
+    let Foo { name, age } = value;
+}`));
+    });
+
+    describe('repeat statement', () => {
+        it('simple repeat', intact(`
+fun foo() {
+    repeat (condition) {
+        body;
+    }
+}`));
+
+        it('repeat with complex condition', intact(`
+fun foo() {
+    repeat (a > 10 && b < 20) {
+        body;
+    }
+}`));
+
+        it('format repeat with extra spaces', test(`
+fun foo() {
+    repeat    (    condition    )    {
+        body;
+    }
+}`, `
+fun foo() {
+    repeat (condition) {
+        body;
+    }
+}`));
+    });
+
+    describe('until statement', () => {
+        it('simple until', intact(`
+fun foo() {
+    do {
+        body;
+    } until (condition);
+}`));
+
+        it('until with complex condition', intact(`
+fun foo() {
+    do {
+        body;
+    } until (a);
+}`));
+
+        it('format until with extra spaces', test(`
+fun foo() {
+    do    {
+        body;
+    }    until    (    true    )    ;
+}`, `
+fun foo() {
+    do {
+        body;
+    } until (true);
+}`));
+    });
+
+    describe('try statement', () => {
+        it('simple try', intact(`
+fun foo() {
+    try {
+        body;
+    }
+}`));
+
+        it('try with catch', intact(`
+fun foo() {
+    try {
+        body;
+    } catch (error) {
+        handle;
+    }
+}`));
+
+        it('format try with extra spaces', test(`
+fun foo() {
+    try    {
+        body;
+    }    catch    (    error    )    {
+        handle;
+    }
+}`, `
+fun foo() {
+    try {
+        body;
+    } catch (error) {
+        handle;
+    }
+}`));
+    });
+
+    describe('forEach statement', () => {
+        it('simple forEach', intact(`
+fun foo() {
+    foreach (key, value in items) {
+        body;
+    }
+}`));
+
+        it('forEach with complex expression', intact(`
+fun foo() {
+    foreach (key, value in map.items()) {
+        body;
+    }
+}`));
+
+        it('format forEach with extra spaces', test(`
+fun foo() {
+    foreach    (    key    ,    value    in    items    )    {
+        body;
+    }
+}`, `
+fun foo() {
+    foreach (key, value in items) {
+        body;
+    }
+}`));
+    });
 });

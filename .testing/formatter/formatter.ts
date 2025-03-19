@@ -64,6 +64,20 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
         case "Comment":
             code.add(visit(node));
             break;
+        case "StatementDestruct":
+        case "StatementRepeat":
+        case "StatementUntil":
+        case "StatementTry":
+        case "StatementForEach":
+        case "StatementLet":
+        case "StatementReturn":
+        case "StatementExpression":
+        case "StatementAssign":
+        case "StatementCondition":
+        case "StatementWhile":
+        case "StatementBlock":
+            formatStatement(code, node);
+            break;
         default:
             if (node.group === "statement") {
                 formatStatement(code, node);
