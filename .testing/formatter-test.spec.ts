@@ -11,8 +11,7 @@ describe('should format', () => {
             expect(res).toBe(true);
             const root = simplifyCst(CstNode(b, "Root")) as CstNode;
 
-            const target = ((root.children[0] as CstNode).children[0] as CstNode).children[0];
-            const formatted = format(target)
+            const formatted = format(root)
             expect(formatted).toBe(output.trim())
         }
     }
@@ -163,4 +162,50 @@ fun foo() {
 //         return 1;
 //     }
 // }`));
+
+    it('5', test(`
+contract Foo(
+param: Int,
+ 
+ some: Cell) with Bar,
+  Foo {}
+`,
+        `
+contract Foo(
+    param: Int,
+    some: Cell,
+) with 
+    Bar,
+    Foo,
+{
+}`));
+
+    it('5', intact(`
+@interface("some.api.interface")
+contract Foo(param: Int) with Bar, Foo {
+    field: Int = 100;
+
+    const FOO: Int = 100;
+
+    init(field: Int) {}
+
+    receive() {}
+
+    external(slice: Slice) {}
+
+    get fun foo(p: String) {}
+}`));
+
+    it('5', intact(`
+trait Foo with Bar, Foo {
+    field: Int = 100;
+
+    const FOO: Int = 100;
+
+    receive() {}
+
+    external(slice: Slice) {}
+
+    get fun foo(p: String) {}
+}`));
 });

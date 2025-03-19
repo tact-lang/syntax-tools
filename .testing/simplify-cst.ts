@@ -17,6 +17,18 @@ export const simplifyCst = (node: Cst): Cst => {
         }
     }
 
+   if (node.type === "traits") {
+        return {
+            ...node,
+            children: node.children.flatMap(it => {
+                if (it.$ === "node" && it.type === "tail") {
+                    return it.children.flatMap(it => simplifyCst(it))
+                }
+                return simplifyCst(it)
+            })
+        }
+    }
+
     if (node.type === "IntegerLiteral" && node.children.length === 1) {
         const child = simplifyCst(node.children[0])
         if (child.$ !== "node") return child

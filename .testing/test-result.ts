@@ -28,6 +28,17 @@ contract Foo(param: Int) with Bar, Foo {
     get fun foo(p: String) {}
 }
 
+trait Foo with Bar, Foo {
+    field: Int = 100;
+    
+    const FOO: Int = 100;
+
+    receive() {}
+    external(slice: Slice) {}
+    
+    get fun foo(p: String) {}
+}
+
 inline fun some() {
     Foo { name };
     foo()

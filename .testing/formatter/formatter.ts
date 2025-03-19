@@ -4,7 +4,7 @@ import {formatFunction} from "./format-declarations";
 import {formatStatement} from "./format-statements";
 import {formatExpression} from "./format-expressions";
 import {visit, childByField} from "../cst-helpers";
-import {formatContract} from "./format-contracts";
+import {formatContract, formatTrait} from "./format-contracts";
 
 export const format = (node: Cst): string => {
     const code = new CodeBuilder();
@@ -50,6 +50,9 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
             break;
         case "Contract":
             formatContract(code, node);
+            break;
+        case "Trait":
+            formatTrait(code, node);
             break;
         case "Comment":
             code.add(visit(node));

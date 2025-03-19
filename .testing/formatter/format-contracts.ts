@@ -1,11 +1,63 @@
-import {Cst, CstNode} from "../result";
+import {CstNode} from "../result";
 import {childByField, childByType, childrenByType, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList, idText} from "./format-helpers";
 import {formatFunction} from "./format-declarations";
 import {formatStatements} from "./format-statements";
-import {formatAscription, formatType} from "./format-types";
+import {formatAscription} from "./format-types";
 import {formatExpression} from "./format-expressions";
+
+export function formatContract(code: CodeBuilder, node: CstNode): void {
+    formatContractTraitAttributes(code, node);
+    code.add("contract").space().add(getName(node, "contract"));
+    formatContractParameters(code, node);
+    formatInheritedTraits(code, node);
+    formatContractTraitBody(code, node, (code, decl) => {
+        switch (decl.type) {
+            case "ContractInit":
+                formatContractInit(code, decl);
+                break;
+            case "Receiver":
+                formatReceiver(code, decl);
+                break;
+            case "$Function":
+                formatFunction(code, decl);
+                break;
+            case "Constant":
+                formatConstant(code, decl);
+                break;
+            case "FieldDecl":
+                formatStorageVar(code, decl);
+                break;
+            default:
+                throw new Error(`Unknown contract declaration type: ${decl.type}`);
+        }
+    });
+}
+
+export function formatTrait(code: CodeBuilder, node: CstNode): void {
+    formatContractTraitAttributes(code, node);
+    code.add("trait").space().add(getName(node, "trait"));
+    formatInheritedTraits(code, node);
+    formatContractTraitBody(code, node, (code, decl) => {
+        switch (decl.type) {
+            case "Receiver":
+                formatReceiver(code, decl);
+                break;
+            case "$Function":
+                formatFunction(code, decl);
+                break;
+            case "Constant":
+                formatConstant(code, decl);
+                break;
+            case "FieldDecl":
+                formatStorageVar(code, decl);
+                break;
+            default:
+                throw new Error(`Unknown trait declaration type: ${decl.type}`);
+        }
+    });
+}
 
 function formatContractInit(code: CodeBuilder, decl: CstNode): void {
     code.add("init");
@@ -103,39 +155,30 @@ function formatStorageVar(code: CodeBuilder, decl: CstNode): void {
     code.add(";");
 }
 
-export function formatContract(code: CodeBuilder, node: CstNode): void {
-    const attributes = childByField(node, "attributes");
-    if (attributes) {
-        const attrs = childrenByType(attributes, "ContractAttribute");
-        attrs.forEach((attr, i) => {
-            const name = childByField(attr, "name");
-            if (!name) return;
-            code.add("@interface");
-            code.add("(").add(visit(name)).add(")");
-            if (i < attrs.length - 1) code.space();
-        });
-        if (attrs.length > 0) code.newLine();
-    }
-
+function getName(node: CstNode, type: "contract" | "trait"): string {
     const name = childByField(node, "name");
     if (!name || name.$ !== "node" || name.type !== "Id") {
-        throw new Error("Invalid contract name");
+        throw new Error(`Invalid ${type} name`);
     }
-    code.add("contract").space().add(idText(name));
+    return idText(name);
+}
 
-    const parameters = childByField(node, "parameters");
-    if (parameters) {
-        formatCommaSeparatedList(code, childByType(parameters, "ParameterList") as CstNode, (code, param) => {
-            const paramName = childByField(param, "name");
-            const paramType = childByField(param, "type");
-            if (!paramName || !paramType) {
-                throw new Error("Invalid contract parameter");
-            }
-            code.add(idText(paramName));
-            formatAscription(code, paramType)
-        });
-    }
+function formatContractTraitAttributes(code: CodeBuilder, node: CstNode): void {
+    const attributes = childByField(node, "attributes");
+    if (!attributes) return;
 
+    const attrs = childrenByType(attributes, "ContractAttribute");
+    attrs.forEach((attr, i) => {
+        const name = childByField(attr, "name");
+        if (!name) return;
+        code.add("@interface");
+        code.add("(").add(visit(name)).add(")");
+        if (i < attrs.length - 1) code.space();
+    });
+    if (attrs.length > 0) code.newLine();
+}
+
+function formatInheritedTraits(code: CodeBuilder, node: CstNode): void {
     const traits = childByType(node, "traits");
     if (traits && traits.$ === "node") {
         code.space().add("with").space();
@@ -147,10 +190,28 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
         }, {
             wrapperLeft: "",
             wrapperRight: "",
-            startIndex: namesIndex
+            startIndex: namesIndex,
+            endIndex: 0,
         });
     }
+}
 
+function formatContractParameters(code: CodeBuilder, node: CstNode): void {
+    const parameters = childByField(node, "parameters");
+    if (!parameters) return;
+
+    formatCommaSeparatedList(code, childByType(parameters, "ParameterList") as CstNode, (code, param) => {
+        const paramName = childByField(param, "name");
+        const paramType = childByField(param, "type");
+        if (!paramName || !paramType) {
+            throw new Error("Invalid contract parameter");
+        }
+        code.add(idText(paramName));
+        formatAscription(code, paramType)
+    });
+}
+
+function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclaration: (code: CodeBuilder, decl: CstNode) => void): void {
     code.space().add("{").newLine().indent();
 
     const declarations = childByField(node, "declarations");
@@ -158,25 +219,8 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
         declarations.children.forEach((decl, index) => {
             if (decl.$ !== "node") return;
 
-            switch (decl.type) {
-                case "ContractInit":
-                    formatContractInit(code, decl);
-                    break;
-                case "Receiver":
-                    formatReceiver(code, decl);
-                    break;
-                case "$Function":
-                    formatFunction(code, decl);
-                    break;
-                case "Constant":
-                    formatConstant(code, decl);
-                    break;
-                case "FieldDecl":
-                    formatStorageVar(code, decl);
-                    break;
-            }
-
-            code.newLine()
+            formatDeclaration(code, decl);
+            code.newLine();
 
             if (index < declarations.children.length - 1) {
                 code.newLine();
@@ -185,4 +229,4 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
     }
 
     code.dedent().add("}");
-} 
+}
