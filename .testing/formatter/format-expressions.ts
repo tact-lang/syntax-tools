@@ -19,6 +19,10 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             case "SuffixCall":
                 formatSuffixCall(code, node);
                 return
+            case "Parens":
+                const expr = node.children[1]
+                code.add("(").add(visit(expr)).add(")")
+                return
             case "Binary": {
                 const elements = node.children.filter(it => it.$ === "node")
                 if (elements.length === 1) {

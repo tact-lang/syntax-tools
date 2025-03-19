@@ -140,4 +140,26 @@ fun foo() {
 //         oopsy
 //     */ = 1;
 // }`));
+
+    it('5', intact(`fun some() {
+    if (a > 10) {
+        return 1;
+    } else if (a < 200) {
+        return 2;
+    } else {
+        return 3;
+    }
+}`));
+
+    it('5', intact(`fun some() {
+    if /* comment */(a > 10) {
+        return 1;
+    }
+}`));
+
+//     it('5', intact(`fun some() {
+//     if (a > 10)/* comment */ {
+//         return 1;
+//     }
+// }`));
 });

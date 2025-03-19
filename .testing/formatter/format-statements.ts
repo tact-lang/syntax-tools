@@ -87,10 +87,12 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatReturnStatement = (code: CodeBuilder, node: CstNode): void => {
+    const returnKeyword = childLeafWithText(node, "return");
     const expression = childByField(node, "expression");
     code.add("return");
     if (expression) {
         code.space();
+        processInlineComments(node, code, returnKeyword, expression);
         formatExpression(code, expression);
     }
     code.add(";");
@@ -108,41 +110,56 @@ const formatExpressionStatement = (code: CodeBuilder, node: CstNode): void => {
 const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
     const left = childByField(node, "left");
     const operator = childByField(node, "operator");
+    const assign = childLeafWithText(node, "=");
     const right = childByField(node, "right");
 
-    if (!left || !right) {
+    if (!left || !right || !assign) {
         throw new Error("Invalid assign statement");
     }
 
     formatExpression(code, left);
+
     if (operator && operator.$ === "node") {
         code.space().add(visit(operator));
     }
+
     code.space().add("=").space();
+    processInlineComments(node, code, assign, right);
+
     formatExpression(code, right);
     code.add(";");
 };
 
 const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
+    const ifKeyword = childLeafWithText(node, "if");
     const condition = childByField(node, "condition");
     const trueBranch = childByField(node, "trueBranch");
-    const falseBranch = childByField(node, "falseBranch");
+    const falseBranch = childByType(node, "falseBranch");
 
     if (!condition || !trueBranch) {
         throw new Error("Invalid condition statement");
     }
 
-    code.add("if").space();
+    code.add("if").space()
+    processInlineComments(node, code, ifKeyword, condition);
+
     formatExpression(code, condition);
     code.space();
+
     formatStatements(code, trueBranch);
 
-    if (falseBranch) {
+    if (falseBranch && falseBranch.$ === "node") {
         code.space().add("else").space();
-        if (falseBranch.type === "StatementCondition") {
-            formatConditionStatement(code, falseBranch);
+
+        const branch = falseBranch.children.at(-1)
+        if (branch.$ === "leaf") {
+            return
+        }
+
+        if (branch.type === "StatementCondition") {
+            formatConditionStatement(code, branch);
         } else {
-            formatStatements(code, falseBranch);
+            formatStatements(code, branch);
         }
     }
 };

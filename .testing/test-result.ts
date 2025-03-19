@@ -14,8 +14,13 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 
 `
 fun some() {
-    let foo/*: Foo*/  = Foo { name: "" 
-    };
+    if /* comment */ (a > 10) {
+        return 1;
+    } else if (a < 200) {
+        return 2;
+    } else {
+        return 3;
+    }
 }
 
 `;
