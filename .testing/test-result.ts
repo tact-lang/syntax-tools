@@ -14,7 +14,7 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 
 `
 fun some() {
-    Foo { name: "" 
+    let foo/*: Foo*/  = Foo { name: "" 
     };
 }
 

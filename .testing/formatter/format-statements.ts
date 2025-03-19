@@ -1,8 +1,9 @@
 import {Cst, CstNode} from "../result";
-import {childByField, visit} from "../cst-helpers";
+import {childByField, childByType, childLeafWithText, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
 import {formatAscription} from "./format-types";
+import {getCommentsBetween} from "./format-helpers";
 
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     code.add("{").newLine().indent();
@@ -51,22 +52,36 @@ export const formatStatement = (code: CodeBuilder, node: Cst): void => {
     }
 };
 
+function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end: Cst) {
+    const comments = getCommentsBetween(node, start, end)
+    comments.forEach(comment => {
+        code.add(visit(comment))
+    })
+}
+
 const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
-    const type = childByField(node, "type");
+    const type = childByType(node, "type");
     const init = childByField(node, "init");
+    const assign = childLeafWithText(node, "=");
 
-    if (!name || !init) {
+    if (!name || !init || !assign) {
         throw new Error("Invalid let statement");
     }
 
     code.add("let").space().add(visit(name));
 
-    if (type) {
+    if (type && type.$ === "node") {
+        processInlineComments(node, code, name, type);
         formatAscription(code, type);
+        processInlineComments(node, code, type, assign);
+    } else {
+        processInlineComments(node, code, name, assign);
     }
 
     code.space().add("=").space();
+    processInlineComments(node, code, assign, init);
+
     formatExpression(code, init);
     code.add(";");
 };

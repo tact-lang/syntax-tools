@@ -112,4 +112,32 @@ fun foo() {
         name: "",
     };
 }`));
+
+    it('5', intact(`fun foo() {
+    let foo/*: Foo*/ = 1;
+}`));
+
+    it('5', intact(`fun foo() {
+    let foo: Foo /*: Foo*/ = 1;
+}`));
+
+    it('5', intact(`fun foo() {
+    let foo/*: Foo*/: Foo = 1;
+}`));
+
+    it('5', intact(`fun foo() {
+    let foo: Foo = /*: Foo*/1;
+}`));
+
+    it('5', intact(`fun foo() {
+    let foo: Foo = 1/*: Foo*/;
+}`));
+
+// TODO: fix
+//
+//     it('5', intact(`fun foo() {
+//     let foo/*
+//         oopsy
+//     */ = 1;
+// }`));
 });

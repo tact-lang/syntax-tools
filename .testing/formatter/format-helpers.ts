@@ -204,4 +204,14 @@ export const formatCommaSeparatedList = (
 
         code.add(wrapperRight);
     }
-}; 
+};
+
+export const getCommentsBetween = (node: CstNode, startNode: undefined | Cst, endNode: undefined | Cst): CstNode[] => {
+    const startIndex = startNode ? node.children.indexOf(startNode) : -1;
+    const endIndex = endNode ? node.children.indexOf(endNode) : node.children.length;
+
+    return node.children.filter((child, childIndex) => {
+        if (child.$ !== "node" || child.type !== "Comment") return false;
+        return childIndex > startIndex && childIndex < endIndex;
+    }) as CstNode[];
+};

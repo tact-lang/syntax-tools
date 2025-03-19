@@ -54,16 +54,3 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         code.add(";");
     }
 };
-
-// Helper function to get comments between nodes
-const getCommentsBetween = (node: CstNode, startNode: Cst | null, endNode: Cst | null): CstNode[] => {
-    return node.children.filter(child => {
-        if (child.$ !== "node" || child.type !== "Comment") return false;
-
-        const childIndex = node.children.indexOf(child);
-        const startIndex = startNode ? node.children.indexOf(startNode) : -1;
-        const endIndex = endNode ? node.children.indexOf(endNode) : node.children.length;
-
-        return childIndex > startIndex && childIndex < endIndex;
-    }) as CstNode[];
-};
