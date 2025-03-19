@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childrenByType, textOfId, visit} from "../cst-helpers";
+import {childByField, childByType, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList, idText} from "./format-helpers";
 import {formatType} from "./format-types";

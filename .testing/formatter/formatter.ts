@@ -6,6 +6,7 @@ import {formatExpression} from "./format-expressions";
 import {visit, childByField} from "../cst-helpers";
 import {formatContract, formatTrait} from "./format-contracts";
 import {formatMessage, formatStruct} from "./format-structs";
+import {formatImport} from "./format-imports";
 
 export const format = (node: Cst): string => {
     const code = new CodeBuilder();
@@ -30,6 +31,18 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
             break;
 
         case "Module":
+            const imports = childByField(node, "imports");
+            if (imports) {
+                imports.children.forEach((item, index) => {
+                    if (item.$ !== "node") return;
+
+                    formatImport(code, item);
+                    code.newLine();
+                });
+
+                code.newLine();
+            }
+
             const items = childByField(node, "items");
             if (!items) {
                 break

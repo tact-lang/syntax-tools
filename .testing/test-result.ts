@@ -14,11 +14,10 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
+// Import standard library
+import "stdlib";
 
-fun foo() {
-    let x = obj.field;
-}
-
+fun foo() {}
 `;
 
 

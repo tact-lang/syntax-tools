@@ -635,4 +635,38 @@ fun foo() {
 // }`));
         });
     });
+
+    describe('imports', () => {
+        it('simple import', intact(`
+import "stdlib";
+
+fun foo() {}`));
+
+        it('import with extra spaces', test(`
+import    "stdlib"    ;
+fun foo() {}`, `
+import "stdlib";
+
+fun foo() {}`));
+
+        it('multiple imports', intact(`
+import "stdlib";
+import "stdlib2";
+
+fun foo() {}`));
+
+        it('imports with complex paths', intact(`
+import "stdlib/contracts";
+import "custom/path/to/module";
+
+fun foo() {}`));
+
+        it('imports with newlines', test(`
+import 
+"stdlib"
+; fun foo() {}`, `
+import "stdlib";
+
+fun foo() {}`));
+    });
 });
