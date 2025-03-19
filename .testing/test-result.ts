@@ -16,7 +16,9 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 `
 fun some() {
     foo()
-        .other()
+        .other(
+        1, 2, bar()
+        .some().param)
         .call();
 }
 
@@ -95,7 +97,7 @@ skip(ctx, b)
 const res = Module(ctx, b)
 
 log(res)
-log(b)
+// log(b)
 
 const visit = (node: Cst): string => {
     if (node.$ === "leaf") return node.text
