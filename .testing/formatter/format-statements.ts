@@ -90,7 +90,7 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid let statement");
     }
 
-    code.add("let").space().add(visit(name));
+    code.add("let").space().add(idText(name));
 
     if (type && type.$ === "node") {
         processInlineComments(node, code, name, type);

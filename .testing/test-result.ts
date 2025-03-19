@@ -16,10 +16,11 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
 `
 
 fun foo() {
-    do    {
-        body;
-    }    until    (    true    )    ;
+    let x = obj.field;
 }
+
+`;
+
 
 // message(100 + 200) Foo {
 //     value: Int = 0;
@@ -34,7 +35,6 @@ fun foo() {
 //         .call();
 // }
 
-`;
 
 const ctx = createContext(code, space);
 

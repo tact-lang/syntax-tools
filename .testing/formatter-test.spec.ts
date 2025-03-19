@@ -485,4 +485,154 @@ fun foo() {
     }
 }`));
     });
+
+    describe('expressions', () => {
+        describe('literals', () => {
+            it('string literal', intact(`
+fun foo() {
+    let x = "hello";
+}`));
+
+            it('integer literal', intact(`
+fun foo() {
+    let x = 123;
+}`));
+
+            it('boolean literal', intact(`
+fun foo() {
+    let x = true;
+}`));
+
+            it('null literal', intact(`
+fun foo() {
+    let x = null;
+}`));
+        });
+
+        describe('binary operations', () => {
+            it('arithmetic operations', intact(`
+fun foo() {
+    let x = a + b * c / d % e;
+}`));
+
+            it('comparison operations', intact(`
+fun foo() {
+    let x = a < b <= c > d >= e;
+}`));
+
+            it('equality operations', intact(`
+fun foo() {
+    let x = a == b != c;
+}`));
+
+            it('bitwise operations', intact(`
+fun foo() {
+    let x = a & b ^ c | d << e >> f;
+}`));
+
+            it('logical operations', intact(`
+fun foo() {
+    let x = a && b || c;
+}`));
+        });
+
+        describe('unary operations', () => {
+            it('simple unary', intact(`
+fun foo() {
+    let x = -a;
+}`));
+
+            it('multiple unary', intact(`
+fun foo() {
+    let x = !~-a;
+}`));
+        });
+
+        describe('conditional expressions', () => {
+            it('simple conditional', intact(`
+fun foo() {
+    let x = a ? b : c;
+}`));
+
+            it('nested conditional', intact(`
+fun foo() {
+    let x = a ? b : c ? d : e;
+}`));
+
+            it('complex conditional', intact(`
+fun foo() {
+    let x = a > 10 ? b + c : d;
+}`));
+
+            it('nexted conditional', intact(`
+fun foo() {
+    let x = a > 10 ? (b ? c : d) : d;
+}`));
+        });
+
+//         describe('suffix operations', () => {
+//             it('field access', intact(`
+// fun foo() {
+//     let x = obj.field;
+// }`));
+//
+//             it('method call', intact(`
+// fun foo() {
+//     let x = obj.method();
+// }`));
+//
+//             it('chained operations', intact(`
+// fun foo() {
+//     let x = obj.method().field.anotherMethod();
+// }`));
+//
+//             it('unbox not null', intact(`
+// fun foo() {
+//     let x = obj!!;
+// }`));
+//         });
+
+        describe('special expressions', () => {
+            it('initOf', intact(`
+fun foo() {
+    let x = initOf Foo(a, b);
+}`));
+
+            it('codeOf', intact(`
+fun foo() {
+    let x = codeOf Foo;
+}`));
+
+            it('struct instance', intact(`
+fun foo() {
+    let x = Foo { name: "test", value: 123 };
+}`));
+        });
+
+        describe('format expressions with extra spaces', () => {
+            it('binary operation', test(`
+fun foo() {
+    let x =    a    +    b    ;
+}`, `
+fun foo() {
+    let x = a + b;
+}`));
+
+            it('conditional', test(`
+fun foo() {
+    let x =    a    ?    b    :    c    ;
+}`, `
+fun foo() {
+    let x = a ? b : c;
+}`));
+
+//             it('method call', test(`
+// fun foo() {
+//     let x =    obj    .    method    (    )    ;
+// }`, `
+// fun foo() {
+//     let x = obj.method();
+// }`));
+        });
+    });
 });
