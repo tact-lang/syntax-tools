@@ -14,29 +14,14 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-@interface("some.api.interface")
-contract Foo(param: Int) with Bar, Foo {
-    field: Int = 100;
-    
-    const FOO: Int = 100;
-
-    init(field: Int) {}
-
-    receive() {}
-    external(slice: Slice) {}
-    
-    get fun foo(p: String) {}
+struct Foo {
+    value:   Int = 10;
+    value:   Int;
+    value:   Int;
 }
 
-trait Foo with Bar, Foo {
-    field: Int = 100;
-    
-    const FOO: Int = 100;
-
-    receive() {}
-    external(slice: Slice) {}
-    
-    get fun foo(p: String) {}
+message(100 + 200) Foo {
+    value: Int = 0;
 }
 
 inline fun some() {

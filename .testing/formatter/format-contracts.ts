@@ -1,4 +1,4 @@
-import {CstNode} from "../result";
+import {Cst, CstNode} from "../result";
 import {childByField, childByType, childrenByType, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList, idText} from "./format-helpers";
@@ -27,7 +27,7 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
                 formatConstant(code, decl);
                 break;
             case "FieldDecl":
-                formatStorageVar(code, decl);
+                formatFieldDecl(code, decl);
                 break;
             default:
                 throw new Error(`Unknown contract declaration type: ${decl.type}`);
@@ -51,7 +51,7 @@ export function formatTrait(code: CodeBuilder, node: CstNode): void {
                 formatConstant(code, decl);
                 break;
             case "FieldDecl":
-                formatStorageVar(code, decl);
+                formatFieldDecl(code, decl);
                 break;
             default:
                 throw new Error(`Unknown trait declaration type: ${decl.type}`);
@@ -136,13 +136,13 @@ function formatConstant(code: CodeBuilder, decl: CstNode): void {
     code.add(";");
 }
 
-function formatStorageVar(code: CodeBuilder, decl: CstNode): void {
+export function formatFieldDecl(code: CodeBuilder, decl: Cst): void {
     const varName = childByField(decl, "name");
     const varType = childByField(decl, "type");
     const varInit = childByType(decl, "expression");
 
     if (!varName || !varType) {
-        throw new Error("Invalid storage variable declaration");
+        throw new Error("Invalid field declaration");
     }
 
     code.add(idText(varName));

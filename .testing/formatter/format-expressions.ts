@@ -192,6 +192,10 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
         switch (node.type) {
             case "Operator":
                 const name = node.children[0] as CstNode;
+                if (!name || !name.children) {
+                    code.add(visit(node))
+                    return
+                }
                 code.add(visit(name.children[0]))
                 return
             case "StringLiteral":

@@ -208,4 +208,95 @@ trait Foo with Bar, Foo {
 
     get fun foo(p: String) {}
 }`));
+
+    describe('structs and messages', () => {
+        it('simple struct', intact(`
+struct Foo {
+    name: String;
+}`));
+
+        it('struct with multiple fields', intact(`
+struct Foo {
+    name: String;
+    age: Int;
+    isActive: Bool;
+}`));
+
+        it('struct with field initialization', intact(`
+struct Foo {
+    name: String = "default";
+    count: Int = 0;
+}`));
+
+        it('format struct with extra spaces', test(`
+struct    Foo    {
+    name:    String    ;
+    age:    Int    ;
+}`, `
+struct Foo {
+    name: String;
+    age: Int;
+}`));
+
+        it('format struct with newlines', test(`
+struct Foo {
+    name: String;
+
+    age: Int;
+}`, `
+struct Foo {
+    name: String;
+    age: Int;
+}`));
+
+
+        it('simple message', intact(`
+message Foo {
+    name: String;
+}`));
+
+        it('message with opcode', intact(`
+message(0x123) Foo {
+    name: String;
+}`));
+
+        it('message with complex opcode', intact(`
+message(1 + 2) Foo {
+    name: String;
+}`));
+
+        it('message with multiple fields', intact(`
+message Foo {
+    name: String;
+    age: Int;
+    isActive: Bool;
+}`));
+
+        it('message with field initialization', intact(`
+message Foo {
+    name: String = "default";
+    count: Int = 0;
+}`));
+
+        it('format message with extra spaces', test(`
+message    Foo    {
+    name:    String     ;
+    age:    Int    ;
+}`, `
+message Foo {
+    name: String;
+    age: Int;
+}`));
+
+        it('format message with newlines', test(`
+message Foo {
+    name: String;
+
+    age: Int;
+}`, `
+message Foo {
+    name: String;
+    age: Int;
+}`));
+    });
 });
