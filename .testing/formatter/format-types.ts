@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childrenByType, idText, visit} from "../cst-helpers";
+import {childByField, childByType, childrenByType, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 
 export const formatType = (code: CodeBuilder, node: Cst): void => {
@@ -20,6 +20,9 @@ export const formatType = (code: CodeBuilder, node: Cst): void => {
             break;
         case "TypeOptional":
             formatTypeOptional(code, node);
+            break;
+        case "TypeId":
+            code.add(textOfId(node))
             break;
         default:
             code.add(visit(node));
@@ -43,7 +46,7 @@ export const formatAscription = (code: CodeBuilder, node: Cst): void => {
 const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
     const child = childByField(node, "child");
 
-    code.add(idText(child))
+    code.add(textOfId(child))
 
     const trailingComments = child.children.slice(1).filter(child => child.$ === "node" && child.type === "Comment");
     if (trailingComments.length > 0) {

@@ -14,7 +14,22 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-fun some() {
+@interface("some.api.interface")
+contract Foo(param: Int) with Bar, Foo {
+    field: Int = 100;
+    
+    const FOO: Int = 100;
+
+    init(field: Int) {}
+
+    receive() {}
+    external(slice: Slice) {}
+    
+    get fun foo(p: String) {}
+}
+
+inline fun some() {
+    Foo { name };
     foo()
         .other(
         1, 2, bar()
@@ -180,21 +195,23 @@ console.log(visit(root));
 fs.writeFileSync("out.tact", visit(root))
 console.log(visit(root) === code)
 
-const module = childByType(root, "Module")!
-const itemsNode = childByField(module, "items")
-const items = childrenByGroup(itemsNode, "moduleItem")!
+console.log(format(root));
 
-for (const item of items) {
-    if (item.$ === "node" && item.type === "$Function") {
-        console.log(format(item));
-
-        console.log(idText(childByField(item, "name")))
-        const paramsNode = childByField(item, "parameters");
-        console.log(childrenByType(paramsNode, "Parameter").map(p => {
-            return idText(childByField(p, "name"))
-        }))
-    }
-}
+// const module = childByType(root, "Module")!
+// const itemsNode = childByField(module, "items")
+// const items = childrenByGroup(itemsNode, "moduleItem")!
+//
+// for (const item of items) {
+//     if (item.$ === "node" && item.type === "$Function") {
+//         console.log(format(item));
+//
+//         console.log(idText(childByField(item, "name")))
+//         const paramsNode = childByField(item, "parameters");
+//         console.log(childrenByType(paramsNode, "Parameter").map(p => {
+//             return idText(childByField(p, "name"))
+//         }))
+//     }
+// }
 
 
 

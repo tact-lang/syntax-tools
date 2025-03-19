@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, idText, visit} from "../cst-helpers";
+import {childByField, childByType, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList} from "./format-helpers";
 import {formatType} from "./format-types";
@@ -279,7 +279,7 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
         const init = childByType(field, "init");
         if (!name) throw new Error("Invalid field initializer");
 
-        code.add(idText(name));
+        code.add(textOfId(name));
         if (init && init.$ === "node") {
             code.add(":").space();
             formatExpression(code, init.children.at(-1));

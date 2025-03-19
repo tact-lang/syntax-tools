@@ -1,6 +1,6 @@
 import {Cst, CstNode} from "../result";
 import {CodeBuilder} from "../code-builder";
-import {visit} from "../cst-helpers";
+import {childByField, visit} from "../cst-helpers";
 
 interface CommentWithNewline {
     node: CstNode;
@@ -215,3 +215,14 @@ export const getCommentsBetween = (node: CstNode, startNode: undefined | Cst, en
         return childIndex > startIndex && childIndex < endIndex;
     }) as CstNode[];
 };
+
+// name: Id
+//   name: name
+//      "some"
+export const idText = (node: Cst): string => {
+    const name = childByField(node, "name");
+    if (!name) return;
+    const child = name.children[0]
+    if (!child) return;
+    return visit(child);
+}

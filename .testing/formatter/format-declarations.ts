@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, childrenByType, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatCommaSeparatedList} from "./format-helpers";
+import {formatCommaSeparatedList, idText} from "./format-helpers";
 import {formatAscription} from "./format-types";
 import {formatStatements} from "./format-statements";
 
@@ -21,10 +21,14 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         attrs.forEach((attr, i) => {
             const attrName = childByField(attr, "name");
             if (!attrName) return;
-            code.add(`@${visit(attrName)}`);
-            if (i < attrs.length - 1) code.space();
+            const child = attrName.children[0]
+            if (child.$ === "node" && child.type === "GetAttribute") {
+                code.add("get")
+            } else {
+                code.add(`${idText(attr)}`);
+            }
+            code.space();
         });
-        if (attrs.length > 0) code.newLine();
     }
 
     code.add("fun").space().add(visit(name));
@@ -35,7 +39,7 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         if (!paramName || !paramType) {
             throw new Error("Invalid parameter node");
         }
-        code.add(visit(paramName));
+        code.add(idText(paramName));
         formatAscription(code, paramType);
     });
 

@@ -6,13 +6,19 @@ import {formatAscription} from "./format-types";
 import {getCommentsBetween} from "./format-helpers";
 
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
+    const statements = node.children.filter(it => it.$ === "node");
+    if (statements.length === 0) {
+        code.add("{}")
+        return
+    }
+
     code.add("{").newLine().indent();
 
-    for (const child of node.children.filter(it => it.$ === "node")) {
-        if (child.type === "Comment") {
-            code.add(visit(child));
-        } else if (child.group === "statement") {
-            formatStatement(code, child);
+    for (const statement of statements) {
+        if (statement.type === "Comment") {
+            code.add(visit(statement));
+        } else if (statement.group === "statement") {
+            formatStatement(code, statement);
         }
         code.newLine();
     }

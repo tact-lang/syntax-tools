@@ -1,0 +1,69 @@
+import {Cst, CstLeaf, CstNode} from "./result";
+
+export const visit = (node: Cst): string => {
+    if (node.$ === "leaf") return node.text
+    return node.children.map(it => visit(it)).join("")
+}
+
+export const childByType = (node: Cst, type: string): undefined | Cst => {
+    if (node.$ === "leaf") {
+        return undefined
+    }
+
+    return node.children.find(c => c.$ === "node" && c.type === type)
+}
+
+export const childrenByType = (node: Cst, type: string): Cst[] => {
+    if (node.$ === "leaf") {
+        return []
+    }
+
+    return node.children.filter(c => c.$ === "node" && c.type === type)
+}
+
+export const childrenByGroup = (node: Cst, group: string): Cst[] => {
+    if (node.$ === "leaf") {
+        return []
+    }
+
+    return node.children.filter(c => c.$ === "node" && c.group === group)
+}
+
+export const childByField = (node: Cst, field: string): undefined | CstNode => {
+    if (node.$ === "leaf") {
+        return undefined
+    }
+
+    const res = node.children.find(c => c.$ === "node" && c.field === field)
+    if (res && res.$ === "node") {
+        return res
+    }
+    return undefined
+}
+
+export const childLeafWithText = (node: Cst, text: string): undefined | CstLeaf => {
+    if (node.$ === "leaf") {
+        return undefined
+    }
+
+    const res = node.children.find(c => c.$ === "leaf" && c.text === text)
+    if (res && res.$ === "leaf") {
+        return res
+    }
+    return undefined
+}
+
+export const textOfId = (node: Cst): string => {
+    if (node.$ === "leaf") return node.text
+    if (node.type === "Id" || node.type === "TypeId") {
+        const name = childByField(node, "name")
+        const first = name.children[0]
+        return first.$ === "leaf" ? first.text : ""
+    }
+    return ""
+}
+
+export const isLowerCase = (str: string): boolean => {
+    return str === str.toLowerCase() &&
+        str !== str.toUpperCase();
+} 
