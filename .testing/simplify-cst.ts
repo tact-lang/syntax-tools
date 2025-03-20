@@ -17,7 +17,7 @@ export const simplifyCst = (node: Cst): Cst => {
         }
     }
 
-   if (node.type === "traits" || node.type === "fields" || node.type === "args") {
+    if (node.type === "traits" || node.type === "fields" || node.type === "args") {
         return {
             ...node,
             children: node.children.flatMap(it => {
@@ -84,8 +84,27 @@ export const simplifyCst = (node: Cst): Cst => {
         }
     }
 
+    if (node.children.length === 1 && node.field === node.type) {
+        node
+    }
+
+    const processedChildren = node.children.flatMap(it => {
+        if (it.$ !== "node") return it
+
+        if (it.children.length === 1 && it.field === it.type) {
+            const firstChild = it.children[0]
+            if (!firstChild || firstChild.$ !== "node") return it
+            return {
+                ...firstChild,
+                field: it.field,
+            }
+        }
+
+        return it
+    })
+
     return {
         ...node,
-        children: node.children.flatMap(it => simplifyCst(it)),
+        children: processedChildren.flatMap(it => simplifyCst(it)),
     }
 };

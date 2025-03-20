@@ -16,12 +16,12 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
 `
 import "";
 
-message(0x100) Foo {
-    foo: Int as int64;
-    bar: map<Int, Int>;
-}
+const Foo: Int = 100;
+const Foo: Int;
 
-contract Foo() with Ownable {
+@interface("hello")
+@interface("hello")
+contract Foo(param: Int) with Ownable, Baz {
     foo: Int = 100;
     receive(p: Param){
         let a: Ty = 10;
@@ -29,6 +29,10 @@ contract Foo() with Ownable {
         
         try {} catch (e) {}
     }
+    
+    init(foo: Int) {}
+    
+    receive("hello") {}
 }
 `;
 
@@ -123,57 +127,14 @@ function isLowerCase(str: string) {
 }
 
 skip(ctx, b)
-const res = Module(ctx, b)
+const isParsed = Module(ctx, b)
+log(isParsed)
 
-log(res)
 // log(b)
 
 const visit = (node: Cst): string => {
     if (node.$ === "leaf") return node.text
     return node.children.map(it => visit(it)).join("")
-}
-
-const childByType = (node: Cst, type: string): undefined | Cst => {
-    if (node.$ === "leaf") {
-        return undefined
-    }
-
-    return node.children.find(c => c.$ === "node" && c.type === type)
-}
-
-const childrenByType = (node: Cst, type: string): Cst[] => {
-    if (node.$ === "leaf") {
-        return []
-    }
-
-    return node.children.filter(c => c.$ === "node" && c.type === type)
-}
-
-const childrenByGroup = (node: Cst, group: string): Cst[] => {
-    if (node.$ === "leaf") {
-        return []
-    }
-
-    return node.children.filter(c => c.$ === "node" && c.group === group)
-}
-
-const childByField = (node: Cst, field: string): undefined | CstNode => {
-    if (node.$ === "leaf") {
-        return undefined
-    }
-
-    const res = node.children.find(c => c.$ === "node" && c.field === field)
-    if (res.$ === "node") {
-        return res
-    }
-    return undefined
-}
-
-const idText = (node: Cst): string => {
-    if (node.$ === "leaf") return node.text
-    if (node.type !== "Id") return ""
-    const first = node.children[0]
-    return first.$ === "leaf" ? first.text : ""
 }
 
 const root = simplifyCst(CstNode(b, "Root"));

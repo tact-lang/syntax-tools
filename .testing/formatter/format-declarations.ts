@@ -5,6 +5,21 @@ import {formatCommaSeparatedList, idText} from "./format-helpers";
 import {formatAscription} from "./format-types";
 import {formatStatements} from "./format-statements";
 
+export const formatParameter = (code: CodeBuilder, param: CstNode): void => {
+    // value: Foo
+    // ^^^^^  ^^^
+    // |      |
+    // |      type
+    // name
+    const name = childByField(param, "name");
+    const type = childByField(param, "type");
+    if (!name || !type) {
+        throw new Error("Invalid parameter");
+    }
+    code.add(idText(name));
+    formatAscription(code, type)
+}
+
 export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
     const parameters = childByField(node, "parameters");
@@ -33,15 +48,7 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
 
     code.add("fun").space().add(visit(name));
 
-    formatCommaSeparatedList(code, parameters, (code, param) => {
-        const paramName = childByField(param, "name");
-        const paramType = childByField(param, "type");
-        if (!paramName || !paramType) {
-            throw new Error("Invalid parameter node");
-        }
-        code.add(idText(paramName));
-        formatAscription(code, paramType);
-    });
+    formatCommaSeparatedList(code, parameters, formatParameter);
 
     if (returnType) {
         formatAscription(code, returnType);

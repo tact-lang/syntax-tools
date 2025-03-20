@@ -34,12 +34,18 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
         case "Module":
             const imports = childByField(node, "imports");
             if (imports) {
-                imports.children.forEach((item, index) => {
-                    if (item.$ !== "node") return;
-
-                    formatImport(code, item);
+                if (imports.type === "Import") {
+                    // single import
+                    formatImport(code, imports);
                     code.newLine();
-                });
+                } else {
+                    imports.children.forEach((item, index) => {
+                        if (item.$ !== "node") return;
+
+                        formatImport(code, item);
+                        code.newLine();
+                    });
+                }
 
                 code.newLine();
             }
@@ -49,6 +55,7 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                 break
             }
 
+            // TODO: check single item module
             items.children.forEach((item, index) => {
                 if (item.$ !== "node") return;
 

@@ -29,6 +29,18 @@ export const childrenByGroup = (node: Cst, group: string): Cst[] => {
     return node.children.filter(c => c.$ === "node" && c.group === group)
 }
 
+export const nonLeafChild = (node: Cst): undefined | CstNode => {
+    if (node.$ === "leaf") {
+        return undefined
+    }
+
+    const res = node.children.find(c => c.$ === "node")
+    if (res && res.$ === "node") {
+        return res
+    }
+    return undefined
+}
+
 export const childByField = (node: Cst, field: string): undefined | CstNode => {
     if (node.$ === "leaf") {
         return undefined
