@@ -42,8 +42,10 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                     imports.children.forEach((item, index) => {
                         if (item.$ !== "node") return;
 
-                        formatImport(code, item);
-                        code.newLine();
+                        if (item.type === "Import") {
+                            formatImport(code, item);
+                            code.newLine();
+                        }
                     });
                 }
 

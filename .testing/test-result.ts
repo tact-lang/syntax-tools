@@ -1,13 +1,16 @@
-import {Builder, createContext, Cst, CstNode, Module, skip, space} from "./result";
+import {Builder, createContext, Cst, CstLeaf, CstNode, Module, skip, space} from "./result";
 import {inspect} from "util";
 import * as fs from "fs";
 import {format} from "./formatter/formatter";
 import {simplifyCst} from "./simplify-cst";
 import {processDocComments} from "./process-comments";
+import {childByField, childByType, childrenByGroup} from "./cst-helpers";
+import {idText} from "./formatter/format-helpers";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
-const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
+// const code = fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
+const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
 
     // struct Foo {
     //     name: String;
@@ -15,6 +18,16 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     // }
 
 `
+// comment
+import "";
+// other comment
+import ""; // inline comment
+
+// comment
+fun foo() {}
+`;
+
+    `
 primitive Int;
 
 asm fun foo() {}
@@ -235,15 +248,29 @@ fs.writeFileSync("minter.fmt.tact", format(root))
 // const items = childrenByGroup(itemsNode, "moduleItem")!
 //
 // for (const item of items) {
-//     if (item.$ === "node" && item.type === "$Function") {
-//         console.log(format(item));
-//
-//         console.log(idText(childByField(item, "name")))
-//         const paramsNode = childByField(item, "parameters");
-//         console.log(childrenByType(paramsNode, "Parameter").map(p => {
-//             return idText(childByField(p, "name"))
-//         }))
+//     const doc = childByField(item, "doc")
+//     const name = childByField(item, "name")
+//     if (doc && name) {
+//         console.log("\n");
+//         console.log("Documentation of: " + idText(name));
+//         console.log();
+//         doc.children.forEach((child) => {
+//             if (child.$ === "node" && child.type === "Comment") {
+//                 const lastLeaf = child.children.at(-1) as CstLeaf
+//                 console.log(lastLeaf.text.slice(1).trim())
+//             }
+//         })
 //     }
+//
+// //     if (item.$ === "node" && item.type === "$Function") {
+// //         console.log(format(item));
+// //
+// //         console.log(idText(childByField(item, "name")))
+// //         const paramsNode = childByField(item, "parameters");
+// //         console.log(childrenByType(paramsNode, "Parameter").map(p => {
+// //             return idText(childByField(p, "name"))
+// //         }))
+// //     }
 // }
 
 

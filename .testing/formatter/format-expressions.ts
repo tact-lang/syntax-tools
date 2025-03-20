@@ -274,6 +274,12 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             formatExpression(code, expression);
             return;
         }
+        case "ParameterList": {
+            formatSeparatedList(code, node, (code, arg) => {
+                formatExpression(code, arg);
+            });
+            return
+        }
         case "Suffix": {
             const suffixes = childByField(node, "suffixes");
             if (!suffixes) {
@@ -327,7 +333,7 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return;
     }
 
-    code.add(visit(node));
+    code.add(visit(node).trim());
 };
 
 function formatConditional(node: CstNode, code: CodeBuilder) {

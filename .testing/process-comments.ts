@@ -77,6 +77,41 @@ function containsSeveralNewlines(text: string): boolean {
     return text.substring(index + 1).includes("\n")
 }
 
+const findNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
+    if (node.type === "Import") {
+        return [node, ";"]
+    }
+    if (node.type === "Contract") {
+        return [node, "}"]
+    }
+    if (node.type === "PrimitiveTypeDecl") {
+        return [node, ";"]
+    }
+    if (node.type === "NativeFunctionDecl") {
+        return [node, ";"]
+    }
+    if (node.type === "AsmFunction") {
+        return [node, "}"]
+    }
+    if (node.type === "Trait") {
+        return [node, "}"]
+    }
+    if (node.type === "StructDecl" || node.type === "MessageDecl") {
+        return [node, "}"]
+    }
+    if (node.type === "$Function") {
+        const body = childByField(node, "body")
+        return [childByField(body, "body"), "}"]
+    }
+    if (node.type === "Constant") {
+        return [childByField(node, "body"), ";"]
+    }
+
+    const lastChildren = node.children.at(-1);
+    if (lastChildren.$ !== "node") return undefined
+    return [lastChildren, "}"]
+}
+
 export const processDocComments = (node: Cst): Cst => {
     if (node.$ === "leaf") {
         return node
@@ -285,40 +320,22 @@ export const processDocComments = (node: Cst): Cst => {
     //         "\n"
     //
     // Comments fore declaration are located inside previous declaration
-    if (node.type === "items" || node.type === "declarations") {
-        const items = node.children;
-
-        const findNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
-            if (node.type === "Contract") {
-                return [node, "}"]
-            }
-            if (node.type === "PrimitiveTypeDecl") {
-                return [node, ";"]
-            }
-            if (node.type === "NativeFunctionDecl") {
-                return [node, ";"]
-            }
-            if (node.type === "AsmFunction") {
-                return [node, "}"]
-            }
-            if (node.type === "Trait") {
-                return [node, "}"]
-            }
-            if (node.type === "StructDecl" || node.type === "MessageDecl") {
-                return [node, "}"]
-            }
-            if (node.type === "$Function") {
-                const body = childByField(node, "body")
-                return [childByField(body, "body"), "}"]
-            }
-            if (node.type === "Constant") {
-                return [childByField(node, "body"), ";"]
-            }
-
-            const lastChildren = node.children.at(-1);
-            if (lastChildren.$ !== "node") return undefined
-            return [lastChildren, "}"]
+    if (node.type === "Import" || node.group === "moduleItem") {
+        if (pendingComments.length > 0) {
+            node.children.splice(0, 0, {
+                $: "node",
+                type: "DocComments",
+                children: pendingComments,
+                field: "doc",
+                group: "",
+                id: 0,
+            })
+            pendingComments = []
         }
+    }
+
+    if (node.type === "items" || node.type === "declarations" || node.type === "imports") {
+        const items = node.children;
 
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
@@ -370,10 +387,14 @@ export const processDocComments = (node: Cst): Cst => {
             pendingComments.push(...comments)
         }
 
-        // comments aren't attached to anything
-        if (pendingComments.length > 0) {
-            node.children.push(...pendingComments)
-            pendingComments = []
+        if (node.type !== "imports") {
+            // comments aren't attached to anything
+            if (pendingComments.length > 0) {
+                node.children.push(...pendingComments)
+                pendingComments = []
+            }
+        } else {
+            return node
         }
     }
 
