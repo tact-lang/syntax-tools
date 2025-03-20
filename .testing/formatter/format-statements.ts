@@ -30,8 +30,10 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
 
     code.add("{").newLine().indent();
 
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
+
     let needNewLine = false
-    for (const statement of node.children) {
+    for (const statement of node.children.slice(0, endIndex)) {
         if (statement.$ === "leaf") {
             if (containsSeveralNewlines(statement.text)) {
                 needNewLine = true;
@@ -58,6 +60,15 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     }
 
     code.dedent().add("}");
+
+    const afterBody = node.children.slice(endIndex + 1)
+    const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment");
+    if (comments.length > 0) {
+        code.space();
+        comments.forEach(comment => {
+            code.add(visit(comment))
+        })
+    }
 };
 
 export const formatStatement = (code: CodeBuilder, node: Cst): void => {

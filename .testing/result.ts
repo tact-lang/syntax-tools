@@ -31,7 +31,7 @@ export type CstNode = {
     readonly type: string,
     readonly group: string,
     readonly field: string,
-    readonly children: readonly Cst[],
+    children: Cst[],
 }
 
 export const CstLeaf = (text: string): CstLeaf => ({

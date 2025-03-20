@@ -55,6 +55,13 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                 break
             }
 
+            if (items.group === "moduleItem") {
+                // single decl file
+                formatNode(code, items);
+                code.newLine();
+                return
+            }
+
             // TODO: check single item module
             items.children.forEach((item, index) => {
                 if (item.$ !== "node") return;

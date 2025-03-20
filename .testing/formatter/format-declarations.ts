@@ -5,6 +5,7 @@ import {formatSeparatedList, idText} from "./format-helpers";
 import {formatAscription} from "./format-types";
 import {formatStatements} from "./format-statements";
 import {formatExpression} from "./format-expressions";
+import {formatDocComments} from "./format-doc-comments";
 
 export const formatParameter = (code: CodeBuilder, param: CstNode): void => {
     // value: Foo
@@ -22,6 +23,8 @@ export const formatParameter = (code: CodeBuilder, param: CstNode): void => {
 }
 
 export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
+    formatDocComments(code, node)
+
     // fun foo(value: Int): Bool {}
     //     ^^^ ^^^^^^^^^^ ^^^^^^ ^^
     //     |   |          |      |
@@ -51,11 +54,9 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         formatAscription(code, returnTypeOpt);
     }
 
-    const bodyNode = body.children[0]
-
-    if (bodyNode.$ === "node" && bodyNode.type === "FunctionDefinition") {
+    if (body.type === "FunctionDefinition") {
         code.space();
-        formatStatements(code, childByField(bodyNode, "body"));
+        formatStatements(code, childByField(body, "body"));
     } else {
         code.add(";");
     }
@@ -85,6 +86,8 @@ function formatAttribute(code: CodeBuilder, attr: Cst) {
 }
 
 export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => {
+    formatDocComments(code, node)
+
     // @name("native_name")
     // ^^^^^ ^^^^^^^^^^^^^
     // |     |
@@ -124,6 +127,8 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
 };
 
 export const formatAsmFunction = (code: CodeBuilder, node: CstNode): void => {
+    formatDocComments(code, node)
+
     // asm(a, b) inline fun foo(param: Int): Int { FOO }
     //    ^^^^^^ ^^^^^^     ^^^ ^^^^^^^^^^ ^^^^^   ^^^^
     //    |      |          |   |          |       |
@@ -229,6 +234,8 @@ function formatAttributes(attributes: undefined | CstNode, code: CodeBuilder) {
 }
 
 export const formatPrimitiveType = (code: CodeBuilder, node: CstNode): void => {
+    formatDocComments(code, node)
+
     // primitive Foo;
     // ^^^^^^^^^ ^^^
     // |         |

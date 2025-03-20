@@ -6,8 +6,11 @@ import {formatFunction, formatParameter} from "./format-declarations";
 import {formatStatements} from "./format-statements";
 import {formatAscription} from "./format-types";
 import {formatExpression} from "./format-expressions";
+import {formatDocComments} from "./format-doc-comments";
 
 export function formatContract(code: CodeBuilder, node: CstNode): void {
+    formatDocComments(code, node)
+
     formatContractTraitAttributes(code, node);
     code.add("contract").space().add(getName(node, "contract"));
     formatContractParameters(code, node);
@@ -36,6 +39,8 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
 }
 
 export function formatTrait(code: CodeBuilder, node: CstNode): void {
+    formatDocComments(code, node)
+
     formatContractTraitAttributes(code, node);
     code.add("trait").space().add(getName(node, "trait"));
     formatInheritedTraits(code, node);
@@ -60,6 +65,8 @@ export function formatTrait(code: CodeBuilder, node: CstNode): void {
 }
 
 function formatContractInit(code: CodeBuilder, decl: CstNode): void {
+    formatDocComments(code, decl)
+
     code.add("init");
 
     // init(foo: Int) {}
@@ -79,6 +86,8 @@ function formatContractInit(code: CodeBuilder, decl: CstNode): void {
 }
 
 function formatReceiver(code: CodeBuilder, decl: CstNode): void {
+    formatDocComments(code, decl)
+
     // receive(param: Message) {}
     // ^^^^^^^ ^^^^^^^^^^^^^^  ^^
     // |       |               |
@@ -120,6 +129,8 @@ function formatReceiver(code: CodeBuilder, decl: CstNode): void {
 }
 
 export function formatConstant(code: CodeBuilder, decl: CstNode): void {
+    formatDocComments(code, decl)
+
     // const Foo : Int = 100;
     //       ^^^ ^^^^^ ^^^^^
     //       |   |     |
@@ -145,6 +156,14 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
         //                  ^^^ this
         const value = nonLeafChild(body);
         code.apply(formatExpression, value).add(";");
+
+        const comments = body.children.filter(it => it.$ === "node" && it.type === "Comment");
+        if (comments.length > 0) {
+            code.space();
+            comments.forEach(comment => {
+                code.add(visit(comment))
+            })
+        }
     } else if (body.type === "ConstantDeclaration") {
         // const Foo: Int;
         //               ^ this
@@ -152,7 +171,9 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     }
 }
 
-export function formatFieldDecl(code: CodeBuilder, decl: Cst): void {
+export function formatFieldDecl(code: CodeBuilder, decl: CstNode): void {
+    formatDocComments(code, decl)
+
     // foo : Int = 100;
     // ^^^ ^^^^^   ^^^
     // |   |       |
@@ -254,16 +275,23 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
     code.space().add("{").newLine().indent();
 
     const declarations = childByField(node, "declarations");
-    declarations?.children.forEach((decl, index) => {
-        if (decl.$ !== "node") return;
 
-        formatDeclaration(code, decl);
+    if (declarations && declarations.group === "contractItemDecl") {
+        // single decl contract
+        formatDeclaration(code, declarations);
         code.newLine();
+    } else {
+        declarations?.children.forEach((decl, index) => {
+            if (decl.$ !== "node") return;
 
-        if (index < declarations.children.length - 1) {
+            formatDeclaration(code, decl);
             code.newLine();
-        }
-    });
+
+            if (index < declarations.children.length - 1) {
+                code.newLine();
+            }
+        });
+    }
 
     code.dedent().add("}");
 }
