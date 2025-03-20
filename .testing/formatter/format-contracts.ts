@@ -32,6 +32,9 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
             case "FieldDecl":
                 formatFieldDecl(code, decl);
                 break;
+            case "Comment":
+                code.add(visit(decl).trim());
+                break;
             default:
                 throw new Error(`Unknown contract declaration type: ${decl.type}`);
         }
@@ -57,6 +60,9 @@ export function formatTrait(code: CodeBuilder, node: CstNode): void {
                 break;
             case "FieldDecl":
                 formatFieldDecl(code, decl);
+                break;
+            case "Comment":
+                code.add(visit(decl).trim());
                 break;
             default:
                 throw new Error(`Unknown trait declaration type: ${decl.type}`);
@@ -291,6 +297,20 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
                 code.newLine();
             }
         });
+    }
+
+    if (!declarations) {
+        // empty contract
+        const openBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "{")
+        const closeBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+
+        const comments = node.children
+            .slice(openBraceIndex + 1, closeBraceIndex)
+            .filter(it => it.$ === "node" && it.type === "Comment");
+        comments.forEach(child => {
+            code.add(visit(child).trim())
+            code.newLine()
+        })
     }
 
     code.dedent().add("}");

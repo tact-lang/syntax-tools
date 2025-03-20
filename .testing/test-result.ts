@@ -3,6 +3,7 @@ import {inspect} from "util";
 import * as fs from "fs";
 import {format} from "./formatter/formatter";
 import {simplifyCst} from "./simplify-cst";
+import {processDocComments} from "./process-comments";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
@@ -12,6 +13,64 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     //     name: String;
     //     value: Int;
     // }
+
+`
+primitive Int;
+
+asm fun foo() {}
+
+trait Foo {}
+
+struct Foo {}
+message Foo {}
+
+// Some comment
+@name("foo")
+native foo();
+
+contract Foo {}
+
+// comment
+contract Foo {
+    foo: Int;
+
+    // comment
+    // comment
+    // comment
+    bar: Int;
+    
+    // comment
+    const FOO: Int;
+    
+    // comment 1
+    get fun foo() {}
+    
+    // comment 2
+    receive() {}
+    
+    // comment 3
+    init() {}
+    
+    /// comment 4
+    bar: Int = 100;
+}
+
+`;
+
+`
+const Foo: Int = 10; // inline comment
+
+// comment
+fun foo() {} // inline comment
+
+// comment
+contract Foo {}
+
+// comment
+fun foo() {
+    let a = 100;
+}
+`;
 
 `
 primitive Int;
@@ -125,61 +184,16 @@ const visualizeCST = (node: Cst, field: undefined | string, indent: string = "")
     return result + childrenOutput;
 };
 
-const cstToSExpr = (node: Cst): string => {
-    if (node.$ === "leaf") {
-        const escapedText = node.text
-            .replace(/\\/g, "\\\\")
-            .replace(/"/g, '\\"')
-            .replace(/\n/g, "\\n");
-
-        const displayText = escapedText.length > 20
-            ? escapedText.substring(0, 20) + "..."
-            : escapedText;
-
-        return `"${displayText}"`;
-    }
-
-    if (node.children.length === 0) {
-        return `(${node.type})`;
-    }
-
-    const childrenSExprs = node.children
-        .filter(c => c.$ === "node")
-        .map(c => cstToSExpr(c))
-        .join(" ").trim();
-
-    if ((node.type.length === 0 || isLowerCase(node.type[0])) && childrenSExprs.length === 0) {
-        return ""
-    }
-
-    if (childrenSExprs.length === 0) {
-        return `(${node.type})`
-    }
-
-    if (node.type === "" || isLowerCase(node.type[0])) {
-        return `(${childrenSExprs})`;
-    }
-
-    return `(${node.type} ${childrenSExprs})`;
-};
-
-function isLowerCase(str: string) {
-    return str === str.toLowerCase() &&
-        str !== str.toUpperCase();
-}
-
 skip(ctx, b)
 const isParsed = Module(ctx, b)
 log(isParsed)
-
-// log(b)
 
 const visit = (node: Cst): string => {
     if (node.$ === "leaf") return node.text
     return node.children.map(it => visit(it)).join("")
 }
 
-const root = simplifyCst(CstNode(b, "Root"));
+const root = processDocComments(simplifyCst(CstNode(b, "Root")));
 
 console.log(visualizeCST(root, undefined));
 fs.writeFileSync("out.json", JSON.stringify(root, null, 4));
