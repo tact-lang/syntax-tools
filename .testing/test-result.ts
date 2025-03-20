@@ -14,6 +14,8 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     // }
 
 `
+primitive Int;
+
 struct Foo {}
 message(0x100) Foo {
     val: Int as uint64;

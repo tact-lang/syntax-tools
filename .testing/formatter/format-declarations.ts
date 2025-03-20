@@ -231,3 +231,18 @@ function formatAttributes(attributes: undefined | CstNode, code: CodeBuilder) {
         formatAttribute(code, attr);
     }
 }
+
+export const formatPrimitiveType = (code: CodeBuilder, node: CstNode): void => {
+    // primitive Foo;
+    // ^^^^^^^^^ ^^^
+    // |         |
+    // |         name
+    // keyword
+    const name = childByField(node, "name");
+
+    if (!name) {
+        throw new Error("Invalid primitive type declaration");
+    }
+
+    code.add("primitive").space().add(idText(name)).add(";");
+};

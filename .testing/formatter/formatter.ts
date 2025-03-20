@@ -1,6 +1,6 @@
 import {Cst} from "../result";
 import {CodeBuilder} from "../code-builder";
-import {formatFunction, formatNativeFunction, formatAsmFunction} from "./format-declarations";
+import {formatFunction, formatNativeFunction, formatAsmFunction, formatPrimitiveType} from "./format-declarations";
 import {formatStatement} from "./format-statements";
 import {formatExpression} from "./format-expressions";
 import {visit, childByField} from "../cst-helpers";
@@ -67,6 +67,9 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
             });
             break;
 
+        case "PrimitiveTypeDecl":
+            formatPrimitiveType(code, node);
+            break;
         case "$Function":
             formatFunction(code, node);
             break;
