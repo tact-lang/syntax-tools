@@ -22,6 +22,8 @@ message(0x100) Foo {
 const Foo: Int = 100;
 const Foo: Int;
 
+extends inline fun foo(self: Int) {}
+
 @interface("hello")
 @interface("hello")
 contract Foo(param: Int) with Ownable, Baz {
@@ -57,6 +59,9 @@ contract Foo(param: Int) with Ownable, Baz {
     init(foo: Int) {}
     
     receive("hello") {}
+    
+    get fun foo() {}
+    get(10) fun foo() {}
 }
 `;
 
