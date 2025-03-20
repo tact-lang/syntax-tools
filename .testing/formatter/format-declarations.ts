@@ -73,12 +73,10 @@ function formatAttribute(code: CodeBuilder, attr: Cst) {
         //    ^^^^^^^^ this
         const methodIdOpt = childByField(attrName, "methodId")
         if (methodIdOpt) {
-            code.add("(")
             // get(0x1000) fun foo() {}
             //     ^^^^^^ this
             const value = nonLeafChild(methodIdOpt)
-            formatExpression(code, value)
-            code.add(")")
+            code.add("(").apply(formatExpression, value).add(")")
         }
     } else {
         code.add(`${idText(attr)}`);
@@ -110,9 +108,7 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
         throw new Error("Invalid native function declaration");
     }
 
-    code.add("@name").add("(");
-    formatExpression(code, nativeName);
-    code.add(")").newLine();
+    code.add("@name").add("(").apply(formatExpression, nativeName).add(")").newLine();
 
     formatAttributes(attributes, code);
 

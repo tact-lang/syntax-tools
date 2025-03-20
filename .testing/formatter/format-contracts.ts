@@ -134,8 +134,8 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
         throw new Error("Invalid constant declaration");
     }
 
-    code.add("const").space().add(idText(name));
-    formatAscription(code, type)
+    // const FOO: Int
+    code.add("const").space().add(idText(name)).apply(formatAscription, type);
 
     if (body.type === "ConstantDefinition") {
         // const Foo: Int = 100;
@@ -144,8 +144,7 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
         // const Foo: Int = 100;
         //                  ^^^ this
         const value = nonLeafChild(body);
-        formatExpression(code, value)
-        code.add(";");
+        code.apply(formatExpression, value).add(";");
     } else if (body.type === "ConstantDeclaration") {
         // const Foo: Int;
         //               ^ this
@@ -168,15 +167,15 @@ export function formatFieldDecl(code: CodeBuilder, decl: Cst): void {
         throw new Error("Invalid field declaration");
     }
 
-    code.add(idText(name));
-    formatAscription(code, type)
+    // foo: Int
+    code.add(idText(name)).apply(formatAscription, type);
 
     if (initOpt) {
-        code.space().add("=").space();
         // foo: Int = 100;
         //            ^^^ this
         const value = nonLeafChild(initOpt);
-        formatExpression(code, value)
+        //  = 100
+        code.space().add("=").space().apply(formatExpression, value);
     }
     code.add(";");
 }
@@ -192,9 +191,7 @@ function getName(node: CstNode, type: "contract" | "trait"): string {
 function formatContractTraitAttribute(attr: Cst, code: CodeBuilder) {
     const name = childByField(attr, "name");
     if (!name) return;
-    code.add("@interface").add("(")
-    formatExpression(code, name)
-    code.add(")");
+    code.add("@interface").add("(").apply(formatExpression, name).add(")");
 }
 
 function formatContractTraitAttributes(code: CodeBuilder, node: CstNode): void {

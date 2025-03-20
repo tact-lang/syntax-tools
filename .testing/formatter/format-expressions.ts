@@ -236,9 +236,8 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return
         case "Parens": {
             const child = childByField(node, "child")
-            code.add("(")
-            formatExpression(code, nonLeafChild(child))
-            code.add(")")
+            const expression = nonLeafChild(child);
+            code.add("(").apply(formatExpression, expression).add(")")
             return
         }
         case "Conditional": {
@@ -254,11 +253,11 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
                 throw new Error("Invalid binary expression");
             }
 
-            formatExpression(code, left);
-            code.space();
-            formatExpression(code, op);
-            code.space();
-            formatExpression(code, right);
+            code.apply(formatExpression, left)
+                .space()
+                .apply(formatExpression, op)
+                .space()
+                .apply(formatExpression, right)
             return;
         }
         case "Unary": {
@@ -352,12 +351,10 @@ function formatConditional(node: CstNode, code: CodeBuilder) {
         throw new Error("Invalid conditional branches");
     }
 
-    const trueBranchCode = new CodeBuilder()
-    formatExpression(trueBranchCode, thenBranch);
-    const falseBranchCode = new CodeBuilder()
-    formatExpression(falseBranchCode, elseBranch);
+    const trueBranchCode = new CodeBuilder().apply(formatExpression, thenBranch).toString()
+    const falseBranchCode = new CodeBuilder().apply(formatExpression, elseBranch).toString()
 
-    const branchesWidth = trueBranchCode.toString().length + falseBranchCode.toString().length;
+    const branchesWidth = trueBranchCode.length + falseBranchCode.length;
 
     const multiline = branchesWidth > 70
     if (multiline) {
@@ -365,18 +362,18 @@ function formatConditional(node: CstNode, code: CodeBuilder) {
         // bar
         //     ? trueBranch
         //     : falseBranch
-        code.newLine().indent().add("?").space();
-        formatExpression(code, thenBranch);
-        code.newLine().add(":").space();
-        formatExpression(code, elseBranch);
-        code.dedent()
+        code.newLine().indent()
+            .add("?").space().apply(formatExpression, thenBranch)
+            .newLine()
+            .add(":").space().apply(formatExpression, elseBranch)
+            .dedent()
     } else {
         // format as:
         // bar ? trueBranch : falseBranch
-        code.space().add("?").space();
-        formatExpression(code, thenBranch);
-        code.space().add(":").space();
-        formatExpression(code, elseBranch);
+        code.space().add("?").space()
+            .apply(formatExpression, thenBranch)
+            .space().add(":").space()
+            .apply(formatExpression, elseBranch)
     }
 }
 
@@ -422,8 +419,7 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid struct instance");
     }
 
-    formatType(code, type);
-    code.space()
+    code.apply(formatType, type).space()
 
     formatSeparatedList(code, fields, (code, field) => {
         // `value: 100` or just `value`

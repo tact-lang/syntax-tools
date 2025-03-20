@@ -1,3 +1,5 @@
+import {Cst} from "./result";
+
 export class CodeBuilder {
     private parts: string[] = [];
     private currentIndent = "";
@@ -37,6 +39,11 @@ export class CodeBuilder {
         if (!this.atLineStart && !this.skipNextSpace) {
             this.parts.push(" ");
         }
+        return this;
+    }
+
+    apply(callback: (code: CodeBuilder, node: Cst) => void, node: Cst): this {
+        callback(this, node);
         return this;
     }
 
