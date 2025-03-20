@@ -120,6 +120,8 @@ export const formatCommaSeparatedList = (
         wrapperLeft?: string,
         wrapperRight?: string,
         extraWrapperSpace?: string,
+        suffixElement?: string,
+        needCommaAfterSuffixElement?: boolean,
     } = {}
 ): void => {
     const {
@@ -166,6 +168,14 @@ export const formatCommaSeparatedList = (
             code.newLine();
         });
 
+        if (options.suffixElement) {
+            code.add(options.suffixElement)
+            if (options.needCommaAfterSuffixElement) {
+                code.add(",")
+            }
+            code.newLine();
+        }
+
         if (info.trailingComments.length > 0) {
             info.trailingComments.forEach((comment, index) => {
                 code.add(visit(comment.node));
@@ -197,6 +207,10 @@ export const formatCommaSeparatedList = (
                 code.add(",").space();
             }
         });
+
+        if (options.suffixElement) {
+            code.add(",").space().add(options.suffixElement);
+        }
 
         if (options.extraWrapperSpace) {
             code.add(options.extraWrapperSpace);

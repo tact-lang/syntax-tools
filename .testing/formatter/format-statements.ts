@@ -1,9 +1,9 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childLeafWithText, visit} from "../cst-helpers";
+import {childByField, childByType, childLeafWithText, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
-import {getCommentsBetween, idText} from "./format-helpers";
+import {formatCommaSeparatedList, getCommentsBetween, idText} from "./format-helpers";
 
 function trailingNewlines(node: CstNode): string {
     const lastChild = node.children.at(-1)
@@ -115,8 +115,15 @@ function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end
 }
 
 const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
+    // let name : Int = 100;
+    //     ^^^^ ^^^^^ ^ ^^^
+    //     |    |     | |
+    //     |    |     | init
+    //     |    |     assign
+    //     |    typeOpt
+    //     name
     const name = childByField(node, "name");
-    const type = childByField(node, "type");
+    const typeOpt = childByField(node, "type");
     const init = childByField(node, "init");
     const assign = childLeafWithText(node, "=");
 
@@ -126,10 +133,10 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
 
     code.add("let").space().add(idText(name));
 
-    if (type && type.$ === "node") {
-        processInlineComments(node, code, name, type);
-        formatAscription(code, type);
-        processInlineComments(node, code, type, assign);
+    if (typeOpt) {
+        processInlineComments(node, code, name, typeOpt);
+        formatAscription(code, typeOpt);
+        processInlineComments(node, code, typeOpt, assign);
     } else {
         processInlineComments(node, code, name, assign);
     }
@@ -142,13 +149,20 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatReturnStatement = (code: CodeBuilder, node: CstNode): void => {
+    // return 100;
+    // ^^^^^^ ^^^^
+    // |      |
+    // |      exprOpt
+    // |
+    // returnKeyword
     const returnKeyword = childLeafWithText(node, "return");
-    const expression = childByField(node, "expression");
+    const exprOpt = childByField(node, "expression");
+
     code.add("return");
-    if (expression) {
+    if (exprOpt) {
         code.space();
-        processInlineComments(node, code, returnKeyword, expression);
-        formatExpression(code, expression);
+        processInlineComments(node, code, returnKeyword, exprOpt);
+        formatExpression(code, exprOpt);
     }
     code.add(";");
 };
@@ -163,8 +177,15 @@ const formatExpressionStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
+    // value + = 100;
+    // ^^^^^ ^ ^ ^^^
+    // |     | | |
+    // |     | | right
+    // |     | assign
+    // |     operatorOpt
+    // left
     const left = childByField(node, "left");
-    const operator = childByField(node, "operator");
+    const operatorOpt = childByField(node, "operator");
     const assign = childLeafWithText(node, "=");
     const right = childByField(node, "right");
 
@@ -175,8 +196,8 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
     formatExpression(code, left);
 
     code.space()
-    if (operator && operator.$ === "node") {
-        code.add(visit(operator));
+    if (operatorOpt) {
+        code.add(visit(operatorOpt));
     }
 
     code.add("=").space();
@@ -187,6 +208,7 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
+    // if (true) {} else {}
     const ifKeyword = childLeafWithText(node, "if");
     const condition = childByField(node, "condition");
     const trueBranch = childByField(node, "trueBranch");
@@ -204,23 +226,26 @@ const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
 
     formatStatements(code, trueBranch);
 
-    if (falseBranch && falseBranch.$ === "node") {
+    if (falseBranch) {
         code.space().add("else").space();
 
-        const branch = falseBranch.children.at(-1)
-        if (branch.$ === "leaf") {
-            return
-        }
+        const branch = nonLeafChild(falseBranch)
+        if (!branch) return
 
         if (branch.type === "StatementCondition") {
             formatConditionStatement(code, branch);
         } else {
-            formatStatements(code, branch);
+            formatStatements(code, childByField(branch, "body"));
         }
     }
 };
 
 const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
+    // while (true) {}
+    //        ^^^^  ^^
+    //        |     |
+    //        |     body
+    //        condition
     const condition = childByField(node, "condition");
     const body = childByField(node, "body");
 
@@ -235,9 +260,17 @@ const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
+    // let Foo { arg, foo: param, .. } = foo();
+    //     ^^^   ^^^^^^^^^^^^^^^  ^^   ^ ^^^^^
+    //     |     |                |    | |
+    //     |     |                |    | init
+    //     |     |                |    assign
+    //     |     |                restOpt
+    //     |     fields
+    //     type
     const type = childByField(node, "type");
     const fields = childByField(node, "fields");
-    const rest = childByType(node, "RestArgument");
+    const restOpt = childByType(node, "RestArgument");
     const assign = childLeafWithText(node, "=");
     const init = childByField(node, "init");
 
@@ -247,42 +280,57 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
 
     code.add("let").space();
     formatType(code, type);
-    code.space().add("{").space();
 
-    const fieldsNode = fields.children.filter(field => field.$ === "node");
-    fieldsNode.forEach((field, index) => {
+    code.space()
+
+    const restArg = restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
+
+    formatCommaSeparatedList(code, fields, (code, field) => {
+        if (field.$ !== "node") return
+
         if (field.type === "RegularField") {
+            // foo: bar
+            // ^^^  ^^^
+            // |    |
+            // |    fieldName
+            // varName
             const fieldName = childByField(field, "fieldName");
             const varName = childByField(field, "varName");
             if (!fieldName || !varName) {
                 throw new Error("Invalid regular field in destruct");
             }
+
             code.add(idText(fieldName)).add(":").space().add(idText(varName));
         } else if (field.type === "PunnedField") {
+            // foo
+            // ^^^ this
             const name = childByField(field, "name");
             if (!name) {
                 throw new Error("Invalid punned field in destruct");
             }
             code.add(idText(name));
         }
-        if (index < fieldsNode.length - 1) {
-            code.add(",").space();
-        }
-    });
+    }, {
+        wrapperLeft: "{",
+        wrapperRight: "}",
+        extraWrapperSpace: " ",
+        startIndex: 0,
+        endIndex: 0,
+        suffixElement: restArg,
+        needCommaAfterSuffixElement: false, // comma is forbidden after `..`
+    })
 
-    if (rest && rest.$ === "node" && rest.type === "RestArgument") {
-        if (fieldsNode.length > 0) {
-            code.add(",").space();
-        }
-        code.add("..");
-    }
-
-    code.space().add("}").space().add("=").space();
+    code.space().add("=").space();
     formatExpression(code, init);
     code.add(";");
 };
 
 const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
+    // repeat(true) {}
+    //        ^^^^  ^^
+    //        |     |
+    //        |     body
+    //        condition
     const condition = childByField(node, "condition");
     const body = childByField(node, "body");
 
@@ -297,6 +345,11 @@ const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
+    // do {} until (true);
+    //    ^^       ^^^^^^
+    //    |        |
+    //    |        conditionNode
+    //    body
     const body = childByField(node, "body");
     const conditionNode = childByField(node, "condition");
 
@@ -304,7 +357,7 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid until statement");
     }
 
-    const condition = conditionNode.children.find(child => child.$ === "node");
+    const condition = nonLeafChild(conditionNode);
 
     code.add("do").space();
     formatStatements(code, body);
@@ -315,8 +368,13 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
+    // try {} catch (e) {}
+    //     ^^ ^^^^^^^^^^^^
+    //     |  |
+    //     |  handlerOpt
+    //     body
     const body = childByField(node, "body");
-    const handler = childByField(node, "handler");
+    const handlerOpt = childByField(node, "handler");
 
     if (!body) {
         throw new Error("Invalid try statement");
@@ -325,9 +383,14 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
     code.add("try").space();
     formatStatements(code, body);
 
-    if (handler && handler.$ === "node") {
-        const name = childByField(handler, "name");
-        const handlerBody = childByField(handler, "body");
+    if (handlerOpt) {
+        // catch (e) {}
+        //        ^  ^^
+        //        |  |
+        //        |  handlerBody
+        //        name
+        const name = childByField(handlerOpt, "name");
+        const handlerBody = childByField(handlerOpt, "body");
 
         if (!name || !handlerBody) {
             throw new Error("Invalid catch handler");
@@ -339,6 +402,13 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
+    // foreach (key, value in foo()) {}
+    //          ^^^  ^^^^^    ^^^^^  ^^
+    //          |    |        |      |
+    //          |    |        |      body
+    //          |    |        expression
+    //          |    value
+    //          key
     const key = childByField(node, "key");
     const value = childByField(node, "value");
     const expression = childByField(node, "expression");

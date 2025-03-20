@@ -37,6 +37,16 @@ contract Foo(param: Int) with Ownable, Baz {
             value: 100,
             some,
         };
+        
+        let Foo { name, foo: bar, .. } = foo();
+        let Foo { name, 
+        foo: bar, .. } = foo();
+        
+        if (true) {}
+        else if (false) {}
+        else {}
+        
+        do {} until (true);
        
         initOf Foo(1, 2, 3);
         codeOf Foo;
