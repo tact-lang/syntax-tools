@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childrenByType, textOfId, visit} from "../cst-helpers";
+import {childByField, childByType, childrenByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {idText} from "./format-helpers";
 
@@ -25,19 +25,14 @@ export const formatType = (code: CodeBuilder, node: Cst): void => {
         case "TypeId":
             code.add(textOfId(node))
             break;
-        case "name":
-            code.add(visit(node).trim())
-            break;
         default:
-            code.add(visit(node));
+            code.add(visit(node).trim());
     }
 };
 
 export const formatAscription = (code: CodeBuilder, node: Cst): void => {
-    if (node.$ !== "node") {
-        throw new Error("Expected node in ascription");
-    }
-
+    // : Int
+    //   ^^^ this
     const type = childByType(node, "TypeAs");
     if (!type) {
         throw new Error("Invalid ascription");
@@ -69,6 +64,11 @@ const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
 };
 
 const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
+    // map<Int, String>
+    // ^^^ ^^^^^^^^^^^
+    // |   |
+    // |   args
+    // name
     const name = childByField(node, "name");
     const args = childByField(node, "args");
 
@@ -78,6 +78,7 @@ const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
 
     formatType(code, name);
 
+    // ["Int", ", ", "String"] -> ["Int", "String"]
     const typeArgs = childrenByType(args, "TypeAs");
     if (typeArgs.length > 0) {
         code.add("<");
@@ -93,17 +94,18 @@ const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
 
 const formatTypeAs = (code: CodeBuilder, node: CstNode): void => {
     const type = childByField(node, "type");
-    const asTypes = childByField(node, "as")
-
     if (!type) {
         throw new Error("Invalid 'as' type");
     }
 
     formatType(code, type);
 
-    if (asTypes) {
-        const children = asTypes.children.find((child) => child.$ === "node");
+    // Int as int64
+    //     ^^^^^^^^ this
+    const asTypeOpt = childByField(node, "as")
 
+    if (asTypeOpt) {
+        const children = nonLeafChild(asTypeOpt);
         if (children) {
             code.space().add("as").space();
             code.add(idText(children))
@@ -122,6 +124,8 @@ const formatTypeOptional = (code: CodeBuilder, node: CstNode): void => {
         formatType(code, typeGeneric);
     }
 
+    // Foo?
+    //    ^ this
     const optionals = childrenByType(node, "optionals");
     for (const _ of optionals) {
         code.add("?");

@@ -14,7 +14,10 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     // }
 
 `
-import "";
+struct Foo {}
+message(0x100) Foo {
+    val: Int as uint64;
+}
 
 const Foo: Int = 100;
 const Foo: Int;
@@ -27,6 +30,17 @@ contract Foo(param: Int) with Ownable, Baz {
         let a: Ty = 10;
         a += 100;
         
+        a ? 100 : 200;
+       
+        Bar {
+            name: "John",
+            value: 100,
+            some,
+        };
+       
+        initOf Foo(1, 2, 3);
+        codeOf Foo;
+       
         try {} catch (e) {}
     }
     

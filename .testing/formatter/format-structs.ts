@@ -1,17 +1,41 @@
 import {CstNode} from "../result";
-import {childByField} from "../cst-helpers";
+import {childByField, nonLeafChild} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {idText} from "./format-helpers";
 import {formatExpression} from "./format-expressions";
 import {formatFieldDecl} from "./format-contracts";
 
-function formatStructBody(code: CodeBuilder, node: CstNode): void {
+export function formatStruct(code: CodeBuilder, node: CstNode): void {
+    code.add("struct").space().add(getName(node, "struct"));
+    formatFields(code, node);
+}
+
+export function formatMessage(code: CodeBuilder, node: CstNode): void {
+    code.add("message");
+
+    // message(0x100) Foo {}
+    //         ^^^^^ this
+    const opcodeOpt = childByField(node, "opcode");
+    if (opcodeOpt) {
+        code.add("(");
+        const expression = nonLeafChild(opcodeOpt)
+        if (expression) {
+            formatExpression(code, expression);
+        }
+        code.add(")");
+    }
+
+    code.space().add(getName(node, "message"));
+    formatFields(code, node);
+}
+
+function formatFields(code: CodeBuilder, node: CstNode): void {
     code.space().add("{").newLine().indent();
 
-    const fields = childByField(node, "fields");
-    if (fields) {
-        const fieldsNode = fields.children.filter(field => field.$ === "node" && field.type === "FieldDecl")
-        fieldsNode.forEach((field) => {
+    const fieldsNode = childByField(node, "fields");
+    if (fieldsNode) {
+        const fields = fieldsNode.children.filter(field => field.$ === "node" && field.type === "FieldDecl")
+        fields.forEach((field) => {
             formatFieldDecl(code, field);
             code.newLine()
         })
@@ -27,25 +51,3 @@ function getName(node: CstNode, type: "struct" | "message"): string {
     }
     return idText(name);
 }
-
-export function formatStruct(code: CodeBuilder, node: CstNode): void {
-    code.add("struct").space().add(getName(node, "struct"));
-    formatStructBody(code, node);
-}
-
-export function formatMessage(code: CodeBuilder, node: CstNode): void {
-    code.add("message");
-
-    const opcode = childByField(node, "opcode");
-    if (opcode && opcode.$ === "node") {
-        code.add("(");
-        const expression = opcode.children.find(it => it.$ === "node")
-        if (expression) {
-            formatExpression(code, expression);
-        }
-        code.add(")");
-    }
-
-    code.space().add(getName(node, "message"));
-    formatStructBody(code, node);
-} 

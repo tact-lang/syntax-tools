@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, textOfId, visit} from "../cst-helpers";
+import {childByField, childByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatCommaSeparatedList, idText} from "./format-helpers";
 import {formatType} from "./format-types";
@@ -190,191 +190,228 @@ function formatChain(code: CodeBuilder, info: ChainInfo): void {
 }
 
 export const formatExpression = (code: CodeBuilder, node: Cst): void => {
-    if (node.$ === "node") {
-        switch (node.type) {
-            case "expression": {
-                const child = node.children[0];
-                formatExpression(code, child);
-                return
-            }
-            case "Operator": {
-                const name = node.children[0] as CstNode;
-                if (!name || !name.children) {
-                    code.add(visit(node).trim())
-                    return
-                }
-                code.add(visit(name.children[0]).trim())
-                return
-            }
-            case "StringLiteral":
-                code.add(visit(node).trim());
-                return
-            case "IntegerLiteral":
-                code.add(visit(node).trim());
-                return
-            case "BoolLiteral":
-                code.add(visit(node).trim());
-                return
-            case "Null":
-                code.add("null");
-                return
-            case "StructInstance":
-                formatStructInstance(code, node);
-                return
-            case "SuffixFieldAccess":
-                formatSuffixFieldAccess(code, node);
-                return
-            case "SuffixCall":
-                formatSuffixCall(code, node);
-                return
-            case "Parens": {
-                const child = childByField(node, "child") as CstNode
-                const expr = child.children[1]
-                code.add("(")
-                formatExpression(code, expr)
-                code.add(")")
-                return
-            }
-            case "Conditional": {
-                const head = node.children[0];
-                const tail = childByType(node, "tail");
-                if (!head) {
-                    throw new Error("Invalid conditional expression");
-                }
-                formatExpression(code, head);
-                if (tail && tail.$ === "node") {
-                    const thenBranch = tail.children.find(it => it.$ === "node");
-                    const elseBranch = childByField(tail, "elseBranch");
-                    if (!thenBranch || !elseBranch) {
-                        throw new Error("Invalid conditional branches");
-                    }
+    if (node.$ !== "node") {
+        code.add(visit(node));
+        return
+    }
 
-                    const tmpCode = new CodeBuilder()
-                    formatExpression(tmpCode, thenBranch);
-
-                    const tmpCode2 = new CodeBuilder()
-                    formatExpression(tmpCode2, elseBranch);
-
-                    const needMultiline = tmpCode.toString().length + tmpCode2.toString().length > 70
-                    if (needMultiline) {
-                        code.newLine().indent().add("?").space();
-                        formatExpression(code, thenBranch);
-                        code.newLine().add(":").space();
-                        formatExpression(code, elseBranch);
-                        code.dedent()
-                    } else {
-                        code.space().add("?").space();
-                        formatExpression(code, thenBranch);
-                        code.space().add(":").space();
-                        formatExpression(code, elseBranch);
-                    }
-                }
-                return;
-            }
-            case "Binary": {
-                const left = childByField(node, "left");
-                const op = childByType(node, "Operator");
-                const right = childByField(node, "right");
-
-                if (!left || !op || !right) {
-                    throw new Error("Invalid binary expression");
-                }
-
-                formatExpression(code, left);
-                code.space();
-                formatExpression(code, op);
-                code.space();
-                formatExpression(code, right);
-                return;
-            }
-            case "Unary": {
-                const prefixes = childByField(node, "prefixes");
-                const expression = childByField(node, "expression");
-
-                if (!expression) {
-                    throw new Error("Invalid unary expression");
-                }
-
-                prefixes.children.forEach(prefix => {
-                    formatExpression(code, prefix);
-                });
-                formatExpression(code, expression);
-                return;
-            }
-            case "Suffix": {
-                const suffixes = childByField(node, "suffixes");
-                if (!suffixes) {
-                    return;
-                }
-
-                const suffixesList = suffixes.children
-                if (suffixesList.length === 1) {
-                    const suffix = suffixesList[0]
-                    formatExpression(code, node.children[0])
-                    formatExpression(code, suffix)
-                    return
-                }
-
-                if (suffixesList.length === 2) {
-                    formatExpression(code, node.children[0])
-                    formatExpression(code, suffixesList[0])
-                    formatExpression(code, suffixesList[1])
-                    return
-                }
-                if (suffixesList.length === 3) {
-                    formatExpression(code, node.children[0])
-                    formatExpression(code, suffixesList[0])
-                    formatExpression(code, suffixesList[1])
-                    formatExpression(code, suffixesList[2])
-                    return
-                }
-                if (suffixesList.length === 4) {
-                    formatExpression(code, node.children[0])
-                    formatExpression(code, suffixesList[0])
-                    formatExpression(code, suffixesList[1])
-                    formatExpression(code, suffixesList[2])
-                    formatExpression(code, suffixesList[3])
-                    return
-                }
-
-                const chainInfo = collectChainInfo(node);
-                formatChain(code, chainInfo);
-                return;
-            }
-            case "InitOf": {
-                code.add("initOf");
-                const name = childByField(node, "name");
-                const params = childByField(node, "params");
-                if (!name) {
-                    throw new Error("Invalid initOf expression");
-                }
-                code.space().add(idText(name));
-                if (params) {
-                    formatCommaSeparatedList(code, params, (code, param) => {
-                        formatExpression(code, param);
-                    });
-                }
-                return;
-            }
-            case "CodeOf": {
-                code.add("codeOf");
-                const name = childByField(node, "name");
-                if (!name) {
-                    throw new Error("Invalid codeOf expression");
-                }
-                code.space().add(idText(name));
-                return;
-            }
-            case "Id":
-                code.add(idText(node).trim());
-                return;
+    switch (node.type) {
+        case "expression": {
+            const child = nonLeafChild(node);
+            formatExpression(code, child);
+            return
         }
+        case "Operator": {
+            const name = node.children[0];
+            if (!name || name.$ !== "node") {
+                code.add(visit(node).trim())
+                return
+            }
+            code.add(visit(name.children[0]).trim())
+            return
+        }
+        case "StringLiteral":
+            code.add(visit(node).trim());
+            return
+        case "IntegerLiteral":
+            code.add(visit(node).trim());
+            return
+        case "BoolLiteral":
+            code.add(visit(node).trim());
+            return
+        case "Null":
+            code.add("null");
+            return
+        case "StructInstance":
+            formatStructInstance(code, node);
+            return
+        case "SuffixFieldAccess":
+            formatSuffixFieldAccess(code, node);
+            return
+        case "SuffixCall":
+            formatSuffixCall(code, node);
+            return
+        case "Parens": {
+            const child = childByField(node, "child")
+            code.add("(")
+            formatExpression(code, nonLeafChild(child))
+            code.add(")")
+            return
+        }
+        case "Conditional": {
+            formatConditional(node, code);
+            return;
+        }
+        case "Binary": {
+            const left = childByField(node, "left");
+            const op = childByType(node, "Operator");
+            const right = childByField(node, "right");
+
+            if (!left || !op || !right) {
+                throw new Error("Invalid binary expression");
+            }
+
+            formatExpression(code, left);
+            code.space();
+            formatExpression(code, op);
+            code.space();
+            formatExpression(code, right);
+            return;
+        }
+        case "Unary": {
+            const prefixes = childByField(node, "prefixes");
+            const expression = childByField(node, "expression");
+
+            if (!expression) {
+                throw new Error("Invalid unary expression");
+            }
+
+            prefixes.children.forEach(prefix => {
+                formatExpression(code, prefix);
+            });
+            formatExpression(code, expression);
+            return;
+        }
+        case "Suffix": {
+            const suffixes = childByField(node, "suffixes");
+            if (!suffixes) {
+                return;
+            }
+
+            const suffixesList = suffixes.children
+            if (suffixesList.length === 1) {
+                const suffix = suffixesList[0]
+                formatExpression(code, node.children[0])
+                formatExpression(code, suffix)
+                return
+            }
+
+            if (suffixesList.length === 2) {
+                formatExpression(code, node.children[0])
+                formatExpression(code, suffixesList[0])
+                formatExpression(code, suffixesList[1])
+                return
+            }
+            if (suffixesList.length === 3) {
+                formatExpression(code, node.children[0])
+                formatExpression(code, suffixesList[0])
+                formatExpression(code, suffixesList[1])
+                formatExpression(code, suffixesList[2])
+                return
+            }
+            if (suffixesList.length === 4) {
+                formatExpression(code, node.children[0])
+                formatExpression(code, suffixesList[0])
+                formatExpression(code, suffixesList[1])
+                formatExpression(code, suffixesList[2])
+                formatExpression(code, suffixesList[3])
+                return
+            }
+
+            const chainInfo = collectChainInfo(node);
+            formatChain(code, chainInfo);
+            return;
+        }
+        case "InitOf": {
+            formatInitOf(code, node);
+            return;
+        }
+        case "CodeOf": {
+            formatCodeOf(code, node);
+            return;
+        }
+        case "Id":
+            code.add(idText(node));
+            return;
     }
 
     code.add(visit(node));
 };
 
+function formatConditional(node: CstNode, code: CodeBuilder) {
+    // foo ? bar : baz
+    // ^^^ ^^^^^^^^^^^
+    // |   |
+    // |   tailOpt
+    // head
+    const head = node.children[0];
+    const tailOpt = childByField(node, "tail");
+    if (!head) {
+        throw new Error("Invalid conditional expression");
+    }
+    formatExpression(code, head);
+
+    if (!tailOpt) return; // Incomplete ternary
+
+    const thenBranch = tailOpt.children.find(it => it.$ === "node");
+    const elseBranch = childByField(tailOpt, "elseBranch");
+    if (!thenBranch || !elseBranch) {
+        throw new Error("Invalid conditional branches");
+    }
+
+    const trueBranchCode = new CodeBuilder()
+    formatExpression(trueBranchCode, thenBranch);
+    const falseBranchCode = new CodeBuilder()
+    formatExpression(falseBranchCode, elseBranch);
+
+    const branchesWidth = trueBranchCode.toString().length + falseBranchCode.toString().length;
+
+    const multiline = branchesWidth > 70
+    if (multiline) {
+        // format as:
+        // bar
+        //     ? trueBranch
+        //     : falseBranch
+        code.newLine().indent().add("?").space();
+        formatExpression(code, thenBranch);
+        code.newLine().add(":").space();
+        formatExpression(code, elseBranch);
+        code.dedent()
+    } else {
+        // format as:
+        // bar ? trueBranch : falseBranch
+        code.space().add("?").space();
+        formatExpression(code, thenBranch);
+        code.space().add(":").space();
+        formatExpression(code, elseBranch);
+    }
+}
+
+function formatInitOf(code: CodeBuilder, node: CstNode) {
+    code.add("initOf");
+    // initOf JettonWallet(0, sender)
+    //        ^^^^^^^^^^^^ ^^^^^^^^^
+    //        |            |
+    //        |            params
+    //        name
+    const name = childByField(node, "name");
+    const params = childByField(node, "params");
+    if (!name) {
+        throw new Error("Invalid initOf expression");
+    }
+
+    code.space().add(idText(name));
+    formatCommaSeparatedList(code, params, formatExpression);
+}
+
+function formatCodeOf(code: CodeBuilder, node: CstNode) {
+    code.add("codeOf");
+    // codeOf JettonWallet
+    //        ^^^^^^^^^^^^ this
+    const name = childByField(node, "name");
+    if (!name) {
+        throw new Error("Invalid codeOf expression");
+    }
+
+    code.space().add(idText(name));
+}
+
 const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
+    // Foo { value: 100 }
+    // ^^^ ^^^^^^^^^^^^^^
+    // |   |
+    // |   fields
+    // type
     const type = childByField(node, "type");
     const fields = childByType(node, "StructInstanceFields");
 
@@ -386,14 +423,18 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
     code.space()
 
     formatCommaSeparatedList(code, fields, (code, field) => {
+        // `value: 100` or just `value`
         const name = childByField(field, "name");
-        const init = childByType(field, "init");
         if (!name) throw new Error("Invalid field initializer");
 
         code.add(textOfId(name));
-        if (init && init.$ === "node") {
+
+        // value: 100
+        //      ^^^^^ this
+        const initOpt = childByField(field, "init");
+        if (initOpt) {
             code.add(":").space();
-            formatExpression(code, init.children.at(-1));
+            formatExpression(code, nonLeafChild(initOpt));
         }
     }, {
         startIndex: 1,

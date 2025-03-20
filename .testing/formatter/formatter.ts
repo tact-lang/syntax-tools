@@ -103,9 +103,7 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
             formatStatement(code, node);
             break;
         default:
-            if (node.group === "statement") {
-                formatStatement(code, node);
-            } else if (node.group === "expression") {
+            if (node.group === "expression") {
                 formatExpression(code, node);
             } else {
                 code.add(visit(node).trim());
