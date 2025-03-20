@@ -3,7 +3,7 @@ import {childByField, childByType, childLeafWithText, nonLeafChild, visit} from 
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
-import {formatCommaSeparatedList, getCommentsBetween, idText} from "./format-helpers";
+import {formatSeparatedList, getCommentsBetween, idText} from "./format-helpers";
 
 function trailingNewlines(node: CstNode): string {
     const lastChild = node.children.at(-1)
@@ -285,7 +285,7 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
 
     const restArg = restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
 
-    formatCommaSeparatedList(code, fields, (code, field) => {
+    formatSeparatedList(code, fields, (code, field) => {
         if (field.$ !== "node") return
 
         if (field.type === "RegularField") {
@@ -317,7 +317,7 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
         startIndex: 0,
         endIndex: 0,
         suffixElement: restArg,
-        needCommaAfterSuffixElement: false, // comma is forbidden after `..`
+        needSeparatorAfterSuffixElement: false, // comma is forbidden after `..`
     })
 
     code.space().add("=").space();

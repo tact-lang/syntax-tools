@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatCommaSeparatedList, idText} from "./format-helpers";
+import {formatSeparatedList, idText} from "./format-helpers";
 import {formatType} from "./format-types";
 
 interface ChainedCall {
@@ -135,7 +135,7 @@ function formatChain(code: CodeBuilder, info: ChainInfo): void {
         code.add(firstCall.name);
 
         if (firstCall.type === "call" && firstCall.parameters) {
-            formatCommaSeparatedList(code, firstCall.parameters, (code, arg) => {
+            formatSeparatedList(code, firstCall.parameters, (code, arg) => {
                 formatExpression(code, arg);
             });
         }
@@ -152,7 +152,7 @@ function formatChain(code: CodeBuilder, info: ChainInfo): void {
             code.add(".").add(call.name);
 
             if (call.type === "call" && call.parameters) {
-                formatCommaSeparatedList(code, call.parameters, (code, arg) => {
+                formatSeparatedList(code, call.parameters, (code, arg) => {
                     formatExpression(code, arg);
                 });
             }
@@ -172,7 +172,7 @@ function formatChain(code: CodeBuilder, info: ChainInfo): void {
         const firstCall = info.calls[0]
         code.add(firstCall.name);
         if (firstCall.type === "call" && firstCall.parameters) {
-            formatCommaSeparatedList(code, firstCall.parameters, (code, arg) => {
+            formatSeparatedList(code, firstCall.parameters, (code, arg) => {
                 formatExpression(code, arg);
             });
         }
@@ -181,7 +181,7 @@ function formatChain(code: CodeBuilder, info: ChainInfo): void {
         calls.forEach(call => {
             code.add(".").add(call.name);
             if (call.type === "call" && call.parameters) {
-                formatCommaSeparatedList(code, call.parameters, (code, arg) => {
+                formatSeparatedList(code, call.parameters, (code, arg) => {
                     formatExpression(code, arg);
                 });
             }
@@ -214,6 +214,9 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             code.add(visit(node).trim());
             return
         case "IntegerLiteral":
+            code.add(visit(node).trim());
+            return
+        case "IntegerLiteralDec":
             code.add(visit(node).trim());
             return
         case "BoolLiteral":
@@ -391,7 +394,7 @@ function formatInitOf(code: CodeBuilder, node: CstNode) {
     }
 
     code.space().add(idText(name));
-    formatCommaSeparatedList(code, params, formatExpression);
+    formatSeparatedList(code, params, formatExpression);
 }
 
 function formatCodeOf(code: CodeBuilder, node: CstNode) {
@@ -422,7 +425,7 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
     formatType(code, type);
     code.space()
 
-    formatCommaSeparatedList(code, fields, (code, field) => {
+    formatSeparatedList(code, fields, (code, field) => {
         // `value: 100` or just `value`
         const name = childByField(field, "name");
         if (!name) throw new Error("Invalid field initializer");
@@ -470,7 +473,7 @@ const formatSuffixCall = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid call expression");
     }
 
-    formatCommaSeparatedList(code, args, (code, arg) => {
+    formatSeparatedList(code, args, (code, arg) => {
         formatExpression(code, arg);
     });
 };

@@ -24,6 +24,17 @@ const Foo: Int;
 
 extends inline fun foo(self: Int) {}
 
+@name("name")
+inline native foo(param: Int): Int;
+
+asm(a b c -> 0 1 2) inline fun bar(foo: Int): Int { FOO }
+asm fun bar(): Int {
+    NEWC
+    STI 10
+    b{} STSLICE
+    ENDC
+}
+
 @interface("hello")
 @interface("hello")
 contract Foo(param: Int) with Ownable, Baz {

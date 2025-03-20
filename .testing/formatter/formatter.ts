@@ -1,6 +1,6 @@
 import {Cst} from "../result";
 import {CodeBuilder} from "../code-builder";
-import {formatFunction} from "./format-declarations";
+import {formatFunction, formatNativeFunction, formatAsmFunction} from "./format-declarations";
 import {formatStatement} from "./format-statements";
 import {formatExpression} from "./format-expressions";
 import {visit, childByField} from "../cst-helpers";
@@ -69,6 +69,12 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
 
         case "$Function":
             formatFunction(code, node);
+            break;
+        case "NativeFunctionDecl":
+            formatNativeFunction(code, node);
+            break;
+        case "AsmFunction":
+            formatAsmFunction(code, node);
             break;
         case "Contract":
             formatContract(code, node);

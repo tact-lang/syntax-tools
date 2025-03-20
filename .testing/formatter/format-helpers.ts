@@ -110,7 +110,7 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
     };
 }
 
-export const formatCommaSeparatedList = (
+export const formatSeparatedList = (
     code: CodeBuilder,
     node: CstNode,
     formatItem: (code: CodeBuilder, item: Cst) => void,
@@ -121,15 +121,19 @@ export const formatCommaSeparatedList = (
         wrapperRight?: string,
         extraWrapperSpace?: string,
         suffixElement?: string,
-        needCommaAfterSuffixElement?: boolean,
+        needSeparatorAfterSuffixElement?: boolean,
+        separator?: string,
     } = {}
 ): void => {
     const {
         wrapperLeft = "(",
         wrapperRight = ")",
+        separator = ",",
+        startIndex = 1,
+        endIndex = -1,
     } = options;
 
-    const info = collectListInfo(node, options.startIndex ?? 1, options.endIndex ?? -1);
+    const info = collectListInfo(node, startIndex, endIndex);
     const items = info.items
     const shouldBeMultiline = info.shouldBeMultiline
 
@@ -156,7 +160,7 @@ export const formatCommaSeparatedList = (
             });
 
             formatItem(code, item.item);
-            code.add(",");
+            code.add(separator);
 
             item.trailingComments.forEach(comment => {
                 code.space().add(visit(comment.node));
@@ -170,8 +174,8 @@ export const formatCommaSeparatedList = (
 
         if (options.suffixElement) {
             code.add(options.suffixElement)
-            if (options.needCommaAfterSuffixElement) {
-                code.add(",")
+            if (options.needSeparatorAfterSuffixElement) {
+                code.add(separator)
             }
             code.newLine();
         }
@@ -204,12 +208,12 @@ export const formatCommaSeparatedList = (
         items.forEach((item, index) => {
             formatItem(code, item.item);
             if (index < items.length - 1) {
-                code.add(",").space();
+                code.add(separator).space();
             }
         });
 
         if (options.suffixElement) {
-            code.add(",").space().add(options.suffixElement);
+            code.add(separator).space().add(options.suffixElement);
         }
 
         if (options.extraWrapperSpace) {

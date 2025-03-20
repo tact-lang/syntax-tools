@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childrenByType, nonLeafChild, visit} from "../cst-helpers";
+import {childByField, childrenByType, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatCommaSeparatedList, idText} from "./format-helpers";
+import {formatSeparatedList, idText} from "./format-helpers";
 import {formatFunction, formatParameter} from "./format-declarations";
 import {formatStatements} from "./format-statements";
 import {formatAscription} from "./format-types";
@@ -66,7 +66,7 @@ function formatContractInit(code: CodeBuilder, decl: CstNode): void {
     //      ^^^^^^^^
     const paramsOpt = childByField(decl, "parameters");
     if (paramsOpt) {
-        formatCommaSeparatedList(code, paramsOpt, formatParameter);
+        formatSeparatedList(code, paramsOpt, formatParameter);
     }
 
     const body = childByField(decl, "body");
@@ -235,7 +235,7 @@ function formatInheritedTraits(code: CodeBuilder, node: CstNode): void {
     //               ^ starts from here
     const namesIndex = traitsOpt.children.findIndex(it => it.$ === "node" && it.type === "Id");
 
-    formatCommaSeparatedList(code, traitsOpt, (code, trait) => {
+    formatSeparatedList(code, traitsOpt, (code, trait) => {
         code.add(idText(trait));
     }, {
         wrapperLeft: "",
@@ -250,7 +250,7 @@ function formatContractParameters(code: CodeBuilder, node: CstNode): void {
     //             ^^^^^^^^^^^^ this
     const paramsOpt = childByField(node, "parameters");
     if (!paramsOpt) return;
-    formatCommaSeparatedList(code, paramsOpt, formatParameter);
+    formatSeparatedList(code, paramsOpt, formatParameter);
 }
 
 function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclaration: (code: CodeBuilder, decl: CstNode) => void): void {
