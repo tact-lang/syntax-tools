@@ -82,14 +82,14 @@ function formatContractInit(code: CodeBuilder, decl: CstNode): void {
 
 function formatReceiver(code: CodeBuilder, decl: CstNode): void {
     const receiverType = childByField(decl, "type");
-    const receiverParam = childByType(decl, "param");
+    const receiverParam = childByField(decl, "param");
     const receiverBody = childByField(decl, "body");
 
     if (!receiverType || !receiverBody) {
         throw new Error("Invalid receiver declaration");
     }
 
-    const typeName = childByType(receiverType, "name");
+    const typeName = childByField(receiverType, "name");
     if (!typeName) {
         throw new Error("Invalid receiver type");
     }
@@ -116,7 +116,7 @@ function formatReceiver(code: CodeBuilder, decl: CstNode): void {
     formatStatements(code, receiverBody);
 }
 
-function formatConstant(code: CodeBuilder, decl: CstNode): void {
+export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     const constName = childByField(decl, "name");
     const constType = childByField(decl, "type");
     const constBody = childByField(decl, "body");
@@ -139,7 +139,7 @@ function formatConstant(code: CodeBuilder, decl: CstNode): void {
 export function formatFieldDecl(code: CodeBuilder, decl: Cst): void {
     const varName = childByField(decl, "name");
     const varType = childByField(decl, "type");
-    const varInit = childByType(decl, "expression");
+    const varInit = childByField(decl, "expression");
 
     if (!varName || !varType) {
         throw new Error("Invalid field declaration");
@@ -179,7 +179,7 @@ function formatContractTraitAttributes(code: CodeBuilder, node: CstNode): void {
 }
 
 function formatInheritedTraits(code: CodeBuilder, node: CstNode): void {
-    const traits = childByType(node, "traits");
+    const traits = childByField(node, "traits");
     if (traits && traits.$ === "node") {
         code.space().add("with").space();
         const children = traits.children
@@ -215,18 +215,16 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
     code.space().add("{").newLine().indent();
 
     const declarations = childByField(node, "declarations");
-    if (declarations) {
-        declarations.children.forEach((decl, index) => {
-            if (decl.$ !== "node") return;
+    declarations?.children.forEach((decl, index) => {
+        if (decl.$ !== "node") return;
 
-            formatDeclaration(code, decl);
+        formatDeclaration(code, decl);
+        code.newLine();
+
+        if (index < declarations.children.length - 1) {
             code.newLine();
-
-            if (index < declarations.children.length - 1) {
-                code.newLine();
-            }
-        });
-    }
+        }
+    });
 
     code.dedent().add("}");
 }

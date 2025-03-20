@@ -35,15 +35,17 @@ function collectChainInfo(node: CstNode): ChainInfo {
         return result;
     }
 
-    let currentCall: undefined | ChainedCall = undefined;
-    let currentAccess: undefined | string = undefined;
-    let leadingComments: CstNode[] = [];
     let lastFieldName: undefined | string = undefined;
     if (initialExpr.$ === "node" && initialExpr.type === "Id") {
         lastFieldName = visit(initialExpr);
     }
 
-    for (const child of suffixes.children) {
+    const suffixesList = suffixes.children
+    let currentCall: undefined | ChainedCall = undefined;
+    let currentAccess: undefined | string = undefined;
+    let leadingComments: CstNode[] = [];
+
+    for (const child of suffixesList) {
         if (child.$ === "leaf") {
 
         } else if (child.type === "Comment") {
@@ -96,8 +98,8 @@ function collectChainInfo(node: CstNode): ChainInfo {
             if (currentCall) {
                 result.calls.push(currentCall);
                 currentCall = null;
-                currentAccess = lastFieldName
             }
+            currentAccess = lastFieldName
         }
     }
 
@@ -190,14 +192,20 @@ function formatChain(code: CodeBuilder, info: ChainInfo): void {
 export const formatExpression = (code: CodeBuilder, node: Cst): void => {
     if (node.$ === "node") {
         switch (node.type) {
-            case "Operator":
+            case "expression": {
+                const child = node.children[0];
+                formatExpression(code, child);
+                return
+            }
+            case "Operator": {
                 const name = node.children[0] as CstNode;
                 if (!name || !name.children) {
-                    code.add(visit(node))
+                    code.add(visit(node).trim())
                     return
                 }
-                code.add(visit(name.children[0]))
+                code.add(visit(name.children[0]).trim())
                 return
+            }
             case "StringLiteral":
                 code.add(visit(node).trim());
                 return
@@ -240,10 +248,26 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
                     if (!thenBranch || !elseBranch) {
                         throw new Error("Invalid conditional branches");
                     }
-                    code.space().add("?").space();
-                    formatExpression(code, thenBranch);
-                    code.space().add(":").space();
-                    formatExpression(code, elseBranch);
+
+                    const tmpCode = new CodeBuilder()
+                    formatExpression(tmpCode, thenBranch);
+
+                    const tmpCode2 = new CodeBuilder()
+                    formatExpression(tmpCode2, elseBranch);
+
+                    const needMultiline = tmpCode.toString().length + tmpCode2.toString().length > 70
+                    if (needMultiline) {
+                        code.newLine().indent().add("?").space();
+                        formatExpression(code, thenBranch);
+                        code.newLine().add(":").space();
+                        formatExpression(code, elseBranch);
+                        code.dedent()
+                    } else {
+                        code.space().add("?").space();
+                        formatExpression(code, thenBranch);
+                        code.space().add(":").space();
+                        formatExpression(code, elseBranch);
+                    }
                 }
                 return;
             }
@@ -278,6 +302,41 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
                 return;
             }
             case "Suffix": {
+                const suffixes = childByField(node, "suffixes");
+                if (!suffixes) {
+                    return;
+                }
+
+                const suffixesList = suffixes.children
+                if (suffixesList.length === 1) {
+                    const suffix = suffixesList[0]
+                    formatExpression(code, node.children[0])
+                    formatExpression(code, suffix)
+                    return
+                }
+
+                if (suffixesList.length === 2) {
+                    formatExpression(code, node.children[0])
+                    formatExpression(code, suffixesList[0])
+                    formatExpression(code, suffixesList[1])
+                    return
+                }
+                if (suffixesList.length === 3) {
+                    formatExpression(code, node.children[0])
+                    formatExpression(code, suffixesList[0])
+                    formatExpression(code, suffixesList[1])
+                    formatExpression(code, suffixesList[2])
+                    return
+                }
+                if (suffixesList.length === 4) {
+                    formatExpression(code, node.children[0])
+                    formatExpression(code, suffixesList[0])
+                    formatExpression(code, suffixesList[1])
+                    formatExpression(code, suffixesList[2])
+                    formatExpression(code, suffixesList[3])
+                    return
+                }
+
                 const chainInfo = collectChainInfo(node);
                 formatChain(code, chainInfo);
                 return;

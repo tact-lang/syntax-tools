@@ -5,6 +5,22 @@ import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
 import {getCommentsBetween, idText} from "./format-helpers";
 
+function trailingNewlines(node: CstNode): string {
+    const lastChild = node.children.at(-1)
+    if (lastChild.$ === "leaf" && lastChild.text.includes("\n")) {
+        return lastChild.text
+    }
+    return ""
+}
+
+function containsSeveralNewlines(text: string): boolean {
+    const index = text.indexOf("\n")
+    if (index === -1) {
+        return false
+    }
+    return text.substring(index + 1).includes("\n")
+}
+
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const statements = node.children.filter(it => it.$ === "node");
     if (statements.length === 0) {
@@ -14,12 +30,30 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
 
     code.add("{").newLine().indent();
 
-    for (const statement of statements) {
+    let needNewLine = false
+    for (const statement of node.children) {
+        if (statement.$ === "leaf") {
+            if (containsSeveralNewlines(statement.text)) {
+                needNewLine = true;
+            }
+            continue
+        }
+
+        if (needNewLine) {
+            code.newLine();
+            needNewLine = false
+        }
+
         if (statement.type === "Comment") {
             code.add(visit(statement));
         } else if (statement.group === "statement") {
             formatStatement(code, statement);
+            const newlines = trailingNewlines(statement)
+            if (containsSeveralNewlines(newlines)) {
+                needNewLine = true
+            }
         }
+
         code.newLine();
     }
 
@@ -82,7 +116,7 @@ function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end
 
 const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
-    const type = childByType(node, "type");
+    const type = childByField(node, "type");
     const init = childByField(node, "init");
     const assign = childLeafWithText(node, "=");
 
@@ -140,11 +174,12 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
 
     formatExpression(code, left);
 
+    code.space()
     if (operator && operator.$ === "node") {
-        code.space().add(visit(operator));
+        code.add(visit(operator));
     }
 
-    code.space().add("=").space();
+    code.add("=").space();
     processInlineComments(node, code, assign, right);
 
     formatExpression(code, right);
@@ -155,7 +190,7 @@ const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
     const ifKeyword = childLeafWithText(node, "if");
     const condition = childByField(node, "condition");
     const trueBranch = childByField(node, "trueBranch");
-    const falseBranch = childByType(node, "falseBranch");
+    const falseBranch = childByField(node, "falseBranch");
 
     if (!condition || !trueBranch) {
         throw new Error("Invalid condition statement");
@@ -281,7 +316,7 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
 
 const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
     const body = childByField(node, "body");
-    const handler = childByType(node, "handler");
+    const handler = childByField(node, "handler");
 
     if (!body) {
         throw new Error("Invalid try statement");

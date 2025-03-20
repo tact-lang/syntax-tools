@@ -6,7 +6,7 @@ import {simplifyCst} from "./simplify-cst";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
-const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
+const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
 
     // struct Foo {
     //     name: String;
@@ -14,10 +14,22 @@ const code = // fs.readFileSync("jetton_wallet.tact", "utf8");
     // }
 
 `
-// Import standard library
-import "stdlib";
+import "";
 
-fun foo() {}
+message(0x100) Foo {
+    foo: Int as int64;
+    bar: map<Int, Int>;
+}
+
+contract Foo() with Ownable {
+    foo: Int = 100;
+    receive(p: Param){
+        let a: Ty = 10;
+        a += 100;
+        
+        try {} catch (e) {}
+    }
+}
 `;
 
 
@@ -34,6 +46,12 @@ fun foo() {}
 //         .call();
 // }
 
+// foo()
+//     .other(1, 2,
+//         bar()
+//             .some()
+//             .param
+//     ).call();
 
 const ctx = createContext(code, space);
 
@@ -192,6 +210,8 @@ fs.writeFileSync("out.tact", visit(root))
 console.log(visit(root) === code)
 
 console.log(format(root));
+
+fs.writeFileSync("minter.fmt.tact", format(root))
 
 // const module = childByType(root, "Module")!
 // const itemsNode = childByField(module, "items")

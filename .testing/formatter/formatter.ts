@@ -4,7 +4,7 @@ import {formatFunction} from "./format-declarations";
 import {formatStatement} from "./format-statements";
 import {formatExpression} from "./format-expressions";
 import {visit, childByField} from "../cst-helpers";
-import {formatContract, formatTrait} from "./format-contracts";
+import {formatConstant, formatContract, formatTrait} from "./format-contracts";
 import {formatMessage, formatStruct} from "./format-structs";
 import {formatImport} from "./format-imports";
 
@@ -28,6 +28,7 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                     code.newLine();
                 }
             });
+            code.newLine()
             break;
 
         case "Module":
@@ -74,8 +75,11 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
         case "MessageDecl":
             formatMessage(code, node);
             break;
+        case "Constant":
+            formatConstant(code, node);
+            break;
         case "Comment":
-            code.add(visit(node));
+            code.add(visit(node).trim());
             break;
         case "StatementDestruct":
         case "StatementRepeat":
@@ -97,7 +101,7 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
             } else if (node.group === "expression") {
                 formatExpression(code, node);
             } else {
-                code.add(visit(node));
+                code.add(visit(node).trim());
             }
     }
 };

@@ -1,4 +1,4 @@
-import {childByField, childByType, visit} from "../cst-helpers";
+import {childByField} from "../cst-helpers";
 import {CstNode} from "../result";
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
@@ -12,7 +12,7 @@ export function formatImport(code: CodeBuilder, node: CstNode): void {
     if (!path) {
         throw new Error("Invalid import node structure");
     }
-    const value = childByType(path, "value");
+    const value = childByField(path, "value");
     if (!value) {
         throw new Error("Invalid import node structure");
     }

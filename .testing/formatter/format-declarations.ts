@@ -8,7 +8,7 @@ import {formatStatements} from "./format-statements";
 export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
     const parameters = childByField(node, "parameters");
-    const returnType = childByType(node, "returnType");
+    const returnType = childByField(node, "returnType");
     const body = childByField(node, "body");
 
     if (!name || !parameters || !body) {
@@ -18,7 +18,7 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
     const attributes = childByField(node, "attributes");
     if (attributes) {
         const attrs = childrenByType(attributes, "FunctionAttribute");
-        attrs.forEach((attr, i) => {
+        attrs.forEach((attr) => {
             const attrName = childByField(attr, "name");
             if (!attrName) return;
             const child = attrName.children[0]
@@ -43,7 +43,6 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         formatAscription(code, paramType);
     });
 
-    // Add return type if present
     if (returnType) {
         formatAscription(code, returnType);
     }

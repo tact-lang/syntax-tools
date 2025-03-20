@@ -70,7 +70,7 @@ const formatTypeRegular = (code: CodeBuilder, node: CstNode): void => {
 
 const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");
-    const args = childByType(node, "args");
+    const args = childByField(node, "args");
 
     if (!name || !args) {
         throw new Error("Invalid generic type");
@@ -93,7 +93,7 @@ const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
 
 const formatTypeAs = (code: CodeBuilder, node: CstNode): void => {
     const type = childByField(node, "type");
-    const asTypes = childByType(node, "as") as CstNode
+    const asTypes = childByField(node, "as")
 
     if (!type) {
         throw new Error("Invalid 'as' type");

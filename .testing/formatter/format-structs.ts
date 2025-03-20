@@ -1,5 +1,5 @@
 import {CstNode} from "../result";
-import {childByField, childByType} from "../cst-helpers";
+import {childByField} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {idText} from "./format-helpers";
 import {formatExpression} from "./format-expressions";
@@ -36,7 +36,7 @@ export function formatStruct(code: CodeBuilder, node: CstNode): void {
 export function formatMessage(code: CodeBuilder, node: CstNode): void {
     code.add("message");
 
-    const opcode = childByType(node, "opcode");
+    const opcode = childByField(node, "opcode");
     if (opcode && opcode.$ === "node") {
         code.add("(");
         const expression = opcode.children.find(it => it.$ === "node")

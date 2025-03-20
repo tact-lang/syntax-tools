@@ -66,7 +66,7 @@ export const CstLeaf = (text: string): CstLeaf => ({
 
 export const CstNode = (children: readonly Cst[], type: string = "unknown", field: string = "", group: string = ""): CstNode => {
   if (children.length === 1 && children[0].$ === "node" && children[0].type === "") {
-    return CstNode(children[0].children, type)
+    return CstNode(children[0].children, type, field, group)
   }
 
   const process = (ch: Cst): readonly Cst[] => {

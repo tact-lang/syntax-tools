@@ -143,7 +143,7 @@ export const formatCommaSeparatedList = (
             }
         });
 
-        items.forEach((item, index) => {
+        items.forEach((item) => {
             item.leadingComments.forEach(comment => {
                 code.add(visit(comment.node));
                 if (comment.hasNewline) {
@@ -181,7 +181,7 @@ export const formatCommaSeparatedList = (
             code.add(options.extraWrapperSpace);
         }
 
-        info.leadingComments.forEach((comment, index) => {
+        info.leadingComments.forEach((comment) => {
             code.add(visit(comment.node));
 
             if (comment.hasNewline) {
