@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, childrenByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {idText} from "./format-helpers";
+import {formatId} from "./format-helpers";
 
 export const formatType = (code: CodeBuilder, node: Cst): void => {
     if (node.$ !== "node") {
@@ -108,7 +108,7 @@ const formatTypeAs = (code: CodeBuilder, node: CstNode): void => {
         const children = nonLeafChild(asTypeOpt);
         if (children) {
             code.space().add("as").space();
-            code.add(idText(children))
+            code.apply(formatId, children)
         }
     }
 };

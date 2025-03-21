@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childLeafWithText, childrenByType, nonLeafChild, visit} from "../cst-helpers";
+import {childByField, childLeafWithText, childrenByType, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatSeparatedList, idText} from "./format-helpers";
+import {formatId, formatSeparatedList, idText} from "./format-helpers";
 import {formatAscription} from "./format-types";
 import {formatStatements} from "./format-statements";
 import {formatExpression} from "./format-expressions";
@@ -18,7 +18,7 @@ export const formatParameter = (code: CodeBuilder, param: CstNode): void => {
     if (!name || !type) {
         throw new Error("Invalid parameter");
     }
-    code.add(idText(name));
+    code.apply(formatId, name);
     formatAscription(code, type)
 }
 
@@ -115,7 +115,7 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
 
     formatAttributes(attributes, code);
 
-    code.add("native").space().add(idText(name));
+    code.add("native").space().apply(formatId, name);
 
     formatSeparatedList(code, parameters, formatParameter);
 
@@ -158,7 +158,7 @@ export const formatAsmFunction = (code: CodeBuilder, node: CstNode): void => {
     code.space();
     formatAttributes(attributes, code);
 
-    code.add("fun").space().add(idText(name));
+    code.add("fun").space().apply(formatId, name);
 
     formatSeparatedList(code, parameters, formatParameter);
 
@@ -192,7 +192,7 @@ function formatShuffle(code: CodeBuilder, node: CstNode): void {
 
     if (ids) {
         formatSeparatedList(code, ids, (code, id) => {
-            code.add(idText(id));
+            code.apply(formatId, id);
         }, {
             wrapperLeft: "",
             wrapperRight: "",
@@ -247,5 +247,5 @@ export const formatPrimitiveType = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid primitive type declaration");
     }
 
-    code.add("primitive").space().add(idText(name)).add(";");
+    code.add("primitive").space().apply(formatId, name).add(";");
 };

@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childrenByType, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatSeparatedList, idText} from "./format-helpers";
+import {formatId, formatSeparatedList, idText} from "./format-helpers";
 import {formatFunction, formatParameter} from "./format-declarations";
 import {formatStatements} from "./format-statements";
 import {formatAscription} from "./format-types";
@@ -152,7 +152,7 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     }
 
     // const FOO: Int
-    code.add("const").space().add(idText(name)).apply(formatAscription, type);
+    code.add("const").space().apply(formatId, name).apply(formatAscription, type);
 
     if (body.type === "ConstantDefinition") {
         // const Foo: Int = 100;
@@ -195,7 +195,7 @@ export function formatFieldDecl(code: CodeBuilder, decl: CstNode): void {
     }
 
     // foo: Int
-    code.add(idText(name)).apply(formatAscription, type);
+    code.apply(formatId, name).apply(formatAscription, type);
 
     if (initOpt) {
         // foo: Int = 100;
@@ -260,7 +260,7 @@ function formatInheritedTraits(code: CodeBuilder, node: CstNode): void {
     const namesIndex = traitsOpt.children.findIndex(it => it.$ === "node" && it.type === "Id");
 
     formatSeparatedList(code, traitsOpt, (code, trait) => {
-        code.add(idText(trait));
+        code.apply(formatId, trait);
     }, {
         wrapperLeft: "",
         wrapperRight: "",

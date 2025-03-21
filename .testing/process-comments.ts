@@ -400,7 +400,7 @@ export const processDocComments = (node: Cst): Cst => {
         }
     }
 
-    if (node.type === "body") {
+    if (node.type === "body" || node.type === "trueBranch") {
         let endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
 
         let pendingComments: Cst[] = []
@@ -438,6 +438,10 @@ export const processDocComments = (node: Cst): Cst => {
                     owner.children = owner.children.slice(0, res.startIndex)
                 }
             }
+        }
+
+        if (pendingComments.length > 0) {
+            node.children.splice(endIndex, 0, ...pendingComments)
         }
     }
 

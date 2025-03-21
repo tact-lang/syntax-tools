@@ -244,3 +244,13 @@ export const idText = (node: Cst): string => {
     if (!child) return;
     return visit(child);
 }
+
+export const formatId = (code: CodeBuilder, node: CstNode) => {
+    const name = idText(node);
+    code.add(name)
+
+    const comments = node.children.filter(it => it.$ === "node" && it.type === "Comment");
+    comments.forEach(comment => {
+        code.add(visit(comment))
+    })
+}

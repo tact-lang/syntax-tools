@@ -1,11 +1,9 @@
-import {Builder, createContext, Cst, CstLeaf, CstNode, Module, skip, space} from "./result";
+import {Builder, createContext, Cst, CstNode, Module, skip, space} from "./result";
 import {inspect} from "util";
 import * as fs from "fs";
 import {format} from "./formatter/formatter";
 import {simplifyCst} from "./simplify-cst";
 import {processDocComments} from "./process-comments";
-import {childByField, childByType, childrenByGroup} from "./cst-helpers";
-import {idText} from "./formatter/format-helpers";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
@@ -16,6 +14,11 @@ const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/i
     //     name: String;
     //     value: Int;
     // }
+
+`
+// top comment
+import "";
+`;
 
 `
 fun foo() {

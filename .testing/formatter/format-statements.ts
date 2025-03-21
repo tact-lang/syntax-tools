@@ -3,7 +3,7 @@ import {childByField, childByType, childLeafWithText, nonLeafChild, visit} from 
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
-import {formatSeparatedList, getCommentsBetween, idText} from "./format-helpers";
+import {formatId, formatSeparatedList, getCommentsBetween} from "./format-helpers";
 
 function trailingNewlines(node: CstNode): string {
     const lastChild = node.children.at(-1)
@@ -21,23 +21,35 @@ function containsSeveralNewlines(text: string): boolean {
     return text.substring(index + 1).includes("\n")
 }
 
+function processStatementsInlineComments(code: CodeBuilder, node: CstNode, endIndex: number) {
+    const afterBody = node.children.slice(endIndex + 1)
+    const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment");
+    if (comments.length > 0) {
+        code.space();
+        comments.forEach(comment => {
+            code.add(visit(comment))
+        })
+    }
+}
+
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
-    const statements = node.children.filter(it => it.$ === "node");
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
     if (statements.length === 0) {
         code.add("{}")
+        processStatementsInlineComments(code, node, endIndex)
         return
     }
 
     code.add("{").newLine().indent();
-
-    let endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
 
     let needNewLine = false
 
     for (let i = 0; i < endIndex; i++) {
         const statement = node.children[i];
         if (statement.$ === "leaf") {
-            if (containsSeveralNewlines(statement.text)) {
+            // don't add extra leading line
+            if (i !== 1 && containsSeveralNewlines(statement.text)) {
                 needNewLine = true;
             }
             continue
@@ -79,14 +91,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
 
     code.dedent().add("}");
 
-    const afterBody = node.children.slice(endIndex + 1)
-    const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment");
-    if (comments.length > 0) {
-        code.space();
-        comments.forEach(comment => {
-            code.add(visit(comment))
-        })
-    }
+    processStatementsInlineComments(code, node, endIndex);
 };
 
 export const formatStatement = (code: CodeBuilder, node: Cst): void => {
@@ -185,7 +190,7 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid let statement");
     }
 
-    code.add("let").space().add(idText(name));
+    code.add("let").space().apply(formatId, name);
 
     if (typeOpt) {
         processInlineComments(node, code, name, typeOpt);
@@ -328,7 +333,7 @@ const formatDestructField = (code: CodeBuilder, field: Cst) => {
             throw new Error("Invalid regular field in destruct");
         }
 
-        code.add(idText(fieldName)).add(":").space().add(idText(varName));
+        code.apply(formatId, fieldName).add(":").space().apply(formatId, varName);
     } else if (field.type === "PunnedField") {
         // foo
         // ^^^ this
@@ -336,7 +341,7 @@ const formatDestructField = (code: CodeBuilder, field: Cst) => {
         if (!name) {
             throw new Error("Invalid punned field in destruct");
         }
-        code.add(idText(name));
+        code.apply(formatId, name);
     }
 };
 
@@ -366,9 +371,12 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
 
     const restArg = restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
 
-    if (fields.type === "PunnedField") {
+    if (fields.type === "PunnedField" || fields.type === "RegularField") {
         code.add("{ ")
         formatDestructField(code, fields);
+        if (restArg) {
+            code.add(", ..")
+        }
         code.add(" }")
     } else {
         formatSeparatedList(code, fields, formatDestructField, {
@@ -458,7 +466,7 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
             throw new Error("Invalid catch handler");
         }
 
-        code.space().add("catch").space().add("(").add(idText(name)).add(")").space();
+        code.space().add("catch").space().add("(").apply(formatId, name).add(")").space();
         formatStatements(code, handlerBody);
     }
 };
@@ -481,7 +489,7 @@ const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
     }
 
     code.add("foreach").space().add("(");
-    code.add(idText(key)).add(",").space().add(idText(value)).space().add("in").space();
+    code.apply(formatId, key).add(",").space().apply(formatId, value).space().add("in").space();
     formatExpression(code, expression);
     code.add(")").space();
     formatStatements(code, body);

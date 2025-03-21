@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatSeparatedList, idText} from "./format-helpers";
+import {formatId, formatSeparatedList} from "./format-helpers";
 import {formatType} from "./format-types";
 
 interface ChainedCall {
@@ -240,6 +240,11 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             code.add("(").apply(formatExpression, expression).add(")")
             return
         }
+        case "condition": {
+            const expression = nonLeafChild(node)
+            code.add("(").apply(formatExpression, expression).add(")")
+            return
+        }
         case "Conditional": {
             formatConditional(node, code);
             return;
@@ -329,7 +334,7 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return;
         }
         case "Id":
-            code.add(idText(node));
+            code.apply(formatId, node);
             return;
     }
 
@@ -396,7 +401,7 @@ function formatInitOf(code: CodeBuilder, node: CstNode) {
         throw new Error("Invalid initOf expression");
     }
 
-    code.space().add(idText(name));
+    code.space().apply(formatId, name);
     formatSeparatedList(code, params, formatExpression);
 }
 
@@ -409,7 +414,7 @@ function formatCodeOf(code: CodeBuilder, node: CstNode) {
         throw new Error("Invalid codeOf expression");
     }
 
-    code.space().add(idText(name));
+    code.space().apply(formatId, name);
 }
 
 const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {

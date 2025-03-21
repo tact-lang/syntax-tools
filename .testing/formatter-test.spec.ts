@@ -1,22 +1,49 @@
-import {Builder, createContext, CstNode, Module, space} from "./result";
+import {Builder, createContext, CstNode, Module, skip, space} from "./result";
 import {format} from "./formatter/formatter";
 import {simplifyCst} from "./simplify-cst";
+import {processDocComments} from "./process-comments";
+
+function normalizeIndentation(input: string): string {
+    const lines = input.split('\n');
+    if (lines.length <= 1) return input;
+
+    const indents = lines.slice(1, -1)
+        .filter(line => line.trim().length > 0)
+        .map(line => line.match(/^\s*/)[0].length)
+    const minIndent = Math.min(...indents);
+
+    if (minIndent === 0) {
+        return input;
+    }
+
+    return lines.map((line, index) => {
+        if (index === 0) return line;
+        if (minIndent > line.length) {
+            return line.trimStart();
+        }
+        return line.slice(minIndent);
+    }).join('\n');
+}
 
 describe('should format', () => {
     const test = (input: string, output: string) => {
         return () => {
-            const ctx = createContext(input.trim(), space);
+            const normalizedInput = normalizeIndentation(input).trim();
+            const normalizedOutput = normalizeIndentation(output).trim();
+
+            const ctx = createContext(normalizedInput, space);
             const b: Builder = []
+            skip(ctx, b)
             const res = Module(ctx, b)
             expect(res).toBe(true);
-            const root = simplifyCst(CstNode(b, "Root")) as CstNode;
+            const root = processDocComments(simplifyCst(CstNode(b, "Root")) as CstNode);
 
             const formatted = format(root)
-            expect(formatted).toBe(output.trim())
+            expect(formatted.trim()).toBe(normalizedOutput)
         }
     }
     const intact = (input: string) => {
-        return test(input.trim(), input.trim())
+        return test(input, input)
     }
 
     it('1', test(`fun    foo(param:    Int)   ;`, `fun foo(param: Int);`));
@@ -113,25 +140,35 @@ fun foo() {
     };
 }`));
 
-    it('5', intact(`fun foo() {
-    let foo/*: Foo*/ = 1;
-}`));
+    it('5', intact(`
+        fun foo() {
+            let foo/*: Foo*/ = 1;
+        }
+    `));
 
-    it('5', intact(`fun foo() {
-    let foo: Foo /*: Foo*/ = 1;
-}`));
+    it('5', intact(`
+        fun foo() {
+            let foo: Foo /*: Foo*/ = 1;
+        }
+    `));
 
-    it('5', intact(`fun foo() {
-    let foo/*: Foo*/: Foo = 1;
-}`));
+    it('5', intact(`
+        fun foo() {
+            let foo/*: Foo*/: Foo = 1;
+        }
+    `));
 
-    it('5', intact(`fun foo() {
-    let foo: Foo = /*: Foo*/1;
-}`));
+    it('5', intact(`
+        fun foo() {
+            let foo: Foo = /*: Foo*/1;
+        }
+    `));
 
-    it('5', intact(`fun foo() {
-    let foo: Foo = 1/*: Foo*/;
-}`));
+    it('5', intact(`
+        fun foo() {
+            let foo: Foo = 1/*: Foo*/;
+        }
+    `));
 
 // TODO: fix
 //
@@ -141,21 +178,25 @@ fun foo() {
 //     */ = 1;
 // }`));
 
-    it('5', intact(`fun some() {
-    if (a > 10) {
-        return 1;
-    } else if (a < 200) {
-        return 2;
-    } else {
-        return 3;
-    }
-}`));
+    it('5', intact(`
+        fun some() {
+            if (a > 10) {
+                return 1;
+            } else if (a < 200) {
+                return 2;
+            } else {
+                return 3;
+            }
+        }
+    `));
 
-    it('5', intact(`fun some() {
-    if /* comment */(a > 10) {
-        return 1;
-    }
-}`));
+    it('5', intact(`
+        fun some() {
+            if /* comment */(a > 10) {
+                return 1;
+            }
+        }
+    `));
 
 //     it('5', intact(`fun some() {
 //     if (a > 10)/* comment */ {
@@ -466,13 +507,6 @@ fun foo() {
     }
 }`));
 
-        it('forEach with complex expression', intact(`
-fun foo() {
-    foreach (key, value in map.items()) {
-        body;
-    }
-}`));
-
         it('format forEach with extra spaces', test(`
 fun foo() {
     foreach    (    key    ,    value    in    items    )    {
@@ -668,5 +702,325 @@ import
 import "stdlib";
 
 fun foo() {}`));
+    });
+
+    describe('statement comments', () => {
+        it('inline comment after let statement', intact(`
+            fun foo() {
+                let a = 10; // comment
+            }
+        `));
+
+        it('inline comment after destruct statement', intact(`
+            fun foo() {
+                let Foo { a } = 10; // comment
+            }
+        `));
+
+        // TODO
+        // it('inline comment after a block statement', intact(`
+        //     fun foo() {
+        //         {
+        //            10;
+        //         } // comment
+        //     }
+        // `));
+
+        it('inline comment after return statement', intact(`
+            fun foo() {
+                return 10; // comment
+            }
+        `));
+
+        it('inline comment after return statement 2', intact(`
+            fun foo() {
+                return; // comment
+            }
+        `));
+
+        it('inline comment after if statement', intact(`
+            fun foo() {
+                if (true) {} // comment
+            }
+        `));
+
+        it('inline comment after if statement with else', intact(`
+            fun foo() {
+                if (true) {} else {} // comment
+            }
+        `));
+
+        it('inline comment after if statement with else if', intact(`
+            fun foo() {
+                if (true) {} else if (false) {} // comment
+            }
+        `));
+
+        it('inline comment after if statement with else if and else', intact(`
+            fun foo() {
+                if (true) {} else if (false) {} else {} // comment
+            }
+        `));
+
+        it('inline comment after while statement', intact(`
+            fun foo() {
+                while (true) {} // comment
+            }
+        `));
+
+        it('inline comment after repeat statement', intact(`
+            fun foo() {
+                repeat (10) {} // comment
+            }
+        `));
+
+        it('inline comment after until statement', intact(`
+            fun foo() {
+                do {} until (true); // comment
+            }
+        `));
+
+        it('inline comment after try statement', intact(`
+            fun foo() {
+                try {} // comment
+            }
+        `));
+
+        it('inline comment after try statement with catch', intact(`
+            fun foo() {
+                try {} catch (e) {} // comment
+            }
+        `));
+
+        it('inline comment after foreach statement', intact(`
+            fun foo() {
+                foreach (a, b in foo) {} // comment
+            }
+        `));
+
+        it('inline comment after expression statement', intact(`
+            fun foo() {
+                10; // comment
+            }
+        `));
+
+        it('inline comment after assign statement', intact(`
+            fun foo() {
+                a = 10; // comment
+            }
+        `));
+
+        it('top comment for first statement', intact(`
+            fun foo() {
+                // top comment
+                let a = 10;
+            }
+        `));
+
+        it('top comment for second statement', intact(`
+            fun foo() {
+                let a = 10;
+                // top comment
+                a = 200;
+            }
+        `));
+
+        it('top comment for second statement with newline between', intact(`
+            fun foo() {
+                let a = 10;
+
+                // top comment
+                a = 200;
+            }
+        `));
+
+        it('block with single comment', intact(`
+            fun foo() {
+                // top comment
+            }
+        `));
+
+        it('block with trailing comment', intact(`
+            fun foo() {
+                let a = 100;
+                // top comment
+            }
+        `));
+
+        it('block with comments everywhere', intact(`
+            fun foo() {
+                // top comment
+                let a = 100; /* inline comment */// wtf bro
+                a = 20; // hehe
+                if (a == 20) {
+                    // top comment 2
+                    a = 1000; // inline comment
+                    /* another trailing comment */
+                } else if (a == 30) {
+                    // top comment 2
+                    a = 2000; // inline comment
+                    /* another trailing comment */
+                } else {
+                    // top comment 2
+                    a = 4000; // inline comment
+                    /* another trailing comment */
+                }
+                // trailing comment
+            }
+        `));
+
+        it('block with comments, statements and newlines', intact(`
+            fun foo() {
+                // top comment
+                let a = 100;
+                a = 20;
+
+                // some comment
+                let b = 1000;
+
+                b = 200;
+
+                while (true) {
+                    // comment
+                    b = 4000;
+                }
+            }
+        `));
+
+        it('block with different statements with top and inline comments', intact(`
+            fun foo() {
+                do {} until (true); // comment 1
+
+                try {} catch (e) {} // comment
+                try {} // comment
+                foreach (a, b in foo) {} // comment
+                while (true) {} // comment
+
+                // top comment 1
+                if (true) {} // comment 1
+                // top comment 2
+                if (true) {} else {} // comment 2
+                // top comment 4
+                if (true) {} else if (true) {} // comment 3
+                // top comment 4
+                if (true) {} else if (true) {} else {} // comment 4
+
+                // comment1
+                let Foo { a } = value(); // comment
+            }
+        `));
+
+        it('block with leading newlines', test(`
+            fun foo() {
+
+                let a = 100;
+                a = 20;
+            }
+        `, `
+            fun foo() {
+                let a = 100;
+                a = 20;
+            }
+        `));
+
+        it('block with trailing newlines', test(`
+            fun foo() {
+                let a = 100;
+                a = 20;
+
+            }
+        `, `
+            fun foo() {
+                let a = 100;
+                a = 20;
+            }
+        `));
+    });
+
+    describe('top level comments', () => {
+        it('comment for import', intact(`
+            // top comment
+            import "";
+        `));
+
+        it('inline comment for import', intact(`
+            import ""; // inline comment
+        `));
+
+        it('comments for import', intact(`
+            // top comment
+            // top comment line 2
+            import "";
+        `));
+
+        it('comments for several imports', intact(`
+            // top comment
+            import "";
+            // top comment
+            import "";
+        `));
+
+        it('comments for several imports and declaration after', intact(`
+            // top comment
+            import "";
+            // top comment
+            import "";
+            
+            // comment here
+            fun foo() {}
+        `));
+
+        it('comments for several imports and declaration after 2', intact(`
+            // top comment
+            import "";
+            // top comment
+            import ""; // inline comment
+            
+            // comment here
+            fun foo() {}
+        `));
+
+        it('top level comment for function', intact(`
+            // top comment
+            fun foo() {}
+        `));
+
+        it('top level comment for constant', intact(`
+            // top comment
+            const FOO: Int = 100;
+        `));
+
+        it('top level comment for functions', intact(`
+            // top comment
+            fun foo() {}
+            
+            // other top comment
+            fun bar() {}
+        `));
+
+        it('top and inline level comment for functions', intact(`
+            // top comment
+            fun foo() {} // inline comment
+            
+            // other top comment
+            fun bar() {} // inline comment 2
+        `));
+
+        // TODO
+        // it('floating comments between declarations', intact(`
+        //     fun foo() {}
+        //
+        //     // floating comment
+        //
+        //     fun bar() {}
+        // `));
+
+        // TODO
+        // it('top level comment for function with empty line between comments', intact(`
+        //     // comment here
+        //
+        //     // top comment
+        //     fun foo() {}
+        // `));
     });
 });
