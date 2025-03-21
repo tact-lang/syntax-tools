@@ -30,10 +30,12 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
 
     code.add("{").newLine().indent();
 
-    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
+    let endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
 
     let needNewLine = false
-    for (const statement of node.children.slice(0, endIndex)) {
+
+    for (let i = 0; i < endIndex; i++) {
+        const statement = node.children[i];
         if (statement.$ === "leaf") {
             if (containsSeveralNewlines(statement.text)) {
                 needNewLine = true;
@@ -53,6 +55,22 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
             const newlines = trailingNewlines(statement)
             if (containsSeveralNewlines(newlines)) {
                 needNewLine = true
+            }
+
+            const anchor = statementAnchor(statement)
+            const anchorIndex = statement.children.findIndex(it => it.$ === "leaf" && it.text === anchor);
+
+            if (anchorIndex !== -1) {
+                const comments = statement.children
+                    .slice(anchorIndex + 1)
+                    .filter(it => it.$ === "node" && it.type === "Comment")
+
+                if (comments.length > 0) {
+                    code.space();
+                    comments.forEach(comment => {
+                        code.add(visit(comment))
+                    })
+                }
             }
         }
 
@@ -118,6 +136,31 @@ export const formatStatement = (code: CodeBuilder, node: Cst): void => {
     }
 };
 
+const statementAnchor = (node: Cst): string => {
+    if (node.$ !== "node") {
+        return ""
+    }
+
+    switch (node.type) {
+        case "StatementExpression":
+        case "StatementReturn":
+        case "StatementDestruct":
+        case "StatementLet":
+        case "StatementAssign":
+        case "StatementUntil":
+            return ";"
+        case "StatementCondition":
+        case "StatementRepeat":
+        case "StatementWhile":
+        case "StatementTry":
+        case "StatementForEach":
+        case "StatementBlock":
+            return "}"
+        default:
+            throw new Error(`Unsupported statement type: ${node.type}`);
+    }
+};
+
 function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end: Cst) {
     const comments = getCommentsBetween(node, start, end)
     comments.forEach(comment => {
@@ -161,7 +204,7 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
 
 const formatReturnStatement = (code: CodeBuilder, node: CstNode): void => {
     // return 100;
-    // ^^^^^^ ^^^^
+    // ^^^^^^ ^^^
     // |      |
     // |      exprOpt
     // |
@@ -270,6 +313,33 @@ const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
     formatStatements(code, body);
 };
 
+const formatDestructField = (code: CodeBuilder, field: Cst) => {
+    if (field.$ !== "node") return
+
+    if (field.type === "RegularField") {
+        // foo: bar
+        // ^^^  ^^^
+        // |    |
+        // |    fieldName
+        // varName
+        const fieldName = childByField(field, "fieldName");
+        const varName = childByField(field, "varName");
+        if (!fieldName || !varName) {
+            throw new Error("Invalid regular field in destruct");
+        }
+
+        code.add(idText(fieldName)).add(":").space().add(idText(varName));
+    } else if (field.type === "PunnedField") {
+        // foo
+        // ^^^ this
+        const name = childByField(field, "name");
+        if (!name) {
+            throw new Error("Invalid punned field in destruct");
+        }
+        code.add(idText(name));
+    }
+};
+
 const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
     // let Foo { arg, foo: param, .. } = foo();
     //     ^^^   ^^^^^^^^^^^^^^^  ^^   ^ ^^^^^
@@ -296,40 +366,21 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
 
     const restArg = restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
 
-    formatSeparatedList(code, fields, (code, field) => {
-        if (field.$ !== "node") return
-
-        if (field.type === "RegularField") {
-            // foo: bar
-            // ^^^  ^^^
-            // |    |
-            // |    fieldName
-            // varName
-            const fieldName = childByField(field, "fieldName");
-            const varName = childByField(field, "varName");
-            if (!fieldName || !varName) {
-                throw new Error("Invalid regular field in destruct");
-            }
-
-            code.add(idText(fieldName)).add(":").space().add(idText(varName));
-        } else if (field.type === "PunnedField") {
-            // foo
-            // ^^^ this
-            const name = childByField(field, "name");
-            if (!name) {
-                throw new Error("Invalid punned field in destruct");
-            }
-            code.add(idText(name));
-        }
-    }, {
-        wrapperLeft: "{",
-        wrapperRight: "}",
-        extraWrapperSpace: " ",
-        startIndex: 0,
-        endIndex: 0,
-        suffixElement: restArg,
-        needSeparatorAfterSuffixElement: false, // comma is forbidden after `..`
-    })
+    if (fields.type === "PunnedField") {
+        code.add("{ ")
+        formatDestructField(code, fields);
+        code.add(" }")
+    } else {
+        formatSeparatedList(code, fields, formatDestructField, {
+            wrapperLeft: "{",
+            wrapperRight: "}",
+            extraWrapperSpace: " ",
+            startIndex: 0,
+            endIndex: 0,
+            suffixElement: restArg,
+            needSeparatorAfterSuffixElement: false, // comma is forbidden after `..`
+        })
+    }
 
     code.space().add("=").space();
     formatExpression(code, init);

@@ -1,10 +1,11 @@
 import {Cst, CstNode} from "./result";
-import {childByField} from "./cst-helpers";
+import {childByField, childByType} from "./cst-helpers";
 
 let pendingComments: Cst[] = []
 
 interface CommentsExtraction {
     comments: Cst[]
+    inlineComments: Cst[]
     startIndex: number
 }
 
@@ -50,7 +51,7 @@ function extractComments([commentPoint, anchor]: [CstNode, string]): undefined |
     const inlineCommentsIndex = actualAnchorIndex + followingLeafs.findIndex(it => it.$ === "leaf" && it.text.includes("\n"))
 
     // all before, inline comments that we don't touch
-    // const _inlineComments = commentPoint.children.slice(0, inlineCommentsIndex - 1)
+    const inlineComments = followingLeafs.slice(0, inlineCommentsIndex - actualAnchorIndex)
 
     // all after newline (inclusive)
     const remainingLeafs = commentPoint.children.slice(inlineCommentsIndex)
@@ -65,7 +66,8 @@ function extractComments([commentPoint, anchor]: [CstNode, string]): undefined |
 
     return {
         comments: remainingLeafs,
-        startIndex: inlineCommentsIndex + 1
+        inlineComments: inlineComments.filter(it => it.$ === "node" && it.type === "Comment"),
+        startIndex: inlineCommentsIndex // + 1
     }
 }
 
@@ -398,8 +400,116 @@ export const processDocComments = (node: Cst): Cst => {
         }
     }
 
+    if (node.type === "body") {
+        let endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
+
+        let pendingComments: Cst[] = []
+
+        for (let i = 0; i < endIndex; i++){
+            const statement = node.children[i];
+            if (statement.$ === "leaf") {
+                continue
+            }
+
+            if (pendingComments.length > 0) {
+                node.children.splice(i, 0, ...pendingComments)
+                endIndex += pendingComments.length
+                pendingComments = []
+                continue
+            }
+
+            if (statement.group === "statement") {
+                const anchor = statementAnchor(statement)
+
+                const found = findStatementNodeWithComments(statement);
+                if (!found) {
+                    continue;
+                }
+
+                const ownerAndAnchor = found
+                if (!ownerAndAnchor[0]) {
+                    continue;
+                }
+                const owner = ownerAndAnchor[0]
+
+                const res = extractComments([owner, anchor])
+                if (res) {
+                    pendingComments = res.comments
+                    owner.children = owner.children.slice(0, res.startIndex)
+                }
+            }
+        }
+    }
+
     return {
         ...node,
         children: node.children.flatMap(it => processDocComments(it)),
     }
 }
+
+const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
+    if (node.type === "StatementWhile" || node.type === "StatementForEach" || node.type === "StatementRepeat") {
+        const body = childByField(node, "body");
+        return [body, "}"]
+    }
+
+    if (node.type === "StatementBlock") {
+        return [node, "}"]
+    }
+
+    if (node.type === "StatementTry") {
+        const body = childByField(node, "body");
+        const handler = childByField(node, "handler");
+        if (!handler) {
+            return [body, "}"]
+        }
+        const handlerBody = childByField(handler, "body");
+        return [handlerBody, "}"]
+    }
+
+    if (node.type === "StatementCondition") {
+        const trueBranch = childByField(node, "trueBranch");
+        const falseBranch = childByField(node, "falseBranch");
+        if (!falseBranch) {
+            return [trueBranch, "}"]
+        }
+        const falseBranch2 = childByType(falseBranch, "FalseBranch");
+        if (falseBranch2) {
+            const body = childByField(falseBranch2, "body");
+            return [body, "}"]
+        }
+
+        const falseBranchIf = childByType(falseBranch, "StatementCondition");
+        if (!falseBranchIf || falseBranchIf.$ === "leaf") {
+            return undefined
+        }
+        return findStatementNodeWithComments(falseBranchIf)
+    }
+
+    return [node, ";"]
+}
+
+const statementAnchor = (node: Cst): string => {
+    if (node.$ !== "node") {
+        return ""
+    }
+
+    switch (node.type) {
+        case "StatementExpression":
+        case "StatementReturn":
+        case "StatementDestruct":
+        case "StatementLet":
+        case "StatementAssign":
+        case "StatementUntil":
+            return ";"
+        case "StatementCondition":
+        case "StatementWhile":
+        case "StatementRepeat":
+        case "StatementTry":
+        case "StatementForEach":
+        case "StatementBlock":
+            return "}"
+        default:
+            throw new Error(`Unsupported statement type: ${node.type}`);
+    }
+};

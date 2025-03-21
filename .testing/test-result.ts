@@ -18,6 +18,29 @@ const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/i
     // }
 
 `
+fun foo() {
+    do {} until (true); // comment 1
+       
+    try {} catch (e) {} // comment
+    try {} // comment
+    
+    foreach (a, b in foo) {} // comment
+    
+    // top comment 1
+    if (true) {} // comment 1 
+    // top comment 2
+    if (true) {} else {} // comment 2
+    // top comment 4
+    if (true) {} else if (true) {} // comment 3
+    // top comment 4
+    if (true) {} else if (true) {} else {} // comment 4
+       
+    // comment1
+    let Foo { a } = value(); // comment
+}
+`;
+
+`
 // comment
 import "";
 // other comment
