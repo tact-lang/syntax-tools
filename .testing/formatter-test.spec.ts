@@ -602,29 +602,38 @@ fun foo() {
 fun foo() {
     let x = a > 10 ? (b ? c : d) : d;
 }`));
+
+            it('long conditional', intact(`
+                fun foo() {
+                    let targetJettonWallet: BasechainAddress = (ownerWorkchain == Workchain)
+                        ? contractBasechainAddress(initOf JettonWallet(0, msg.ownerAddress, myAddress()))
+                        : emptyBasechainAddress();
+                }
+            `));
         });
 
-//         describe('suffix operations', () => {
-//             it('field access', intact(`
-// fun foo() {
-//     let x = obj.field;
-// }`));
-//
-//             it('method call', intact(`
-// fun foo() {
-//     let x = obj.method();
-// }`));
-//
-//             it('chained operations', intact(`
-// fun foo() {
-//     let x = obj.method().field.anotherMethod();
-// }`));
-//
-//             it('unbox not null', intact(`
-// fun foo() {
-//     let x = obj!!;
-// }`));
-//         });
+        describe('suffix operations', () => {
+            it('field access', intact(`
+fun foo() {
+    let x = obj.field;
+}`));
+
+            it('method call', intact(`
+fun foo() {
+    let x = obj.method();
+}`));
+
+            // TODO
+            // it('chained operations', intact(`
+            // fun foo() {
+            //     let x = obj.method().field.anotherMethod();
+            // }`));
+
+            it('unbox not null', intact(`
+fun foo() {
+    let x = obj!!;
+}`));
+        });
 
         describe('special expressions', () => {
             it('initOf', intact(`

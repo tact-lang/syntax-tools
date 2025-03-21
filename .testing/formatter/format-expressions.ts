@@ -250,19 +250,27 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return;
         }
         case "Binary": {
-            const left = childByField(node, "left");
-            const op = childByType(node, "Operator");
-            const right = childByField(node, "right");
-
-            if (!left || !op || !right) {
-                throw new Error("Invalid binary expression");
+            const processBinaryTail = (code: CodeBuilder, node: CstNode): void => {
+                node.children.forEach(child => {
+                    if (child.$ === "leaf") return
+                    if (child.type === "Operator") {
+                        code.space()
+                    }
+                    code.apply(formatExpression, child)
+                    if (child.type === "Operator") {
+                        code.space()
+                    }
+                })
             }
 
-            code.apply(formatExpression, left)
-                .space()
-                .apply(formatExpression, op)
-                .space()
-                .apply(formatExpression, right)
+            const head = childByField(node, "head")
+            const tail = childByField(node, "tail")
+
+            if (head && tail) {
+                code.apply(formatExpression, head)
+                code.apply(processBinaryTail, tail)
+            }
+
             return;
         }
         case "Unary": {

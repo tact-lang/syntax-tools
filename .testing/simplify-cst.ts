@@ -56,34 +56,6 @@ export const simplifyCst = (node: Cst): Cst => {
         }
     }
 
-    if (node.type === "Binary" && node.children.length === 2) {
-        const firstChild = simplifyCst(node.children[0])
-        const lastChild = simplifyCst(node.children[1])
-        if (firstChild.$ !== "node" || lastChild.$ !== "node") {
-            return node
-        }
-
-        const [op, right, ...tail] = lastChild.children
-        if (right.$ !== "node" || op.$ !== "node") {
-            return node
-        }
-
-        return {
-            ...node,
-            children: [{
-                ...firstChild,
-                field: "left"
-            }, {
-                ...op,
-                field: "op",
-            }, {
-                ...right,
-                field: "right",
-                children: [...right.children, ...tail]
-            }],
-        }
-    }
-
     const processedChildren = node.children.flatMap(it => {
         if (it.$ !== "node") return it
 

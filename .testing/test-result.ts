@@ -7,8 +7,8 @@ import {processDocComments} from "./process-comments";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
-// const code = fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
-const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
+const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
+// const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
 
     // struct Foo {
     //     name: String;
@@ -16,8 +16,19 @@ const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/i
     // }
 
 `
-// top comment
-import "";
+fun foo() {
+    1 + 2 * 3 + 4
+}
+
+contract Foo {
+    // comment
+    receive() {}
+    
+    // comment
+    
+    // comment
+    receive() {}
+}
 `;
 
 `

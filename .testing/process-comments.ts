@@ -262,6 +262,20 @@ export const processDocComments = (node: Cst): Cst => {
         }
     }
 
+    if (node.group === "contractItemDecl") {
+        if (pendingComments.length > 0) {
+            node.children.splice(0, 0, {
+                $: "node",
+                type: "DocComments",
+                children: pendingComments,
+                field: "doc",
+                group: "",
+                id: 0,
+            })
+            pendingComments = []
+        }
+    }
+
     // Root
     //   "\n"
     //   Module
