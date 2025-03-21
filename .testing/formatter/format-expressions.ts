@@ -1,193 +1,8 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatId, formatSeparatedList} from "./format-helpers";
+import {formatId, formatSeparatedList, idText} from "./format-helpers";
 import {formatType} from "./format-types";
-
-interface ChainedCall {
-    type: "call" | "field";
-    name: string;
-    parameters?: CstNode;
-    leadingComments: CstNode[];
-    trailingComments: CstNode[];
-    hasLeadingNewline: boolean;
-    hasTrailingNewline: boolean;
-}
-
-interface ChainInfo {
-    calls: ChainedCall[];
-    indent: number;
-}
-
-function collectChainInfo(node: CstNode): ChainInfo {
-    const result: ChainInfo = {
-        calls: [],
-        indent: 0
-    };
-
-    const initialExpr = node.children[0];
-    if (!initialExpr) {
-        throw new Error("Invalid initial expression");
-    }
-
-    const suffixes = childByField(node, "suffixes");
-    if (!suffixes) {
-        return result;
-    }
-
-    let lastFieldName: undefined | string = undefined;
-    if (initialExpr.$ === "node" && initialExpr.type === "Id") {
-        lastFieldName = visit(initialExpr);
-    }
-
-    const suffixesList = suffixes.children
-    let currentCall: undefined | ChainedCall = undefined;
-    let currentAccess: undefined | string = undefined;
-    let leadingComments: CstNode[] = [];
-
-    for (const child of suffixesList) {
-        if (child.$ === "leaf") {
-
-        } else if (child.type === "Comment") {
-            if (currentCall) {
-                currentCall.trailingComments.push(child);
-            } else {
-                leadingComments.push(child);
-            }
-        } else if (child.type === "SuffixCall") {
-            if (!lastFieldName) {
-                throw new Error("Invalid call expression: no field name before call");
-            }
-
-            const parameters = childByField(child, "params");
-
-            currentCall = {
-                type: "call",
-                name: lastFieldName,
-                leadingComments,
-                trailingComments: [],
-                hasLeadingNewline: parameters.children.some(it => it.$ === "leaf" && it.text.includes("\n")),
-                hasTrailingNewline: false,
-                parameters,
-            };
-
-            lastFieldName = null;
-            leadingComments = [];
-            currentAccess = undefined;
-        } else if (child.type === "SuffixFieldAccess") {
-            const name = childByField(child, "name");
-            if (!name || name.$ !== "node" || name.type !== "Id") {
-                throw new Error("Invalid field access name");
-            }
-
-            lastFieldName = visit(name);
-
-            if (currentAccess) {
-                result.calls.push({
-                    type: "field",
-                    name: currentAccess,
-                    hasLeadingNewline: false,
-                    hasTrailingNewline: false,
-                    leadingComments: [],
-                    trailingComments: [],
-                });
-                currentAccess = undefined
-                continue
-            }
-
-            if (currentCall) {
-                result.calls.push(currentCall);
-                currentCall = null;
-            }
-            currentAccess = lastFieldName
-        }
-    }
-
-    if (currentCall) {
-        result.calls.push(currentCall);
-    }
-
-    if (currentAccess) {
-        result.calls.push({
-            type: "field",
-            name: currentAccess,
-            hasLeadingNewline: false,
-            hasTrailingNewline: false,
-            leadingComments: [],
-            trailingComments: [],
-        });
-    }
-
-    result.indent = result.calls.some(call => call.hasLeadingNewline || call.hasTrailingNewline) ? 4 : 0;
-
-    return result;
-}
-
-function formatChain(code: CodeBuilder, info: ChainInfo): void {
-    const shouldBeMultiline = info.indent > 0 ||
-        info.calls.some(call =>
-            call.leadingComments.length > 0 ||
-            call.trailingComments.length > 0
-        );
-
-    if (shouldBeMultiline) {
-        const firstCall = info.calls[0]
-        code.add(firstCall.name);
-
-        if (firstCall.type === "call" && firstCall.parameters) {
-            formatSeparatedList(code, firstCall.parameters, (code, arg) => {
-                formatExpression(code, arg);
-            });
-        }
-
-        code.newLine().indent()
-
-        const calls = info.calls.slice(1);
-        calls.forEach((call, index) => {
-            call.leadingComments.forEach(comment => {
-                code.add(visit(comment));
-                code.newLine();
-            });
-
-            code.add(".").add(call.name);
-
-            if (call.type === "call" && call.parameters) {
-                formatSeparatedList(code, call.parameters, (code, arg) => {
-                    formatExpression(code, arg);
-                });
-            }
-
-            call.trailingComments.forEach(comment => {
-                code.space().add(visit(comment));
-                code.newLine();
-            });
-
-            if (index !== calls.length - 1) {
-                code.newLine();
-            }
-        });
-
-        code.dedent();
-    } else {
-        const firstCall = info.calls[0]
-        code.add(firstCall.name);
-        if (firstCall.type === "call" && firstCall.parameters) {
-            formatSeparatedList(code, firstCall.parameters, (code, arg) => {
-                formatExpression(code, arg);
-            });
-        }
-
-        const calls = info.calls.slice(1);
-        calls.forEach(call => {
-            code.add(".").add(call.name);
-            if (call.type === "call" && call.parameters) {
-                formatSeparatedList(code, call.parameters, (code, arg) => {
-                    formatExpression(code, arg);
-                });
-            }
-        });
-    }
-}
 
 export const formatExpression = (code: CodeBuilder, node: Cst): void => {
     if (node.$ !== "node") {
@@ -230,6 +45,9 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return
         case "SuffixFieldAccess":
             formatSuffixFieldAccess(code, node);
+            return
+        case "SuffixUnboxNotNull":
+            formatSuffixUnboxNotNull(code, node);
             return
         case "SuffixCall":
             formatSuffixCall(code, node);
@@ -294,43 +112,102 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return
         }
         case "Suffix": {
+            interface ChainCall {
+                nodes: CstNode[]
+                leadingComments: CstNode[]
+                trailingComments: CstNode[]
+                hasLeadingNewline: boolean
+            }
+
             const suffixes = childByField(node, "suffixes");
             if (!suffixes) {
                 return;
             }
 
-            const suffixesList = suffixes.children
-            if (suffixesList.length === 1) {
-                const suffix = suffixesList[0]
-                formatExpression(code, node.children[0])
-                formatExpression(code, suffix)
-                return
+            const infos: ChainCall[] = []
+            let suffixesList = suffixes.type === "SuffixFieldAccess" || suffixes.type === "SuffixCall" || suffixes.type === "SuffixUnboxNotNull"
+                ? [suffixes]
+                : suffixes.children
+
+            // foo.bar()
+            // ^^^
+            const firstExpression = node.children[0];
+            // foo.bar()
+            //        ^^
+            const firstSuffix = suffixesList[0];
+
+            // first call suffix attached to first expression
+            const firstSuffixIsCallOrNotNull = firstSuffix && firstSuffix.$ === "node" && (firstSuffix.type === "SuffixCall" || firstSuffix.type === "SuffixUnboxNotNull");
+            if (firstSuffixIsCallOrNotNull) {
+                suffixesList = suffixesList.slice(1)
             }
 
-            if (suffixesList.length === 2) {
-                formatExpression(code, node.children[0])
-                formatExpression(code, suffixesList[0])
-                formatExpression(code, suffixesList[1])
-                return
-            }
-            if (suffixesList.length === 3) {
-                formatExpression(code, node.children[0])
-                formatExpression(code, suffixesList[0])
-                formatExpression(code, suffixesList[1])
-                formatExpression(code, suffixesList[2])
-                return
-            }
-            if (suffixesList.length === 4) {
-                formatExpression(code, node.children[0])
-                formatExpression(code, suffixesList[0])
-                formatExpression(code, suffixesList[1])
-                formatExpression(code, suffixesList[2])
-                formatExpression(code, suffixesList[3])
-                return
+            suffixesList.forEach((suffix) => {
+                if (suffix.$ !== "node") return;
+
+                if (suffix.type === "SuffixFieldAccess") {
+                    const name = childByField(suffix, "name")
+                    infos.push({
+                        nodes: [suffix],
+                        hasLeadingNewline: name.children.some(it => it.$ === "leaf" && it.text.includes("\n")),
+                        leadingComments: [],
+                        trailingComments: [],
+                    })
+                }
+
+                if (suffix.type === "SuffixCall" && infos.length > 0) {
+                    const lastInfo = infos.at(-1);
+                    lastInfo.nodes.push(suffix)
+
+                    const params = childByField(suffix, "params")
+                    lastInfo.hasLeadingNewline = params.children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+                }
+
+                if (suffix.type === "SuffixUnboxNotNull" && infos.length > 0) {
+                    const lastInfo = infos.at(-1);
+                    lastInfo.nodes.push(suffix)
+                }
+            })
+
+            const indent = infos.some(call => call.hasLeadingNewline) ? 4 : 0;
+
+            formatExpression(code, firstExpression)
+
+            if (firstSuffixIsCallOrNotNull) {
+                formatExpression(code, firstSuffix)
             }
 
-            const chainInfo = collectChainInfo(node);
-            formatChain(code, chainInfo);
+            const shouldBeMultiline = indent > 0 ||
+                infos.some(call =>
+                    call.leadingComments.length > 0 ||
+                    call.trailingComments.length > 0
+                );
+
+            if (shouldBeMultiline) {
+                code.indent()
+                code.newLine()
+
+                infos.forEach((info, index) => {
+                    info.nodes.forEach(child => {
+                        code.apply(formatExpression, child)
+                    })
+
+                    if (index !== infos.length - 1) {
+                        code.newLine()
+                    }
+                })
+
+                code.dedent()
+            } else {
+                infos.forEach(info => {
+                    info.nodes.forEach(child => {
+                        code.apply(formatExpression, child)
+                    })
+                })
+            }
+
+            // const chainInfo = collectChainInfo(node);
+            // formatChain(code, chainInfo);
             return;
         }
         case "InitOf": {
@@ -470,16 +347,11 @@ const formatSuffixFieldAccess = (code: CodeBuilder, node: CstNode): void => {
     }
 
     code.add(".")
-    const name1 = childByField(name, "name")
-    if (name1.$ !== "node") {
-        throw new Error("Invalid field access expression");
-    }
-    const textLeaf = name1.children[0]
-    if (textLeaf.$ !== "leaf") {
-        throw new Error("Invalid field access expression");
-    }
+    code.apply(formatId, name)
+};
 
-    code.add(textLeaf.text)
+const formatSuffixUnboxNotNull = (code: CodeBuilder, _node: CstNode): void => {
+    code.add("!!")
 };
 
 const formatSuffixCall = (code: CodeBuilder, node: CstNode): void => {

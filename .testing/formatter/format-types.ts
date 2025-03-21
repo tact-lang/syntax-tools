@@ -80,6 +80,10 @@ const formatTypeGeneric = (code: CodeBuilder, node: CstNode): void => {
 
     // ["Int", ", ", "String"] -> ["Int", "String"]
     const typeArgs = childrenByType(args, "TypeAs");
+    if (typeArgs.length === 0) {
+        // bounced type
+        typeArgs.push(...childrenByType(args, "TypeOptional"))
+    }
     if (typeArgs.length > 0) {
         code.add("<");
         typeArgs.forEach((arg, i) => {

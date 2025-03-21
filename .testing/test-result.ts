@@ -4,11 +4,12 @@ import * as fs from "fs";
 import {format} from "./formatter/formatter";
 import {simplifyCst} from "./simplify-cst";
 import {processDocComments} from "./process-comments";
+import {visualizeCST} from "./cst-helpers";
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
 
 const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
-// const code = // fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
+// const code = fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
 
     // struct Foo {
     //     name: String;
@@ -16,18 +17,18 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     // }
 
 `
-fun foo() {
-    1 + 2 * 3 + 4
+struct Foo {
+    // comment
+    value: Int; // comment
+    some: Int;
 }
 
-contract Foo {
-    // comment
-    receive() {}
+fun foo(a: bounced<JettonTransferInternal>) {
+    while (true) {
+        return 200;
+    }
     
-    // comment
-    
-    // comment
-    receive() {}
+    return 100;
 }
 `;
 
@@ -208,46 +209,31 @@ contract Foo(param: Int) with Ownable, Baz {
 //             .param
 //     ).call();
 
-const ctx = createContext(code, space);
-
-const b: Builder = []
-
-const visualizeCST = (node: Cst, field: undefined | string, indent: string = ""): string => {
-    const fieldRepr = field ? `${field}: ` : ""
-    if (node.$ === "leaf") {
-        const text = node.text.replace(/\n/g, "\\n").substring(0, 30);
-        return `${indent}${fieldRepr}"${text}${node.text.length > 30 ? "..." : ""}"`;
-    }
-
-    let result = `${indent}${fieldRepr}${node.type}`;
-
-    if (node.children.length === 0) {
-        return `${result} (empty)`;
-    }
-
-    result += "\n";
-
-    const childrenOutput = node.children
-        .map(child => visualizeCST(child, child.$ === "node" ? child.field : undefined, indent + "  "))
-        .join("\n");
-
-    return result + childrenOutput;
-};
-
-skip(ctx, b)
-const isParsed = Module(ctx, b)
-log(isParsed)
-
 const visit = (node: Cst): string => {
     if (node.$ === "leaf") return node.text
     return node.children.map(it => visit(it)).join("")
 }
 
+const ctx = createContext(code, space);
+const b: Builder = []
+skip(ctx, b)
+const isParsed = Module(ctx, b)
+log(isParsed)
+
 const root = processDocComments(simplifyCst(CstNode(b, "Root")));
 
 console.log(visualizeCST(root, undefined));
 fs.writeFileSync("out.json", JSON.stringify(root, null, 4));
-console.log(visit(root));
+
+console.log(visit(root) === code)
+
+const result = format(root);
+console.log(result);
+
+fs.writeFileSync("minter.fmt.tact", result)
+
+
+// console.log(visit(root));
 
 // const files = fs.globSync("**/*.tact", {
 //     cwd: "/Users/petrmakhnev/tact",
@@ -272,13 +258,6 @@ console.log(visit(root));
 //         throw new Error(`not equal text: ${file}`)
 //     }
 // })
-
-fs.writeFileSync("out.tact", visit(root))
-console.log(visit(root) === code)
-
-console.log(format(root));
-
-fs.writeFileSync("minter.fmt.tact", format(root))
 
 // const module = childByType(root, "Module")!
 // const itemsNode = childByField(module, "items")

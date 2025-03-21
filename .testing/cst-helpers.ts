@@ -78,4 +78,26 @@ export const textOfId = (node: Cst): string => {
 export const isLowerCase = (str: string): boolean => {
     return str === str.toLowerCase() &&
         str !== str.toUpperCase();
-} 
+}
+
+export const visualizeCST = (node: Cst, field: undefined | string, indent: string = ""): string => {
+    const fieldRepr = field ? `${field}: ` : ""
+    if (node.$ === "leaf") {
+        const text = node.text.replace(/\n/g, "\\n").substring(0, 30);
+        return `${indent}${fieldRepr}"${text}${node.text.length > 30 ? "..." : ""}"`;
+    }
+
+    let result = `${indent}${fieldRepr}${node.type}`;
+
+    if (node.children.length === 0) {
+        return `${result} (empty)`;
+    }
+
+    result += "\n";
+
+    const childrenOutput = node.children
+        .map(child => visualizeCST(child, child.$ === "node" ? child.field : undefined, indent + "  "))
+        .join("\n");
+
+    return result + childrenOutput;
+};

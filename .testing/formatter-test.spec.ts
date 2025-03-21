@@ -142,7 +142,7 @@ fun foo() {
 
     it('5', intact(`
         fun foo() {
-            let foo/*: Foo*/ = 1;
+            let foo /*: Foo*/ = 1;
         }
     `));
 
@@ -154,7 +154,7 @@ fun foo() {
 
     it('5', intact(`
         fun foo() {
-            let foo/*: Foo*/: Foo = 1;
+            let foo /*: Foo*/: Foo = 1;
         }
     `));
 
@@ -635,6 +635,102 @@ fun foo() {
 }`));
         });
 
+        describe('chains', () => {
+            it('simple field chain', intact(`
+                fun foo() {
+                    a.foo;
+                }
+            `));
+
+            it('simple call chain', intact(`
+                fun foo() {
+                    a();
+                }
+            `));
+
+            it('simple method call chain', intact(`
+                fun foo() {
+                    f.a();
+                }
+            `));
+
+            it('method call chain with field', intact(`
+                fun foo() {
+                    f.foo.a();
+                }
+            `));
+
+             it('method call chain with calls', intact(`
+                fun foo() {
+                    sender().asSlice();
+                }
+            `));
+
+            it('method call chain with field and newline', test(`
+                fun foo() {
+                    f.foo
+                    .a();
+                }
+            `, `
+                fun foo() {
+                    f
+                        .foo
+                        .a();
+                }
+            `));
+
+            it('nested chain with field and newline', test(`
+                fun foo() {
+                    foo.bar;
+                    foo().bar.baz(foo
+                    .bar(
+                    1, 2, 3))
+                    .boo.beee.aaaa;
+                }
+            `, `
+                fun foo() {
+                    foo.bar;
+                    foo()
+                        .bar
+                        .baz(foo
+                            .bar(
+                                1,
+                                2,
+                                3,
+                            ))
+                        .boo
+                        .beee
+                        .aaaa;
+                }
+            `));
+
+            it('field chain with comment', intact(`
+                fun foo() {
+                    a.foo /*comment*/;
+                }
+            `));
+
+            it('field chain with comment 2', intact(`
+                fun foo() {
+                    a.foo /*comment*/.bar /*comment 2*/;
+                }
+            `));
+
+            it('field chain with comment 2', test(`
+                fun foo() {
+                    a.foo // comment
+                    .bar // comment 2
+                    ;
+                }
+            `, `
+                fun foo() {
+                    a
+                        .foo // comment
+                        .bar // comment 2;
+                }
+            `));
+        });
+
         describe('special expressions', () => {
             it('initOf', intact(`
 fun foo() {
@@ -944,6 +1040,62 @@ fun foo() {}`));
                 a = 20;
             }
         `));
+
+        it('preserve newlines after if', intact(`
+            fun foo() {
+                if (true) {
+                    return 200;
+                }
+
+                return 100;
+            }
+        `));
+
+        it('preserve newlines after if-else', intact(`
+            fun foo() {
+                if (true) {
+                    return 200;
+                } else {
+                    return 200;
+                }
+
+                return 100;
+            }
+        `));
+
+        it('preserve newlines after if-else-if', intact(`
+            fun foo() {
+                if (true) {
+                    return 200;
+                } else if (false) {
+                    return 200;
+                }
+
+                return 100;
+            }
+        `));
+
+        it('preserve newlines after if-else-if-else', intact(`
+            fun foo() {
+                if (true) {
+                    return 200;
+                } else if (false) {
+                    return 200;
+                } else {
+                    return 200;
+                }
+
+                return 100;
+            }
+        `));
+
+        it('preserve newlines after while', intact(`
+            fun foo() {
+                while (true) {}
+
+                return 100;
+            }
+        `));
     });
 
     describe('top level comments', () => {
@@ -1032,4 +1184,79 @@ fun foo() {}`));
         //     fun foo() {}
         // `));
     });
+
+    describe('top level declarations', () => {
+        it('empty struct', intact(`
+            struct Foo {}
+        `));
+
+        it('struct with field', intact(`
+            struct Foo {
+                value: Int;
+            }
+        `));
+
+        it('struct with field and inline comment', intact(`
+            struct Foo {
+                value: Int; // inline comment
+            }
+        `));
+
+        it('struct with field, top and inline comment', intact(`
+            struct Foo {
+                // top comment
+                value: Int; // inline comment
+            }
+        `));
+
+        it('struct with fields', intact(`
+            struct Foo {
+                // top comment
+                value: Int; // inline comment
+                some: Int;
+            }
+        `));
+
+        it('struct with fields 2', intact(`
+            struct Foo {
+                // top comment
+                value: Int; // inline comment
+                // top comment 2
+                some: Int;
+            }
+        `));
+
+        it('struct with fields 3', intact(`
+            struct Foo {
+                // top comment
+                value: Int;
+                some: Int;
+            }
+        `));
+
+
+
+        it('contract', intact(`
+            contract Foo {
+            }
+        `));
+
+        it('contract with parameters', intact(`
+            contract Foo(value: Int) {
+            }
+        `));
+
+        it('contract with parameters on new lines', intact(`
+            contract Foo(
+                value: Int,
+            ) {
+            }
+        `));
+    })
+
+    describe('types', () => {
+        it('bounced type', intact(`
+            fun foo(f: bounced<Foo>) {}
+        `));
+    })
 });

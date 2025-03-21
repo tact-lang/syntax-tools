@@ -203,7 +203,10 @@ function formatShuffle(code: CodeBuilder, node: CstNode): void {
     }
 
     if (to) {
-        code.space().add("->").space();
+        if (ids) {
+            code.space()
+        }
+        code.add("->").space();
         formatSeparatedList(code, to, (code, value) => {
             formatExpression(code, value);
         }, {

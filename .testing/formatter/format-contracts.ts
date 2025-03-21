@@ -3,7 +3,7 @@ import {childByField, childrenByType, nonLeafChild, visit} from "../cst-helpers"
 import {CodeBuilder} from "../code-builder";
 import {formatId, formatSeparatedList, idText} from "./format-helpers";
 import {formatFunction, formatParameter} from "./format-declarations";
-import {formatStatements} from "./format-statements";
+import {formatStatements, processInlineCommentsAfterIndex} from "./format-statements";
 import {formatAscription} from "./format-types";
 import {formatExpression} from "./format-expressions";
 import {formatDocComments} from "./format-doc-comments";
@@ -205,6 +205,9 @@ export function formatFieldDecl(code: CodeBuilder, decl: CstNode): void {
         code.space().add("=").space().apply(formatExpression, value);
     }
     code.add(";");
+
+    const endIndex = decl.children.findIndex(it => it.$ === "leaf" && it.text === ";")
+    processInlineCommentsAfterIndex(code, decl, endIndex)
 }
 
 function getName(node: CstNode, type: "contract" | "trait"): string {

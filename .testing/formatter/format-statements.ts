@@ -5,8 +5,28 @@ import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
 import {formatId, formatSeparatedList, getCommentsBetween} from "./format-helpers";
 
-function trailingNewlines(node: CstNode): string {
-    const lastChild = node.children.at(-1)
+function trailingNewlines(node: Cst): string {
+    if (node.$ === "leaf") return ""
+
+    let lastChild = node.children.at(-1)
+    if (lastChild.$ === "node" && lastChild.type === "trueBranch") {
+        lastChild = lastChild.children.at(-1)
+    }
+    if (lastChild.$ === "node" && lastChild.type === "falseBranch") {
+        const falseBranch = childByType(lastChild, "FalseBranch")
+        if (falseBranch) {
+            return trailingNewlines(childByField(falseBranch, "body"))
+        }
+
+        const falseCondition = childByType(lastChild, "StatementCondition")
+        if (falseCondition) {
+            return trailingNewlines(falseCondition)
+        }
+    }
+    if (node.$ === "node" && node.type === "StatementWhile") {
+        const body= childByField(node, "body")
+        lastChild = body.children.at(-1)
+    }
     if (lastChild.$ === "leaf" && lastChild.text.includes("\n")) {
         return lastChild.text
     }
@@ -21,7 +41,7 @@ function containsSeveralNewlines(text: string): boolean {
     return text.substring(index + 1).includes("\n")
 }
 
-function processStatementsInlineComments(code: CodeBuilder, node: CstNode, endIndex: number) {
+export function processInlineCommentsAfterIndex(code: CodeBuilder, node: CstNode, endIndex: number) {
     const afterBody = node.children.slice(endIndex + 1)
     const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment");
     if (comments.length > 0) {
@@ -37,7 +57,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
     if (statements.length === 0) {
         code.add("{}")
-        processStatementsInlineComments(code, node, endIndex)
+        processInlineCommentsAfterIndex(code, node, endIndex)
         return
     }
 
@@ -91,7 +111,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
 
     code.dedent().add("}");
 
-    processStatementsInlineComments(code, node, endIndex);
+    processInlineCommentsAfterIndex(code, node, endIndex);
 };
 
 export const formatStatement = (code: CodeBuilder, node: Cst): void => {

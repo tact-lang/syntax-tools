@@ -250,7 +250,11 @@ export const formatId = (code: CodeBuilder, node: CstNode) => {
     code.add(name)
 
     const comments = node.children.filter(it => it.$ === "node" && it.type === "Comment");
-    comments.forEach(comment => {
-        code.add(visit(comment))
-    })
+
+    if (comments.length > 0) {
+        code.space();
+        comments.forEach(comment => {
+            code.add(visit(comment))
+        })
+    }
 }

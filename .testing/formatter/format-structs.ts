@@ -1,5 +1,5 @@
 import {CstNode} from "../result";
-import {childByField, nonLeafChild} from "../cst-helpers";
+import {childByField, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {idText} from "./format-helpers";
 import {formatExpression} from "./format-expressions";
@@ -33,17 +33,48 @@ export function formatMessage(code: CodeBuilder, node: CstNode): void {
 }
 
 function formatFields(code: CodeBuilder, node: CstNode): void {
+    const fieldsNode = childByField(node, "fields");
+    if (!fieldsNode || fieldsNode.children.length === 0) {
+        code.space().add("{}")
+        return
+    }
+
     code.space().add("{").newLine().indent();
 
-    const fieldsNode = childByField(node, "fields");
-    if (fieldsNode) {
-        const fields = fieldsNode.children.filter(field => field.$ === "node" && field.type === "FieldDecl")
-        fields.forEach((field) => {
-            if (field.$ === "leaf") return
-            formatFieldDecl(code, field);
+    node.children.forEach(child => {
+        if (child.$ === "leaf") return
+
+        if (child.type === "Comment") {
+            code.add(visit(child).trim())
             code.newLine()
-        })
-    }
+        }
+
+        if (child.field === "fields") {
+            const fields = child.children.filter(field => field.$ === "node")
+
+            let needNewline = false
+            fields.forEach((field) => {
+                if (field.type === "Comment") {
+                    if (needNewline) {
+                        code.add(" ")
+                    }
+                    code.add(visit(field).trim())
+                    code.newLine()
+                    needNewline = false
+                } else if (field.type === "FieldDecl") {
+                    if (needNewline) {
+                        code.newLine()
+                    }
+                    formatFieldDecl(code, field);
+                    needNewline = true
+                }
+            })
+
+            if (needNewline) {
+                code.newLine()
+            }
+        }
+    })
 
     code.dedent().add("}");
 }
