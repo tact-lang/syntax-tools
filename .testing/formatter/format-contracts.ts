@@ -140,12 +140,12 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     // const Foo : Int = 100;
     //       ^^^ ^^^^^ ^^^^^
     //       |   |     |
-    //       |   |     body
+    //       |   |     bodyOpt
     //       |   type
     //       name
     const name = childByField(decl, "name");
     const type = childByField(decl, "type");
-    const body = childByField(decl, "body");
+    const bodyOpt = childByField(decl, "body");
 
     if (!name || !type) {
         throw new Error("Invalid constant declaration");
@@ -154,23 +154,23 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     // const FOO: Int
     code.add("const").space().apply(formatId, name).apply(formatAscription, type);
 
-    if (body.type === "ConstantDefinition") {
+    if (bodyOpt && bodyOpt.type === "ConstantDefinition") {
         // const Foo: Int = 100;
         //               ^^^^^^^ this
         code.space().add("=").space();
         // const Foo: Int = 100;
         //                  ^^^ this
-        const value = nonLeafChild(body);
+        const value = nonLeafChild(bodyOpt);
         code.apply(formatExpression, value).add(";");
 
-        const comments = body.children.filter(it => it.$ === "node" && it.type === "Comment");
+        const comments = bodyOpt.children.filter(it => it.$ === "node" && it.type === "Comment");
         if (comments.length > 0) {
             code.space();
             comments.forEach(comment => {
                 code.add(visit(comment))
             })
         }
-    } else if (body.type === "ConstantDeclaration") {
+    } else if (!bodyOpt || bodyOpt.type === "ConstantDeclaration") {
         // const Foo: Int;
         //               ^ this
         code.add(";");
@@ -285,7 +285,7 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
 
     const declarations = childByField(node, "declarations");
 
-    if (declarations && declarations.group === "contractItemDecl") {
+    if (declarations && (declarations.type === "FieldDecl" || declarations.group === "contractItemDecl" || declarations.group === "traitItemDecl")) {
         // single decl contract
         formatDeclaration(code, declarations);
         code.newLine();

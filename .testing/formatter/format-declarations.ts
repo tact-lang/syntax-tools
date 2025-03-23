@@ -28,16 +28,16 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
     // fun foo(value: Int): Bool {}
     //     ^^^ ^^^^^^^^^^ ^^^^^^ ^^
     //     |   |          |      |
-    //     |   |          |      body
+    //     |   |          |      bodyOpt
     //     |   |          returnTypeOpt
     //     |   parameters
     //     name
     const name = childByField(node, "name");
     const parameters = childByField(node, "parameters");
     const returnTypeOpt = childByField(node, "returnType");
-    const body = childByField(node, "body");
+    const bodyOpt = childByField(node, "body");
 
-    if (!name || !parameters || !body) {
+    if (!name || !parameters) {
         throw new Error("Invalid function node");
     }
 
@@ -54,9 +54,9 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         formatAscription(code, returnTypeOpt);
     }
 
-    if (body.type === "FunctionDefinition") {
+    if (bodyOpt && bodyOpt.type === "FunctionDefinition") {
         code.space();
-        formatStatements(code, childByField(body, "body"));
+        formatStatements(code, childByField(bodyOpt, "body"));
     } else {
         code.add(";");
     }
