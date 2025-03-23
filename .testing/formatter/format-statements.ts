@@ -24,7 +24,7 @@ function trailingNewlines(node: Cst): string {
         }
     }
     if (node.$ === "node" && node.type === "StatementWhile") {
-        const body= childByField(node, "body")
+        const body = childByField(node, "body")
         lastChild = body.children.at(-1)
     }
     if (lastChild.$ === "leaf" && lastChild.text.includes("\n")) {
@@ -391,24 +391,15 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
 
     const restArg = restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
 
-    if (fields.type === "PunnedField" || fields.type === "RegularField") {
-        code.add("{ ")
-        formatDestructField(code, fields);
-        if (restArg) {
-            code.add(", ..")
-        }
-        code.add(" }")
-    } else {
-        formatSeparatedList(code, fields, formatDestructField, {
-            wrapperLeft: "{",
-            wrapperRight: "}",
-            extraWrapperSpace: " ",
-            startIndex: 0,
-            endIndex: 0,
-            suffixElement: restArg,
-            needSeparatorAfterSuffixElement: false, // comma is forbidden after `..`
-        })
-    }
+    formatSeparatedList(code, fields, formatDestructField, {
+        wrapperLeft: "{",
+        wrapperRight: "}",
+        extraWrapperSpace: " ",
+        startIndex: 0,
+        endIndex: 0,
+        suffixElement: restArg,
+        needSeparatorAfterSuffixElement: false, // comma is forbidden after `..`
+    })
 
     code.space().add("=").space();
     formatExpression(code, init);

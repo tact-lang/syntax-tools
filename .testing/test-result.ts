@@ -23,13 +23,17 @@ struct Foo {
     some: Int;
 }
 
-fun foo(a: bounced<JettonTransferInternal>) {
-    while (true) {
-        return 200;
+contract Foo with Foo {
+    fun foo() {
+        let Foo { a } = 100;
+        let Foo { a, b, .. } = 100;
+        Foo { a, b: b };
     }
     
-    return 100;
+    init(a: Int) {}
 }
+
+asm(-> 0) fun foo() {}
 `;
 
 `
