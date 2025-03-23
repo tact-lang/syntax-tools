@@ -419,7 +419,7 @@ export const processDocComments = (node: Cst): Cst => {
 
         let pendingComments: Cst[] = []
 
-        for (let i = 0; i < endIndex; i++){
+        for (let i = 0; i < endIndex; i++) {
             const statement = node.children[i];
             if (statement.$ === "leaf") {
                 continue
@@ -456,6 +456,112 @@ export const processDocComments = (node: Cst): Cst => {
 
         if (pendingComments.length > 0) {
             node.children.splice(endIndex, 0, ...pendingComments)
+        }
+    }
+
+    if (node.type === "StructDecl" || node.type === "MessageDecl") {
+        const fields = childByField(node, "fields")
+        if (!fields || fields.children.length === 0) {
+            // nothing to do
+            return {
+                ...node,
+                children: node.children.flatMap(it => processDocComments(it)),
+            }
+        }
+
+        const startIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "{") + 1
+        const fieldsIndex = node.children.findIndex(it => it.$ === "node" && it.field === "fields")
+
+        const leadingLeafs = node.children.slice(startIndex, fieldsIndex)
+        const leadingComments = leadingLeafs.filter(it => it.$ === "node" && it.type === "Comment")
+
+        if (leadingComments.length === 0) {
+            // nothing to do, no leading comments
+            return {
+                ...node,
+                children: node.children.flatMap(it => processDocComments(it)),
+            }
+        }
+
+        pendingComments = leadingComments
+        const processedChildren = node.children.filter((it, index) => {
+            if (index >= startIndex && index < fieldsIndex) {
+                // remove all nodes that we take
+                return false
+            }
+            // and keep other nodes
+            return true
+        })
+
+        return {
+            ...node,
+            children: processedChildren.flatMap(it => processDocComments(it)),
+        }
+    }
+
+    if (node.type === "fields") {
+        const items = node.children;
+
+        let prevFieldsIndex = 0;
+        for (let i = 0; i < items.length; i++) {
+            const item = items[i];
+
+            if (item.$ !== "node") continue;
+
+            // If there are some pending comments, we insert it as a new children
+            if (pendingComments.length > 0 && item.type !== "Comment") {
+                item.children.splice(0, 0, {
+                    $: "node",
+                    type: "DocComments",
+                    children: pendingComments,
+                    field: "doc",
+                    group: "",
+                    id: 0,
+                })
+                pendingComments = []
+            }
+
+            if (item.type === "Comment") {
+                // this comment may be inline comment
+                const children = items.slice(prevFieldsIndex, i)
+                const inlineComment = !children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+                if (inlineComment) {
+                    const prevItem = items[prevFieldsIndex]
+                    if (prevItem.$ === "node") {
+                        // append inline comment to previous item
+                        prevItem.children.push(item)
+                        // remove comment and go back to not increment too much
+                        items.splice(i, 1)
+                        i--
+                        continue;
+                    }
+                }
+
+                pendingComments.push(item)
+
+                // remove comment and go back to not increment too much
+                items.splice(i, 1)
+                i--
+                continue;
+            }
+
+            prevFieldsIndex = i
+
+            // const res = extractComments([node, ";"]);
+            // if (!res) {
+            //     continue;
+            // }
+            //
+            // const {comments, startIndex} = res;
+            //
+            // node.children = node.children.slice(0, startIndex)
+            //
+            // pendingComments.push(...comments)
+        }
+
+        if (pendingComments.length > 0) {
+            node.children.push(...pendingComments)
+            pendingComments = []
         }
     }
 

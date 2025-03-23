@@ -17,8 +17,10 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     // }
 
 `
-contract Foo {
-    fun foo() {}
+struct Foo {
+    bar: Int;
+    bar: Int;
+    // comment here
 }
 `;
 

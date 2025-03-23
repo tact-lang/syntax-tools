@@ -290,6 +290,59 @@ struct Foo {
     age: Int;
 }`));
 
+        it('struct without fields', intact(`
+            struct Foo {}
+        `));
+
+        it('struct without fields but with comment', intact(`
+            struct Foo {
+                // empty on purpose
+            }
+        `));
+
+        it('struct without fields but with comments', intact(`
+            struct Foo {
+                // empty on purpose
+                // don't remove
+                // this comment
+            }
+        `));
+
+        // TODO
+        // it('struct with trailing comment', intact(`
+        //     struct Foo {
+        //         foo: Int;
+        //         // comment
+        //     }
+        // `));
+        //
+        // it('struct with trailing comment 2', intact(`
+        //     struct Foo {
+        //         foo: Int; // comment here
+        //         // comment
+        //     }
+        // `));
+
+        it('struct with inline comment for field', intact(`
+            struct Foo {
+                foo: Int; // comment
+            }
+        `));
+
+        it('struct with inline comment for field and field after', intact(`
+            struct Foo {
+                foo: Int; // comment
+                field: String;
+            }
+        `));
+
+        it('struct with inline comment for field and field after with comment', intact(`
+            struct Foo {
+                foo: Int; // comment
+                // comment here
+                field: String;
+            }
+        `));
 
         it('simple message', intact(`
 message Foo {

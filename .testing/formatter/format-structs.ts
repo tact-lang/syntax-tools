@@ -33,15 +33,20 @@ export function formatMessage(code: CodeBuilder, node: CstNode): void {
 }
 
 function formatFields(code: CodeBuilder, node: CstNode): void {
+    const children = node.children;
+
+    // struct can contain only comments, so we need to handle this case properly
+    const hasComments = children.find(it => it.$ === "node" && it.type === "Comment");
+
     const fieldsNode = childByField(node, "fields");
-    if (!fieldsNode || fieldsNode.children.length === 0) {
+    if ((!fieldsNode || fieldsNode.children.length === 0) && !hasComments) {
         code.space().add("{}")
         return
     }
 
     code.space().add("{").newLine().indent();
 
-    node.children.forEach(child => {
+    children.forEach(child => {
         if (child.$ === "leaf") return
 
         if (child.type === "Comment") {
