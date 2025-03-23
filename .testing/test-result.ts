@@ -17,23 +17,9 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
     // }
 
 `
-struct Foo {
-    // comment
-    value: Int; // comment
-    some: Int;
+contract Foo {
+    fun foo() {}
 }
-
-contract Foo with Foo {
-    fun foo() {
-        let Foo { a } = 100;
-        let Foo { a, b, .. } = 100;
-        Foo { a, b: b };
-    }
-    
-    init(a: Int) {}
-}
-
-asm(-> 0) fun foo() {}
 `;
 
 `

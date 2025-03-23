@@ -285,22 +285,16 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
 
     const declarations = childByField(node, "declarations");
 
-    if (declarations && (declarations.type === "FieldDecl" || declarations.group === "contractItemDecl" || declarations.group === "traitItemDecl")) {
-        // single decl contract
-        formatDeclaration(code, declarations);
+    declarations?.children.forEach((decl, index) => {
+        if (decl.$ !== "node") return;
+
+        formatDeclaration(code, decl);
         code.newLine();
-    } else {
-        declarations?.children.forEach((decl, index) => {
-            if (decl.$ !== "node") return;
 
-            formatDeclaration(code, decl);
+        if (index < declarations.children.length - 1) {
             code.newLine();
-
-            if (index < declarations.children.length - 1) {
-                code.newLine();
-            }
-        });
-    }
+        }
+    });
 
     if (!declarations) {
         // empty contract
