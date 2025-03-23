@@ -6,7 +6,7 @@ import {formatAscription, formatType} from "./format-types";
 import {
     containsSeveralNewlines,
     formatId,
-    formatSeparatedList,
+    formatSeparatedList, getCommentsBetween,
     processInlineComments
 } from "./format-helpers";
 
@@ -59,6 +59,9 @@ function semicolonStatement(node: CstNode): boolean {
 }
 
 function canBeSingleLine(node: CstNode): boolean {
+    if (node.children.some(it => it.$ === "node" && it.type === "Comment" && visit(it).startsWith("//"))) {
+        return false
+    }
     if (node.type === "StatementUntil") {
         return false
     }
@@ -71,6 +74,21 @@ function canBeSingleLine(node: CstNode): boolean {
     return true
 }
 
+export function singleLineStatement(node: CstNode): boolean {
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
+    if (statements.length === 0) {
+        return false
+    }
+
+    const comments = statements.filter(it => it.$ === "node" && it.type === "Comment")
+    return statements.length === 1 &&
+        childLeafWithText(statements[0], ";") === undefined &&
+        semicolonStatement(statements[0]) &&
+        canBeSingleLine(statements[0]) &&
+        comments.length === 0
+}
+
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
     const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
@@ -80,14 +98,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
         return
     }
 
-    const comments = statements.filter(it => it.$ === "node" && it.type === "Comment")
-    const oneLiner = statements.length === 1 &&
-        childLeafWithText(statements[0], ";") === undefined &&
-        semicolonStatement(statements[0]) &&
-        canBeSingleLine(statements[0]) &&
-        comments.length === 0
-
-    if (oneLiner) {
+    if (singleLineStatement(node)) {
         code.add("{").space();
         formatStatement(code, statements[0], false);
         code.space().add("}");
@@ -143,22 +154,6 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
             const newlines = trailingNewlines(statement)
             if (containsSeveralNewlines(newlines)) {
                 needNewLine = true
-            }
-
-            const anchor = statementAnchor(statement)
-            const anchorIndex = statement.children.findIndex(it => it.$ === "leaf" && it.text === anchor);
-
-            if (anchorIndex !== -1) {
-                const comments = statement.children
-                    .slice(anchorIndex + 1)
-                    .filter(it => it.$ === "node" && it.type === "Comment")
-
-                if (comments.length > 0) {
-                    code.space();
-                    comments.forEach(comment => {
-                        code.add(visit(comment))
-                    })
-                }
             }
         }
 
@@ -273,13 +268,30 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
     }
 
     code.space().add("=").space();
-    processInlineComments(node, code, assign, init);
+
+    let indented = false
+    const comments = getCommentsBetween(node, assign, init)
+    if (comments.length > 0) {
+        code.newLine()
+        code.indent()
+        comments.forEach(comment => {
+            code.add(visit(comment))
+        })
+        code.newLine()
+        indented = true
+    }
 
     formatExpression(code, init);
 
+    if (indented) {
+        code.dedent()
+    }
     if (needSemicolon) {
         code.add(";");
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "node" && it.field === "init")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -301,6 +313,11 @@ const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     if (needSemicolon) {
         code.add(";");
     }
+
+    const endIndex = exprOpt
+        ? node.children.findIndex(it => it.$ === "node" && it.field === "expression")
+        : 0 // index of return
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatExpressionStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -312,6 +329,9 @@ const formatExpressionStatement = (code: CodeBuilder, node: CstNode, needSemicol
     if (needSemicolon) {
         code.add(";");
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "node" && it.field === "expression")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -345,6 +365,9 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     if (needSemicolon) {
         code.add(";");
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "node" && it.field === "right")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -367,7 +390,13 @@ const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
     formatStatements(code, trueBranch);
 
     if (falseBranch) {
-        code.space().add("else").space();
+        if (singleLineStatement(trueBranch)) {
+            code.newLine()
+        } else {
+            code.space()
+        }
+
+        code.add("else").space();
 
         const branch = nonLeafChild(falseBranch)
         if (!branch) return
@@ -378,6 +407,9 @@ const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
             formatStatements(code, childByField(branch, "body"));
         }
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -397,6 +429,9 @@ const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
     formatExpression(code, condition);
     code.space();
     formatStatements(code, body);
+
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatDestructField = (code: CodeBuilder, field: Cst) => {
@@ -467,6 +502,9 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode, needSemicolon
     if (needSemicolon) {
         code.add(";");
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "node" && it.field === "init")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -486,6 +524,9 @@ const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
     formatExpression(code, condition);
     code.space();
     formatStatements(code, body);
+
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -511,6 +552,9 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: b
     if (needSemicolon) {
         code.add(";");
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "node" && it.field === "condition")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -545,6 +589,9 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
         code.space().add("catch").space().add("(").apply(formatId, name).add(")").space();
         formatStatements(code, handlerBody);
     }
+
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 };
 
 const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -569,4 +616,7 @@ const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
     formatExpression(code, expression);
     code.add(")").space();
     formatStatements(code, body);
+
+    const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+    processInlineCommentsAfterIndex(code, node, endIndex)
 }; 

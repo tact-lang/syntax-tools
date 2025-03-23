@@ -55,9 +55,29 @@ export class CodeBuilder {
         return this;
     }
 
+    indentCustom(len: number): this {
+        this.indentStack.push(this.currentIndent);
+        this.currentIndent = " ".repeat(len);
+        return this;
+    }
+
+    lineLength(): number {
+        let sum = 0;
+        for (let i = 0; i < this.parts.length; i++) {
+            const index = this.parts.length - 1 - i
+            const element = this.parts[index];
+            if (element !== "\n") {
+                sum += element.length;
+                continue;
+            }
+            break
+        }
+        return sum
+    }
+
     trimNewlines(): this {
         let toRemove = 0;
-        for (;toRemove < this.parts.length; toRemove++) {
+        for (; toRemove < this.parts.length; toRemove++) {
             const index = this.parts.length - 1 - toRemove
             const element = this.parts[index];
             if (element === "\n") {

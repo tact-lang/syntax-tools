@@ -26,7 +26,7 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
         case "Operator": {
             const name = node.children[0];
             if (!name || name.$ !== "node") {
-                code.add(visit(node).trim())
+                code.add(visit(name).trim())
                 return
             }
             code.add(visit(name.children[0]).trim())
@@ -75,17 +75,59 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return;
         }
         case "Binary": {
+            let lineLengthBeforeLeft = code.lineLength()
+            let indented = false
+
             const processBinaryTail = (code: CodeBuilder, node: CstNode): void => {
-                node.children.forEach(child => {
-                    if (child.$ === "leaf") return
+                let needWrap = false
+
+                for (const child of node.children) {
+                    if (child.$ === "leaf") continue;
                     if (child.type === "Operator") {
                         code.space()
                     }
                     code.apply(formatExpression, child)
                     if (child.type === "Operator") {
-                        code.space()
+                        needWrap = child.children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+
+                        const trailingComments = child.children.filter(it => it.$ === "node" && it.type === "Comment")
+
+                        let seenComment = false
+                        const needNewlineBeforeComments = child.children.some(it => {
+                            if (it.$ === "leaf" && it.text.includes("\n") && !seenComment) {
+                                return true
+                            }
+                            if (it.$ === "node" && it.type === "Comment") {
+                                seenComment = true
+                            }
+                            return false
+                        })
+
+                        if (trailingComments.length > 0) {
+                            code.space()
+                            trailingComments.forEach((comment, index) => {
+                                code.add(visit(comment))
+                                if (index !== trailingComments.length - 1) {
+                                    code.newLine()
+                                }
+                            })
+                            needWrap = true
+                        } else if (trailingComments.length > 0 && needNewlineBeforeComments) {
+                            code.newLine()
+                        } else if (!needWrap) {
+                            code.space()
+                        }
                     }
-                })
+
+                    if (needWrap) {
+                        if (!indented && lineLengthBeforeLeft > 0) {
+                            code.indentCustom(lineLengthBeforeLeft)
+                            indented = true
+                        }
+                        code.newLine()
+                        needWrap = false
+                    }
+                }
             }
 
             const head = childByField(node, "head")
@@ -94,6 +136,9 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             if (head && tail) {
                 code.apply(formatExpression, head)
                 code.apply(processBinaryTail, tail)
+                if (indented) {
+                    code.dedent()
+                }
             }
 
             return;
@@ -231,6 +276,8 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
     code.apply(formatType, type).space()
 
     formatSeparatedList(code, fields, (code, field) => {
+        if (field.$ !== "node") return
+
         // `value: 100` or just `value`
         const name = childByField(field, "name");
         if (!name) throw new Error("Invalid field initializer");
@@ -250,6 +297,21 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
         wrapperLeft: "{",
         wrapperRight: "}",
         extraWrapperSpace: " ",
+        provideTrailingComments: field => {
+            if (field.$ !== "node") return []
+
+            // value: 100
+            //      ^^^^^ this
+            const initOpt = childByField(field, "init");
+
+            const searchField = initOpt ? "init" : "name"
+            const endIndex = field.children.findIndex(it => it.$ === "node" && it.field === searchField)
+            const comments = field.children.slice(endIndex).filter(child => child.$ === "node" && child.type === "Comment");
+            if (comments.length > 0) {
+                return comments
+            }
+            return []
+        }
     });
 };
 
@@ -364,7 +426,19 @@ const formatSuffixCall = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid call expression");
     }
 
+    const endIndex = args.children.findIndex(it => it.$ === "leaf" && it.text === ")")
+
     formatSeparatedList(code, args, (code, arg) => {
         formatExpression(code, arg);
+    }, {
+        endIndex,
     });
+
+    const comments = args.children.slice(endIndex).filter(child => child.$ === "node" && child.type === "Comment");
+    if (comments.length > 0) {
+        code.space()
+        comments.forEach(comment => {
+            code.add(visit(comment))
+        })
+    }
 };

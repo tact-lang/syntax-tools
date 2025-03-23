@@ -33,8 +33,10 @@ interface CommentsExtraction {
 //       ^^^^^^^^^^ this
 //
 // Comments here can be both inline (attached to node) and plain one (actually attached to the next declaration)
-function extractComments([commentPoint, anchor]: [CstNode, string]): undefined | CommentsExtraction {
-    const anchorIndex = commentPoint.children.findIndex(it => it.$ === "leaf" && it.text === anchor)
+function extractComments([commentPoint, anchor]: [CstNode, Anchor]): undefined | CommentsExtraction {
+    const anchorIndex = typeof anchor === "string"
+        ? commentPoint.children.findIndex(it => it.$ === "leaf" && it.text === anchor)
+        : anchor(commentPoint)
     if (anchorIndex === -1) {
         // No anchor, bug?
         return undefined
@@ -63,7 +65,12 @@ function extractComments([commentPoint, anchor]: [CstNode, string]): undefined |
     // all after newline (inclusive)
     const remainingLeafs = commentPoint.children.slice(inlineCommentsIndex)
     if (remainingLeafs.length === 0) {
-        return undefined
+        return {
+            comments: [],
+            inlineComments: inlineComments,
+            startIndex: inlineCommentsIndex,
+            floatingComments: [],
+        }
     }
 
     const lastLeaf = remainingLeafs.at(-1);
@@ -495,8 +502,6 @@ export const processDocComments = (node: Cst): Cst => {
             }
 
             if (statement.group === "statement") {
-                const anchor = statementAnchor(statement)
-
                 const found = findStatementNodeWithComments(statement);
                 if (!found) {
                     continue;
@@ -508,10 +513,21 @@ export const processDocComments = (node: Cst): Cst => {
                 }
                 const owner = ownerAndAnchor[0]
 
-                const res = extractComments([owner, anchor])
-                if (res) {
-                    pendingComments = res.comments
-                    owner.children = owner.children.slice(0, res.startIndex)
+                const anchors = found[1];
+                for (const anchor of anchors) {
+                    const res = extractComments([owner, anchor])
+                    if (res) {
+                        if (res.inlineComments.length > 0 && owner !== statement) {
+                            statement.children.push(...res.inlineComments)
+                        }
+
+                        pendingComments = res.comments
+                        owner.children = owner.children.slice(0, res.startIndex)
+                        if (res.inlineComments.length > 0 && owner !== statement) {
+                            owner.children = owner.children.slice(0, owner.children.length - 1 - res.inlineComments.length)
+                        }
+                        break
+                    }
                 }
             }
         }
@@ -565,10 +581,10 @@ export const processDocComments = (node: Cst): Cst => {
         const items = node.children;
 
         const head = childByField(node, "head")
-        if (head && head.type === "StructFieldInitializer") {
-            // skip Foo {}
-            return node
-        }
+        // if (head && head.type === "StructFieldInitializer") {
+        //     // skip Foo {}
+        //     return node
+        // }
 
         let prevFieldsIndex = 0;
         for (let i = 0; i < items.length; i++) {
@@ -615,16 +631,35 @@ export const processDocComments = (node: Cst): Cst => {
 
             prevFieldsIndex = i
 
-            // const res = extractComments([node, ";"]);
-            // if (!res) {
-            //     continue;
-            // }
-            //
-            // const {comments, startIndex} = res;
-            //
-            // node.children = node.children.slice(0, startIndex)
-            //
-            // pendingComments.push(...comments)
+            if (item.type === "StructFieldInitializer") {
+                const found = findStatementNodeWithComments(item);
+                if (!found) {
+                    continue;
+                }
+
+                const ownerAndAnchor = found
+                if (!ownerAndAnchor[0]) {
+                    continue;
+                }
+                const owner = ownerAndAnchor[0]
+
+                const anchors = found[1];
+                for (const anchor of anchors) {
+                    const res = extractComments([owner, anchor])
+                    if (res) {
+                        if (res.inlineComments.length > 0 && owner !== item) {
+                            item.children.push(...res.inlineComments)
+                        }
+
+                        pendingComments = res.comments
+                        owner.children = owner.children.slice(0, res.startIndex)
+                        if (res.inlineComments.length > 0 && owner !== item) {
+                            owner.children = owner.children.slice(0, owner.children.length - 1 - res.inlineComments.length)
+                        }
+                        break
+                    }
+                }
+            }
         }
 
         if (pendingComments.length > 0) {
@@ -639,36 +674,38 @@ export const processDocComments = (node: Cst): Cst => {
     }
 }
 
-const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
+export type Anchor = string | ((n: CstNode) => number)
+
+const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, Anchor[]] => {
     if (node.type === "StatementWhile" || node.type === "StatementForEach" || node.type === "StatementRepeat") {
         const body = childByField(node, "body");
-        return [body, "}"]
+        return [body, ["}"]]
     }
 
     if (node.type === "StatementBlock") {
-        return [node, "}"]
+        return [node, ["}"]]
     }
 
     if (node.type === "StatementTry") {
         const body = childByField(node, "body");
         const handler = childByField(node, "handler");
         if (!handler) {
-            return [body, "}"]
+            return [body, ["}"]]
         }
         const handlerBody = childByField(handler, "body");
-        return [handlerBody, "}"]
+        return [handlerBody, ["}"]]
     }
 
     if (node.type === "StatementCondition") {
         const trueBranch = childByField(node, "trueBranch");
         const falseBranch = childByField(node, "falseBranch");
         if (!falseBranch) {
-            return [trueBranch, "}"]
+            return [trueBranch, ["}"]]
         }
         const falseBranch2 = childByType(falseBranch, "FalseBranch");
         if (falseBranch2) {
             const body = childByField(falseBranch2, "body");
-            return [body, "}"]
+            return [body, ["}"]]
         }
 
         const falseBranchIf = childByType(falseBranch, "StatementCondition");
@@ -678,30 +715,20 @@ const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, str
         return findStatementNodeWithComments(falseBranchIf)
     }
 
-    return [node, ";"]
+    if (node.children.length > 0) {
+        const child = node.children.at(-1);
+        if (child.$ === "node") {
+            return findStatementNodeWithComments(child)
+        }
+
+        return [node, [(n) => {
+            const index = [...n.children].reverse().findIndex(it => it.$ === "node" && it.type !== "Comment");
+            if (index === -1) {
+                return n.children.findIndex(it => it.$ === "leaf" && it.text !== ")");
+            }
+            return n.children.length - 1 - index
+        }, ";", "}"]]
+    }
+
+    return [node, [";"]]
 }
-
-const statementAnchor = (node: Cst): string => {
-    if (node.$ !== "node") {
-        return ""
-    }
-
-    switch (node.type) {
-        case "StatementExpression":
-        case "StatementReturn":
-        case "StatementDestruct":
-        case "StatementLet":
-        case "StatementAssign":
-        case "StatementUntil":
-            return ";"
-        case "StatementCondition":
-        case "StatementWhile":
-        case "StatementRepeat":
-        case "StatementTry":
-        case "StatementForEach":
-        case "StatementBlock":
-            return "}"
-        default:
-            throw new Error(`Unsupported statement type: ${node.type}`);
-    }
-};

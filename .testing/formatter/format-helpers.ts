@@ -123,6 +123,7 @@ export const formatSeparatedList = (
         suffixElement?: string,
         needSeparatorAfterSuffixElement?: boolean,
         separator?: string,
+        provideTrailingComments?: (item: Cst) => undefined | Cst[],
     } = {}
 ): void => {
     const {
@@ -162,9 +163,11 @@ export const formatSeparatedList = (
             formatItem(code, item.item);
             code.add(separator);
 
-            item.trailingComments.forEach(comment => {
-                code.space().add(visit(comment.node));
-                if (comment.hasNewline) {
+            const trailingComments = options.provideTrailingComments?.(item.item) ?? []
+            trailingComments.forEach((comment, index) => {
+                code.space().add(visit(comment));
+
+                if (index !== trailingComments.length - 1) {
                     code.newLine();
                 }
             });
