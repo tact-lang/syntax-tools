@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
 import {childByField, childLeafWithText, childrenByType, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatId, formatSeparatedList, idText} from "./format-helpers";
+import {formatId, formatSeparatedList, getCommentsBetween, idText} from "./format-helpers";
 import {formatAscription} from "./format-types";
 import {formatStatements} from "./format-statements";
 import {formatExpression} from "./format-expressions";
@@ -96,7 +96,7 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
     // 
     // inline native foo(param: Int): Int {}
     // ^^^^^^         ^^^ ^^^^^^^^^^ ^^^^^ ^^
-    // attributes     |   |          |     |
+    // attributesOpt  |   |          |     |
     //                |   |          |     body
     //                |   |          returnTypeOpt
     //                |   parameters
@@ -105,15 +105,26 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
     const nativeName = childByField(node, "nativeName");
     const parameters = childByField(node, "parameters");
     const returnTypeOpt = childByField(node, "returnType");
-    const attributes = childByField(node, "attributes");
+    const attributesOpt = childByField(node, "attributes");
 
     if (!name || !nativeName || !parameters) {
         throw new Error("Invalid native function declaration");
     }
 
-    code.add("@name").add("(").apply(formatExpression, nativeName).add(")").newLine();
+    code.add("@name").add("(").apply(formatExpression, nativeName).add(")");
 
-    formatAttributes(code, attributes);
+    // inline comments after `@name()`
+    const comments = getCommentsBetween(node, nativeName, attributesOpt ?? name)
+    if (comments.length > 0) {
+        code.space();
+        comments.forEach(comment => {
+            code.add(visit(comment))
+        })
+    }
+
+    code.newLine()
+
+    formatAttributes(code, attributesOpt);
 
     code.add("native").space().apply(formatId, name);
 

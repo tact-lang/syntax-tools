@@ -1,5 +1,5 @@
 import {CstNode} from "../result";
-import {childByField, nonLeafChild, visit} from "../cst-helpers";
+import {childByField, childLeafWithText, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {containsSeveralNewlines, idText} from "./format-helpers";
 import {formatExpression} from "./format-expressions";
@@ -44,6 +44,21 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
         return
     }
 
+    const fields = fieldsNode?.children.filter(it => it.$ === "node" && it.type === "FieldDecl") ?? [];
+    const firstField = fields.at(0);
+
+    const oneLiner = fields.length === 1 &&
+        firstField &&
+        childLeafWithText(fieldsNode, ";") === undefined &&
+        !hasComments
+
+    if (oneLiner && firstField && firstField.$ === "node") {
+        code.space().add("{").space();
+        formatFieldDecl(code, firstField, false);
+        code.space().add("}");
+        return
+    }
+
     code.space().add("{").newLine().indent();
 
     children.forEach(child => {
@@ -83,7 +98,7 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
                     if (needNewline) {
                         code.newLine()
                     }
-                    formatFieldDecl(code, field);
+                    formatFieldDecl(code, field, true);
                     needNewline = true
                 }
             })

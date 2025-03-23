@@ -278,14 +278,10 @@ struct Foo {
     age: Int;
 }`));
 
-        it('format struct with newlines', test(`
+        it('format struct with newlines', intact(`
 struct Foo {
     name: String;
 
-    age: Int;
-}`, `
-struct Foo {
-    name: String;
     age: Int;
 }`));
 
@@ -381,14 +377,10 @@ message Foo {
     age: Int;
 }`));
 
-        it('format message with newlines', test(`
+        it('format message with newlines', intact(`
 message Foo {
     name: String;
 
-    age: Int;
-}`, `
-message Foo {
-    name: String;
     age: Int;
 }`));
     });
@@ -642,7 +634,9 @@ fun foo() {
 
             it('nested conditional', intact(`
 fun foo() {
-    let x = a ? b : c ? d : e;
+    let x = a
+        ? b
+        : c ? d : e;
 }`));
 
             it('complex conditional', intact(`
@@ -744,12 +738,11 @@ fun foo() {
                     foo.bar;
                     foo()
                         .bar
-                        .baz(foo
-                            .bar(
-                                1,
-                                2,
-                                3,
-                            ))
+                        .baz(foo.bar(
+                            1,
+                            2,
+                            3,
+                        ))
                         .boo
                         .beee
                         .aaaa;
@@ -779,6 +772,20 @@ fun foo() {
                     a
                         .foo // comment
                         .bar // comment 2;
+                }
+            `));
+
+            it('field chain in struct instance', test(`
+                fun foo() {
+                    return Foo {
+                        foo: bar.baz
+                    }
+                }
+            `, `
+                fun foo() {
+                    return Foo {
+                        foo: bar.baz,
+                    };
                 }
             `));
         });
@@ -822,6 +829,16 @@ fun foo() {
 fun foo() {
     let x = a ? b : c;
 }`));
+
+            it('nested conditional', intact(`
+                fun foo() {
+                    return (a == 1)
+                        ? 42
+                        : (a == 2)
+                            ? 43
+                            : (a == 3) ? 44 : 45;
+                }
+            `));
 
 //             it('method call', test(`
 // fun foo() {

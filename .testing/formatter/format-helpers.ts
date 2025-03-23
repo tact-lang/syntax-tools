@@ -234,6 +234,13 @@ export const getCommentsBetween = (node: CstNode, startNode: undefined | Cst, en
     }) as CstNode[];
 };
 
+export function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end: Cst) {
+    const comments = getCommentsBetween(node, start, end)
+    comments.forEach(comment => {
+        code.add(visit(comment))
+    })
+}
+
 // name: Id
 //   name: name
 //      "some"

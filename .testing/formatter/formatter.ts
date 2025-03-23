@@ -22,32 +22,47 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
     }
 
     switch (node.type) {
-        case "Root":
+        case "Root": {
+            if (node.children.length === 0) {
+                return
+            }
+
+            let needNewLine = false;
             node.children.forEach((child, index) => {
+                if (child.$ === "leaf") {
+                    if (containsSeveralNewlines(child.text)) {
+                        needNewLine = true;
+                    }
+                    return;
+                }
+
+                if (needNewLine) {
+                    code.newLine()
+                }
+
+                if (child.$ === "node" && child.type === "Comment") {
+                    code.add(visit(child))
+                    code.newLine();
+                    return
+                }
+
                 formatNode(code, child);
                 if (index < node.children.length - 2) {
                     code.newLine();
                 }
             });
-            code.newLine()
+            code.trimNewlines().newLine()
             break;
-
-        case "Module":
-            const imports = childByField(node, "imports");
-            if (imports) {
-                if (imports.type === "Import") {
-                    // single import
-                    formatImport(code, imports);
-                    code.newLine();
-                } else {
-                    imports.children.forEach((item, index) => {
-                        if (item.$ !== "node") return;
-
-                        if (item.type === "Import") {
-                            formatImport(code, item);
-                            code.newLine();
-                        }
-                    });
+        }
+        case "Module": {
+            const importsNode = childByField(node, "imports");
+            if (importsNode) {
+                const imports = importsNode.children;
+                for (const item of imports) {
+                    if (item.$ === "node" && item.type === "Import") {
+                        formatImport(code, item);
+                        code.newLine();
+                    }
                 }
 
                 code.newLine();
@@ -69,6 +84,17 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                     return;
                 }
 
+                if (item.type === "Comment") {
+                    // floating comment
+                    code.add(visit(item))
+                    code.newLine();
+                    return
+                }
+
+                if (needNewLine) {
+                    code.newLine();
+                    needNewLine = false
+                }
                 formatNode(code, item);
                 if (index < items.length - 1) {
                     code.newLine();
@@ -80,6 +106,7 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                 }
             });
             break;
+        }
 
         case "PrimitiveTypeDecl":
             formatPrimitiveType(code, node);

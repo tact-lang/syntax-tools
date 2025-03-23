@@ -4,6 +4,13 @@ import {CodeBuilder} from "../code-builder";
 import {formatId, formatSeparatedList, idText} from "./format-helpers";
 import {formatType} from "./format-types";
 
+interface ChainCall {
+    nodes: CstNode[]
+    leadingComments: CstNode[]
+    trailingComments: CstNode[]
+    hasLeadingNewline: boolean
+}
+
 export const formatExpression = (code: CodeBuilder, node: Cst): void => {
     if (node.$ !== "node") {
         code.add(visit(node));
@@ -112,103 +119,8 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             return
         }
         case "Suffix": {
-            interface ChainCall {
-                nodes: CstNode[]
-                leadingComments: CstNode[]
-                trailingComments: CstNode[]
-                hasLeadingNewline: boolean
-            }
-
-            const suffixes = childByField(node, "suffixes");
-            if (!suffixes) {
-                return;
-            }
-
-            const infos: ChainCall[] = []
-            let suffixesList = suffixes.type === "SuffixFieldAccess" || suffixes.type === "SuffixCall" || suffixes.type === "SuffixUnboxNotNull"
-                ? [suffixes]
-                : suffixes.children
-
-            // foo.bar()
-            // ^^^
-            const firstExpression = node.children[0];
-            // foo.bar()
-            //        ^^
-            const firstSuffix = suffixesList[0];
-
-            // first call suffix attached to first expression
-            const firstSuffixIsCallOrNotNull = firstSuffix && firstSuffix.$ === "node" && (firstSuffix.type === "SuffixCall" || firstSuffix.type === "SuffixUnboxNotNull");
-            if (firstSuffixIsCallOrNotNull) {
-                suffixesList = suffixesList.slice(1)
-            }
-
-            suffixesList.forEach((suffix) => {
-                if (suffix.$ !== "node") return;
-
-                if (suffix.type === "SuffixFieldAccess") {
-                    const name = childByField(suffix, "name")
-                    infos.push({
-                        nodes: [suffix],
-                        hasLeadingNewline: name.children.some(it => it.$ === "leaf" && it.text.includes("\n")),
-                        leadingComments: [],
-                        trailingComments: [],
-                    })
-                }
-
-                if (suffix.type === "SuffixCall" && infos.length > 0) {
-                    const lastInfo = infos.at(-1);
-                    lastInfo.nodes.push(suffix)
-
-                    const params = childByField(suffix, "params")
-                    lastInfo.hasLeadingNewline = params.children.some(it => it.$ === "leaf" && it.text.includes("\n"))
-                }
-
-                if (suffix.type === "SuffixUnboxNotNull" && infos.length > 0) {
-                    const lastInfo = infos.at(-1);
-                    lastInfo.nodes.push(suffix)
-                }
-            })
-
-            const indent = infos.some(call => call.hasLeadingNewline) ? 4 : 0;
-
-            formatExpression(code, firstExpression)
-
-            if (firstSuffixIsCallOrNotNull) {
-                formatExpression(code, firstSuffix)
-            }
-
-            const shouldBeMultiline = indent > 0 ||
-                infos.some(call =>
-                    call.leadingComments.length > 0 ||
-                    call.trailingComments.length > 0
-                );
-
-            if (shouldBeMultiline) {
-                code.indent()
-                code.newLine()
-
-                infos.forEach((info, index) => {
-                    info.nodes.forEach(child => {
-                        code.apply(formatExpression, child)
-                    })
-
-                    if (index !== infos.length - 1) {
-                        code.newLine()
-                    }
-                })
-
-                code.dedent()
-            } else {
-                infos.forEach(info => {
-                    info.nodes.forEach(child => {
-                        code.apply(formatExpression, child)
-                    })
-                })
-            }
-
-            // const chainInfo = collectChainInfo(node);
-            // formatChain(code, chainInfo);
-            return;
+            formatSuffix(node, code);
+            return
         }
         case "InitOf": {
             formatInitOf(code, node);
@@ -252,7 +164,8 @@ function formatConditional(node: CstNode, code: CodeBuilder) {
 
     const branchesWidth = trueBranchCode.length + falseBranchCode.length;
 
-    const multiline = branchesWidth > 70
+    const nestedConditional = thenBranch.type === "Conditional" || elseBranch.type === "Conditional";
+    const multiline = branchesWidth > 70 || nestedConditional
     if (multiline) {
         // format as:
         // bar
@@ -339,6 +252,97 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
         extraWrapperSpace: " ",
     });
 };
+
+function formatSuffix(node: CstNode, code: CodeBuilder) {
+    const suffixes = childByField(node, "suffixes");
+    if (!suffixes) {
+        return;
+    }
+
+    const infos: ChainCall[] = []
+    let suffixesList = suffixes.type === "SuffixFieldAccess" || suffixes.type === "SuffixCall" || suffixes.type === "SuffixUnboxNotNull"
+        ? [suffixes]
+        : suffixes.children
+
+    // foo.bar()
+    // ^^^
+    const firstExpression = node.children[0];
+    // foo.bar()
+    //        ^^
+    const firstSuffix = suffixesList[0];
+
+    // first call suffix attached to first expression
+    const firstSuffixIsCallOrNotNull = firstSuffix && firstSuffix.$ === "node" && (firstSuffix.type === "SuffixCall" || firstSuffix.type === "SuffixUnboxNotNull");
+    if (firstSuffixIsCallOrNotNull) {
+        suffixesList = suffixesList.slice(1)
+    }
+
+    suffixesList.forEach((suffix) => {
+        if (suffix.$ !== "node") return;
+
+        if (suffix.type === "SuffixFieldAccess") {
+            const name = childByField(suffix, "name")
+            infos.push({
+                nodes: [suffix],
+                hasLeadingNewline: name.children.some(it => it.$ === "leaf" && it.text.includes("\n")),
+                leadingComments: [],
+                trailingComments: [],
+            })
+        }
+
+        if (suffix.type === "SuffixCall" && infos.length > 0) {
+            const lastInfo = infos.at(-1);
+            lastInfo.nodes.push(suffix)
+
+            const params = childByField(suffix, "params")
+            lastInfo.hasLeadingNewline = params.children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+        }
+
+        if (suffix.type === "SuffixUnboxNotNull" && infos.length > 0) {
+            const lastInfo = infos.at(-1);
+            lastInfo.nodes.push(suffix)
+        }
+    })
+
+    const indent = infos.slice(0, -1).some(call => call.hasLeadingNewline) ? 4 : 0;
+
+    formatExpression(code, firstExpression)
+
+    if (firstSuffixIsCallOrNotNull) {
+        formatExpression(code, firstSuffix)
+    }
+
+    const shouldBeMultiline = indent > 0 ||
+        infos.slice(0, -1).some(call =>
+            call.leadingComments.length > 0 ||
+            call.trailingComments.length > 0
+        );
+
+    if (shouldBeMultiline) {
+        code.indent()
+        code.newLine()
+
+        infos.forEach((info, index) => {
+            info.nodes.forEach(child => {
+                code.apply(formatExpression, child)
+            })
+
+            if (index !== infos.length - 1) {
+                code.newLine()
+            }
+        })
+
+        code.dedent()
+    } else {
+        infos.forEach(info => {
+            info.nodes.forEach(child => {
+                code.apply(formatExpression, child)
+            })
+        })
+    }
+
+    return;
+}
 
 const formatSuffixFieldAccess = (code: CodeBuilder, node: CstNode): void => {
     const name = childByField(node, "name");

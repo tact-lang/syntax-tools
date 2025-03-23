@@ -7,6 +7,7 @@ interface CommentsExtraction {
     comments: Cst[]
     inlineComments: Cst[]
     startIndex: number
+    floatingComments: Cst[] // not attached to any
 }
 
 // $Function
@@ -51,7 +52,8 @@ function extractComments([commentPoint, anchor]: [CstNode, string]): undefined |
     let inlineCommentsIndex = actualAnchorIndex + followingLeafs.findIndex(it => it.$ === "leaf" && it.text.includes("\n"))
 
     // all before, inline comments that we don't touch
-    const inlineComments = followingLeafs.slice(0, inlineCommentsIndex - actualAnchorIndex)
+    const inlineLeafs = followingLeafs.slice(0, inlineCommentsIndex - actualAnchorIndex)
+    const inlineComments = inlineLeafs.filter(it => it.$ === "node" && it.type === "Comment");
 
     const inlineCommentFirstChildren = commentPoint.children[inlineCommentsIndex];
     if (inlineCommentFirstChildren.$ === "leaf" && inlineCommentFirstChildren.text.includes("\n")) {
@@ -69,13 +71,31 @@ function extractComments([commentPoint, anchor]: [CstNode, string]): undefined |
     const isAttachedTo = lastLeaf && lastLeaf.$ === "leaf" && !containsSeveralNewlines(lastLeaf.text)
     if (!isAttachedTo) {
         // comments are not attached, need to add a separate statement? TODO
-        return undefined
+        return {
+            comments: [],
+            inlineComments: [],
+            startIndex: inlineCommentsIndex,
+            floatingComments: remainingLeafs,
+        }
+    }
+
+    const reverseDoubleNewlineIndex = [...remainingLeafs].reverse().findIndex(it => it.$ === "leaf" && containsSeveralNewlines(it.text));
+
+    if (reverseDoubleNewlineIndex !== -1) {
+        const index = remainingLeafs.length - reverseDoubleNewlineIndex
+        return {
+            comments: remainingLeafs.slice(index),
+            inlineComments: inlineComments,
+            startIndex: inlineCommentsIndex,
+            floatingComments: remainingLeafs.slice(0, index),
+        }
     }
 
     return {
         comments: remainingLeafs,
-        inlineComments: inlineComments.filter(it => it.$ === "node" && it.type === "Comment"),
-        startIndex: inlineCommentsIndex // + 1
+        inlineComments: inlineComments,
+        startIndex: inlineCommentsIndex,
+        floatingComments: [],
     }
 }
 
@@ -197,9 +217,13 @@ export const processDocComments = (node: Cst): Cst => {
         }
 
         // skip top level whitespaces before comment
-        const firstCommentIndex = initialLeafs.findIndex(it => it.$ === "node" && it.type === "Comment")
+        let firstCommentIndex = initialLeafs.findIndex(it => it.$ === "node" && it.type === "Comment")
 
-        // TODO: take only consecutive comments
+        const reverseDoubleNewlineIndex = [...initialLeafs].reverse().findIndex(it => it.$ === "leaf" && containsSeveralNewlines(it.text));
+
+        if (reverseDoubleNewlineIndex !== -1) {
+            firstCommentIndex = initialLeafs.length - reverseDoubleNewlineIndex
+        }
 
         pendingComments = initialLeafs.slice(firstCommentIndex)
 
@@ -368,6 +392,7 @@ export const processDocComments = (node: Cst): Cst => {
     if (node.type === "items" || node.type === "declarations" || node.type === "imports") {
         const items = node.children;
 
+        let prevFieldsIndex = 0;
         for (let i = 0; i < items.length; i++) {
             const item = items[i];
 
@@ -387,6 +412,21 @@ export const processDocComments = (node: Cst): Cst => {
             }
 
             if (item.type === "Comment") {
+                // this comment may be inline comment
+                const children = items.slice(prevFieldsIndex, i)
+                const inlineComment = !children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+                if (inlineComment) {
+                    const prevItem = items[prevFieldsIndex]
+                    if (prevItem.$ === "node") {
+                        // append inline comment to previous item
+                        prevItem.children.push(item)
+                        // remove comment and go back to not increment too much
+                        items.splice(i, 1)
+                        i--
+                        continue;
+                    }
+                }
+
                 pendingComments.push(item)
 
                 // remove comment and go back to not increment too much
@@ -394,6 +434,8 @@ export const processDocComments = (node: Cst): Cst => {
                 i--
                 continue;
             }
+
+            prevFieldsIndex = i
 
             const found = findNodeWithComments(item);
             if (!found) {
@@ -410,10 +452,15 @@ export const processDocComments = (node: Cst): Cst => {
                 continue;
             }
 
-            const {comments, startIndex} = res;
-            const owner = commentOwner[0]
+            const {comments, startIndex, floatingComments} = res;
 
+            const owner = commentOwner[0]
             owner.children = owner.children.slice(0, startIndex)
+
+            if (floatingComments.length > 0) {
+                items.splice(i + 1, 0, ...floatingComments)
+                i += floatingComments.length - 1
+            }
 
             pendingComments.push(...comments)
         }
@@ -516,6 +563,12 @@ export const processDocComments = (node: Cst): Cst => {
 
     if (node.type === "fields") {
         const items = node.children;
+
+        const head = childByField(node, "head")
+        if (head && head.type === "StructFieldInitializer") {
+            // skip Foo {}
+            return node
+        }
 
         let prevFieldsIndex = 0;
         for (let i = 0; i < items.length; i++) {

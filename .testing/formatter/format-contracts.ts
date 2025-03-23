@@ -30,7 +30,7 @@ export function formatContract(code: CodeBuilder, node: CstNode): void {
                 formatConstant(code, decl);
                 break;
             case "FieldDecl":
-                formatFieldDecl(code, decl);
+                formatFieldDecl(code, decl, true);
                 break;
             case "Comment":
                 code.add(visit(decl).trim());
@@ -59,7 +59,7 @@ export function formatTrait(code: CodeBuilder, node: CstNode): void {
                 formatConstant(code, decl);
                 break;
             case "FieldDecl":
-                formatFieldDecl(code, decl);
+                formatFieldDecl(code, decl, true);
                 break;
             case "Comment":
                 code.add(visit(decl).trim());
@@ -195,7 +195,7 @@ function formatConstantAttribute(code: CodeBuilder, attr: Cst) {
     code.add(`${idText(attr)}`).space();
 }
 
-export function formatFieldDecl(code: CodeBuilder, decl: CstNode): void {
+export function formatFieldDecl(code: CodeBuilder, decl: CstNode, needSemicolon: boolean): void {
     formatDocComments(code, decl)
 
     // foo : Int = 100;
@@ -222,7 +222,9 @@ export function formatFieldDecl(code: CodeBuilder, decl: CstNode): void {
         //  = 100
         code.space().add("=").space().apply(formatExpression, value);
     }
-    code.add(";");
+    if (needSemicolon) {
+        code.add(";");
+    }
 
     const endIndex = decl.children.findIndex(it => it.$ === "leaf" && it.text === ";")
     processInlineCommentsAfterIndex(code, decl, endIndex)

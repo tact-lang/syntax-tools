@@ -5,7 +5,6 @@ export class CodeBuilder {
     private currentIndent = "";
     private indentStack: string[] = [];
     private atLineStart = true;
-    private skipNextSpace = false;
 
     constructor(private indentStr: string = "    ") {}
 
@@ -21,22 +20,12 @@ export class CodeBuilder {
     }
 
     add(part: string): this {
-        // Split by newlines to handle multiline strings (like comments)
-        const lines = part.split("\n");
-        if (lines.length === 1) {
-            this.addPart(lines[0])
-            return this;
-        }
-
-        for (let i = 0; i < lines.length; i++) {
-            if (i > 0) this.newLine();
-            if (lines[i].length > 0) this.addPart(lines[i]);
-        }
+        this.addPart(part)
         return this;
     }
 
     space(): this {
-        if (!this.atLineStart && !this.skipNextSpace) {
+        if (!this.atLineStart) {
             this.parts.push(" ");
         }
         return this;
@@ -44,11 +33,6 @@ export class CodeBuilder {
 
     apply(callback: (code: CodeBuilder, node: Cst) => void, node: Cst): this {
         callback(this, node);
-        return this;
-    }
-
-    noSpace(): this {
-        this.skipNextSpace = true;
         return this;
     }
 
@@ -69,6 +53,20 @@ export class CodeBuilder {
             this.currentIndent = this.indentStack.pop()!;
         }
         return this;
+    }
+
+    trimNewlines(): this {
+        let toRemove = 0;
+        for (;toRemove < this.parts.length; toRemove++) {
+            const index = this.parts.length - 1 - toRemove
+            const element = this.parts[index];
+            if (element === "\n") {
+                continue;
+            }
+            break
+        }
+        this.parts = this.parts.slice(0, this.parts.length - toRemove);
+        return this
     }
 
     toString(): string {

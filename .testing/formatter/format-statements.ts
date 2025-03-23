@@ -3,7 +3,12 @@ import {childByField, childByType, childLeafWithText, nonLeafChild, visit} from 
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
-import {containsSeveralNewlines, formatId, formatSeparatedList, getCommentsBetween} from "./format-helpers";
+import {
+    containsSeveralNewlines,
+    formatId,
+    formatSeparatedList,
+    processInlineComments
+} from "./format-helpers";
 
 function trailingNewlines(node: Cst): string {
     if (node.$ === "leaf") return ""
@@ -53,6 +58,19 @@ function semicolonStatement(node: CstNode): boolean {
         node.type === "StatementUntil"
 }
 
+function canBeSingleLine(node: CstNode): boolean {
+    if (node.type === "StatementUntil") {
+        return false
+    }
+    if (node.type === "StatementReturn") {
+        const expr = childByField(node, "expression")
+        if (expr && expr.type === "StructInstance") {
+            return false
+        }
+    }
+    return true
+}
+
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
     const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
@@ -66,6 +84,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const oneLiner = statements.length === 1 &&
         childLeafWithText(statements[0], ";") === undefined &&
         semicolonStatement(statements[0]) &&
+        canBeSingleLine(statements[0]) &&
         comments.length === 0
 
     if (oneLiner) {
@@ -75,13 +94,21 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
         return
     }
 
-    code.add("{").newLine().indent();
+    code.add("{")
 
     let needNewLine = false
+    let seenFirstNewline = false
 
     for (let i = 0; i < endIndex; i++) {
         const statement = node.children[i];
         if (statement.$ === "leaf") {
+            if (!seenFirstNewline && statement.text.includes("\n")) {
+                // add initial new line after `{`
+                code.newLine().indent();
+                seenFirstNewline = true
+                continue
+            }
+
             // don't add extra leading line
             if (i !== 1 && containsSeveralNewlines(statement.text)) {
                 needNewLine = true;
@@ -95,8 +122,23 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
         }
 
         if (statement.type === "Comment") {
-            code.add(visit(statement));
+            if (!seenFirstNewline) {
+                // found inline comment after `{`, need to add space before it
+                code.space()
+            }
+            code.add(visit(statement).trim());
+
+            if (!seenFirstNewline) {
+                // don't add new line for inline comment
+                continue
+            }
         } else if (statement.group === "statement") {
+            if (!seenFirstNewline) {
+                // add initial new line after `{`
+                code.newLine().indent();
+                seenFirstNewline = true
+            }
+
             formatStatement(code, statement, true);
             const newlines = trailingNewlines(statement)
             if (containsSeveralNewlines(newlines)) {
@@ -202,13 +244,6 @@ const statementAnchor = (node: Cst): string => {
             throw new Error(`Unsupported statement type: ${node.type}`);
     }
 };
-
-function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end: Cst) {
-    const comments = getCommentsBetween(node, start, end)
-    comments.forEach(comment => {
-        code.add(visit(comment))
-    })
-}
 
 const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // let name : Int = 100;

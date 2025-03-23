@@ -31,9 +31,13 @@ if (!fs.statSync(firstArg).isFile()) {
     })
 
     files.forEach(file => {
-        console.log(`formatting ${file}`)
         const basePath = "/Users/petrmakhnev/tact";
         const fullPath = path.join(basePath, file);
+
+        if (fullPath.includes("grammar/test")) {
+            return
+        }
+
         const content = fs.readFileSync(fullPath, "utf8");
         const result = formatCode(content);
 
