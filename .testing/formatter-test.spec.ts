@@ -218,8 +218,7 @@ contract Foo(
 ) with 
     Bar,
     Foo,
-{
-}`));
+{}`));
 
     it('5', intact(`
 @interface("some.api.interface")
@@ -799,6 +798,12 @@ fun foo() {
 fun foo() {
     let x = Foo { name: "test", value: 123 };
 }`));
+
+            it('empty struct instance', intact(`
+                fun foo() {
+                    Foo {};
+                }
+            `));
         });
 
         describe('format expressions with extra spaces', () => {
@@ -860,6 +865,13 @@ import
 import "stdlib";
 
 fun foo() {}`));
+
+        it('single import with function with comment', intact(`
+            import "";
+            
+            // comment here
+            fun foo() {}
+        `));
     });
 
     describe('statement comments', () => {
@@ -1289,20 +1301,182 @@ fun foo() {}`));
 
 
 
-        it('contract', intact(`
+        it('empty contract', intact(`
+            contract Foo {}
+        `));
+
+        it('empty contract with comment', intact(`
             contract Foo {
+                // empty contract
             }
         `));
 
         it('contract with parameters', intact(`
-            contract Foo(value: Int) {
-            }
+            contract Foo(value: Int) {}
         `));
 
         it('contract with parameters on new lines', intact(`
             contract Foo(
                 value: Int,
-            ) {
+            ) {}
+        `));
+
+        it('contract with single field', intact(`
+            contract Foo {
+                foo: Int;
+            }
+        `));
+
+        it('contract with single field and trailing newlines', test(`
+            contract Foo {
+                foo: Int;
+                
+                
+            }
+        `, `
+            contract Foo {
+                foo: Int;
+            }
+        `));
+
+        it('contract with two fields', intact(`
+            contract Foo {
+                foo: Int;
+                bar: Int;
+            }
+        `));
+
+        it('contract with two fields and newline between', intact(`
+            contract Foo {
+                foo: Int;
+
+                bar: Int;
+            }
+        `));
+
+        it('contract with two fields and several newlines between', test(`
+            contract Foo {
+                foo: Int;
+
+
+
+                bar: Int;
+            }
+        `, `
+            contract Foo {
+                foo: Int;
+
+                bar: Int;
+            }
+        `));
+
+        it('contract with two fields, several newlines between and trailing newline', test(`
+            contract Foo {
+                foo: Int;
+
+
+
+                bar: Int;
+
+
+            }
+        `, `
+            contract Foo {
+                foo: Int;
+
+                bar: Int;
+            }
+        `));
+
+        it('contract with two fields and constant', intact(`
+            contract Foo {
+                foo: Int;
+                bar: Int;
+                const Foo: Int = 0;
+            }
+        `));
+
+        it('contract with two fields and function', intact(`
+            contract Foo {
+                foo: Int;
+                bar: Int;
+                fun foo() {}
+            }
+        `));
+
+        it('contract with receive with empty line after', intact(`
+            contract Test {
+                init() {}
+                receive(src: A) {}
+            
+                bounced(src: Int) {}
+            }
+        `));
+
+        it('contract with fun with empty line after', intact(`
+            contract Test {
+                init() {}
+                fun foo() {}
+            
+                bounced(src: Int) {}
+            }
+        `));
+
+        it('contract with init with empty line after', intact(`
+            contract Test {
+                init() {}
+            
+                bounced(src: Int) {}
+            }
+        `));
+
+        it('contract with const with empty line after', intact(`
+            contract Test {
+                const FOO: Int = 100;
+            
+                bounced(src: Int) {}
+            }
+        `));
+
+        it('contract with field with empty line after', intact(`
+            contract Test {
+                foo: Int;
+            
+                bounced(src: Int) {}
+            }
+        `));
+
+        it('trait with abstract constant', intact(`
+            trait T {
+                abstract const Foo: Int;
+            }
+        `));
+
+        it('preserve newlines for constants', intact(`
+            const FOO: Int = 100;
+            const BAR: Int = 100;
+            const BAZ: Int = 100;
+        `));
+
+        it('one line function', intact(`
+            fun foo() { return 10 }
+        `));
+
+        it('one line function with if', test(`
+            fun foo() { if (true) {
+                return 10;
+            } }
+        `, `
+            fun foo() {
+                if (true) {
+                    return 10;
+                }
+            }
+        `));
+
+        it('function with oneline of', intact(`
+            fun foo() {
+                if (true) { return }
             }
         `));
     })

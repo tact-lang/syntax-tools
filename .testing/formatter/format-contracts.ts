@@ -1,7 +1,7 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childrenByType, nonLeafChild, visit} from "../cst-helpers";
+import {childByField, childByType, childrenByType, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {formatId, formatSeparatedList, idText} from "./format-helpers";
+import {containsSeveralNewlines, formatId, formatSeparatedList, idText, trailingNewlines} from "./format-helpers";
 import {formatFunction, formatParameter} from "./format-declarations";
 import {formatStatements, processInlineCommentsAfterIndex} from "./format-statements";
 import {formatAscription} from "./format-types";
@@ -151,6 +151,9 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
         throw new Error("Invalid constant declaration");
     }
 
+    const attributes = childByField(decl, "attributes");
+    formatConstantAttributes(code, attributes)
+
     // const FOO: Int
     code.add("const").space().apply(formatId, name).apply(formatAscription, type);
 
@@ -175,6 +178,21 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
         //               ^ this
         code.add(";");
     }
+}
+
+function formatConstantAttributes(code: CodeBuilder, attributes: CstNode | undefined) {
+    if (!attributes) return;
+
+    const attrs = childrenByType(attributes, "ConstantAttribute");
+    for (const attr of attrs) {
+        formatConstantAttribute(code, attr);
+    }
+}
+
+function formatConstantAttribute(code: CodeBuilder, attr: Cst) {
+    const attrName = childByField(attr, "name");
+    if (!attrName) return;
+    code.add(`${idText(attr)}`).space();
 }
 
 export function formatFieldDecl(code: CodeBuilder, decl: CstNode): void {
@@ -281,22 +299,45 @@ function formatContractParameters(code: CodeBuilder, node: CstNode): void {
 }
 
 function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclaration: (code: CodeBuilder, decl: CstNode) => void): void {
+    const children = node.children;
+
+    // contract or trait can contain only comments, so we need to handle this case properly
+    const hasComments = children.find(it => it.$ === "node" && it.type === "Comment");
+
+    const declarationsNode = childByField(node, "declarations");
+    if ((!declarationsNode || declarationsNode.children.length === 0) && !hasComments) {
+        code.space().add("{}")
+        return
+    }
+
     code.space().add("{").newLine().indent();
 
-    const declarations = childByField(node, "declarations");
+    const declarations = declarationsNode?.children ?? [];
 
-    declarations?.children.forEach((decl, index) => {
-        if (decl.$ !== "node") return;
+    let needNewLine = false;
+    declarations.forEach(decl => {
+        if (decl.$ === "leaf") {
+            if (containsSeveralNewlines(decl.text)) {
+                needNewLine = true;
+            }
+            return;
+        }
+
+        if (needNewLine) {
+            code.newLine();
+            needNewLine = false
+        }
 
         formatDeclaration(code, decl);
         code.newLine();
 
-        if (index < declarations.children.length - 1) {
+        const newlines = trailingNewlines(decl)
+        if (!needNewLine && containsSeveralNewlines(newlines)) {
             code.newLine();
         }
     });
 
-    if (!declarations) {
+    if (!declarationsNode) {
         // empty contract
         const openBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "{")
         const closeBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")

@@ -3,7 +3,7 @@ import {childByField, childByType, childLeafWithText, nonLeafChild, visit} from 
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
 import {formatAscription, formatType} from "./format-types";
-import {formatId, formatSeparatedList, getCommentsBetween} from "./format-helpers";
+import {containsSeveralNewlines, formatId, formatSeparatedList, getCommentsBetween} from "./format-helpers";
 
 function trailingNewlines(node: Cst): string {
     if (node.$ === "leaf") return ""
@@ -23,7 +23,7 @@ function trailingNewlines(node: Cst): string {
             return trailingNewlines(falseCondition)
         }
     }
-    if (node.$ === "node" && node.type === "StatementWhile") {
+    if (node.$ === "node" && (node.type === "StatementWhile" || node.type === "StatementForEach" || node.type === "StatementRepeat")) {
         const body = childByField(node, "body")
         lastChild = body.children.at(-1)
     }
@@ -31,14 +31,6 @@ function trailingNewlines(node: Cst): string {
         return lastChild.text
     }
     return ""
-}
-
-function containsSeveralNewlines(text: string): boolean {
-    const index = text.indexOf("\n")
-    if (index === -1) {
-        return false
-    }
-    return text.substring(index + 1).includes("\n")
 }
 
 export function processInlineCommentsAfterIndex(code: CodeBuilder, node: CstNode, endIndex: number) {
@@ -52,12 +44,34 @@ export function processInlineCommentsAfterIndex(code: CodeBuilder, node: CstNode
     }
 }
 
+function semicolonStatement(node: CstNode): boolean {
+    return node.type === "StatementLet" ||
+        node.type === "StatementDestruct" ||
+        node.type === "StatementReturn" ||
+        node.type === "StatementExpression" ||
+        node.type === "StatementAssign" ||
+        node.type === "StatementUntil"
+}
+
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
     const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
     if (statements.length === 0) {
         code.add("{}")
         processInlineCommentsAfterIndex(code, node, endIndex)
+        return
+    }
+
+    const comments = statements.filter(it => it.$ === "node" && it.type === "Comment")
+    const oneLiner = statements.length === 1 &&
+        childLeafWithText(statements[0], ";") === undefined &&
+        semicolonStatement(statements[0]) &&
+        comments.length === 0
+
+    if (oneLiner) {
+        code.add("{").space();
+        formatStatement(code, statements[0], false);
+        code.space().add("}");
         return
     }
 
@@ -83,7 +97,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
         if (statement.type === "Comment") {
             code.add(visit(statement));
         } else if (statement.group === "statement") {
-            formatStatement(code, statement);
+            formatStatement(code, statement, true);
             const newlines = trailingNewlines(statement)
             if (containsSeveralNewlines(newlines)) {
                 needNewLine = true
@@ -114,26 +128,26 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     processInlineCommentsAfterIndex(code, node, endIndex);
 };
 
-export const formatStatement = (code: CodeBuilder, node: Cst): void => {
+export const formatStatement = (code: CodeBuilder, node: Cst, needSemicolon: boolean): void => {
     if (node.$ !== "node") {
         throw new Error("Expected node in statement");
     }
 
     switch (node.type) {
         case "StatementLet":
-            formatLetStatement(code, node);
+            formatLetStatement(code, node, needSemicolon);
             break;
         case "StatementDestruct":
-            formatDestructStatement(code, node);
+            formatDestructStatement(code, node, needSemicolon);
             break;
         case "StatementReturn":
-            formatReturnStatement(code, node);
+            formatReturnStatement(code, node, needSemicolon);
             break;
         case "StatementExpression":
-            formatExpressionStatement(code, node);
+            formatExpressionStatement(code, node, needSemicolon);
             break;
         case "StatementAssign":
-            formatAssignStatement(code, node);
+            formatAssignStatement(code, node, needSemicolon);
             break;
         case "StatementCondition":
             formatConditionStatement(code, node);
@@ -145,7 +159,7 @@ export const formatStatement = (code: CodeBuilder, node: Cst): void => {
             formatRepeatStatement(code, node);
             break;
         case "StatementUntil":
-            formatUntilStatement(code, node);
+            formatUntilStatement(code, node, needSemicolon);
             break;
         case "StatementTry":
             formatTryStatement(code, node);
@@ -154,7 +168,10 @@ export const formatStatement = (code: CodeBuilder, node: Cst): void => {
             formatForEachStatement(code, node);
             break;
         case "StatementBlock":
-            formatStatements(code, node);
+            const body = childByField(node, "body")
+            if (body) {
+                formatStatements(code, body);
+            }
             break;
         default:
             throw new Error(`Unsupported statement type: ${node.type}`);
@@ -193,7 +210,7 @@ function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end
     })
 }
 
-const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
+const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // let name : Int = 100;
     //     ^^^^ ^^^^^ ^ ^^^
     //     |    |     | |
@@ -224,10 +241,13 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode): void => {
     processInlineComments(node, code, assign, init);
 
     formatExpression(code, init);
-    code.add(";");
+
+    if (needSemicolon) {
+        code.add(";");
+    }
 };
 
-const formatReturnStatement = (code: CodeBuilder, node: CstNode): void => {
+const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // return 100;
     // ^^^^^^ ^^^
     // |      |
@@ -243,19 +263,23 @@ const formatReturnStatement = (code: CodeBuilder, node: CstNode): void => {
         processInlineComments(node, code, returnKeyword, exprOpt);
         formatExpression(code, exprOpt);
     }
-    code.add(";");
+    if (needSemicolon) {
+        code.add(";");
+    }
 };
 
-const formatExpressionStatement = (code: CodeBuilder, node: CstNode): void => {
+const formatExpressionStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     const expression = childByField(node, "expression");
     if (!expression) {
         throw new Error("Invalid expression statement");
     }
     formatExpression(code, expression);
-    code.add(";");
+    if (needSemicolon) {
+        code.add(";");
+    }
 };
 
-const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
+const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // value + = 100;
     // ^^^^^ ^ ^ ^^^
     // |     | | |
@@ -283,7 +307,9 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode): void => {
     processInlineComments(node, code, assign, right);
 
     formatExpression(code, right);
-    code.add(";");
+    if (needSemicolon) {
+        code.add(";");
+    }
 };
 
 const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -365,7 +391,7 @@ const formatDestructField = (code: CodeBuilder, field: Cst) => {
     }
 };
 
-const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
+const formatDestructStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // let Foo { arg, foo: param, .. } = foo();
     //     ^^^   ^^^^^^^^^^^^^^^  ^^   ^ ^^^^^
     //     |     |                |    | |
@@ -403,7 +429,9 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode): void => {
 
     code.space().add("=").space();
     formatExpression(code, init);
-    code.add(";");
+    if (needSemicolon) {
+        code.add(";");
+    }
 };
 
 const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -425,7 +453,7 @@ const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
     formatStatements(code, body);
 };
 
-const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
+const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // do {} until (true);
     //    ^^       ^^^^^^
     //    |        |
@@ -445,7 +473,9 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode): void => {
     code.space().add("until (");
     formatExpression(code, condition);
     code.add(")");
-    code.add(";");
+    if (needSemicolon) {
+        code.add(";");
+    }
 };
 
 const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {

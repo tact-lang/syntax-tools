@@ -1,7 +1,7 @@
 import {CstNode} from "../result";
 import {childByField, nonLeafChild, visit} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
-import {idText} from "./format-helpers";
+import {containsSeveralNewlines, idText} from "./format-helpers";
 import {formatExpression} from "./format-expressions";
 import {formatFieldDecl} from "./format-contracts";
 import {formatDocComments} from "./format-doc-comments";
@@ -55,10 +55,23 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
         }
 
         if (child.field === "fields") {
-            const fields = child.children.filter(field => field.$ === "node")
+            const fields = child.children
 
             let needNewline = false
+            let needNewlineBetween = false
             fields.forEach((field) => {
+                if (field.$ === "leaf") {
+                    if (containsSeveralNewlines(field.text)) {
+                        needNewlineBetween = true;
+                    }
+                    return;
+                }
+
+                if (needNewlineBetween) {
+                    code.newLine()
+                    needNewlineBetween = false
+                }
+
                 if (field.type === "Comment") {
                     if (needNewline) {
                         code.add(" ")

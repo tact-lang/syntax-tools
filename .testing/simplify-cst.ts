@@ -60,7 +60,7 @@ export const simplifyCst = (node: Cst): Cst => {
         if (it.$ !== "node") return it
 
         if (it.children.length === 1 && it.field === it.type) {
-            if (it.type === "declarations" || it.type === "items" || it.type === "fields" || it.type === "ids") {
+            if (it.type === "declarations" || it.type === "items"  || it.type === "attributes" || it.type === "imports" || it.type === "fields" || it.type === "ids") {
                 // don't need to flatten lists with a single element
                 return it
             }

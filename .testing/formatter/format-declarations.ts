@@ -44,7 +44,7 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
     // inline extends fun foo(self: Int) {}
     // ^^^^^^^^^^^^^^ this
     const attributes = childByField(node, "attributes");
-    formatAttributes(attributes, code);
+    formatAttributes(code, attributes);
 
     code.add("fun").space().add(visit(name));
 
@@ -113,7 +113,7 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
 
     code.add("@name").add("(").apply(formatExpression, nativeName).add(")").newLine();
 
-    formatAttributes(attributes, code);
+    formatAttributes(code, attributes);
 
     code.add("native").space().apply(formatId, name);
 
@@ -156,7 +156,7 @@ export const formatAsmFunction = (code: CodeBuilder, node: CstNode): void => {
     }
 
     code.space();
-    formatAttributes(attributes, code);
+    formatAttributes(code, attributes);
 
     code.add("fun").space().apply(formatId, name);
 
@@ -221,14 +221,8 @@ function formatShuffle(code: CodeBuilder, node: CstNode): void {
     code.add(")");
 }
 
-function formatAttributes(attributes: undefined | CstNode, code: CodeBuilder) {
+function formatAttributes(code: CodeBuilder, attributes: CstNode | undefined) {
     if (!attributes) return;
-
-    if (attributes.type === "FunctionAttribute") {
-        // single attribute
-        formatAttribute(code, attributes);
-        return
-    }
 
     const attrs = childrenByType(attributes, "FunctionAttribute");
     for (const attr of attrs) {

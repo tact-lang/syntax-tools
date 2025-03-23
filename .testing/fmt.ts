@@ -33,14 +33,17 @@ if (!fs.statSync(firstArg).isFile()) {
     files.forEach(file => {
         console.log(`formatting ${file}`)
         const basePath = "/Users/petrmakhnev/tact";
-        const content = fs.readFileSync(path.join(basePath, file), "utf8");
+        const fullPath = path.join(basePath, file);
+        const content = fs.readFileSync(fullPath, "utf8");
         const result = formatCode(content);
 
-        const outFile = `${path.basename(file)}.fmt.tact`;
-        const savePath = path.join("out", outFile);
-        console.log(savePath)
-        fs.mkdirSync("out", {recursive: true})
-        fs.writeFileSync(savePath, result)
+        if (result === content) {
+            // console.log("already formatted")
+            return
+        }
+
+        console.log(`reformat ${file}`)
+        fs.writeFileSync(fullPath, result)
     })
 
     process.exit(0);

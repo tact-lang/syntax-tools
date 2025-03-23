@@ -191,7 +191,7 @@ export const formatSeparatedList = (
 
         code.dedent().add(wrapperRight);
     } else {
-        if (options.extraWrapperSpace) {
+        if (items.length !== 0 && options.extraWrapperSpace) {
             code.add(options.extraWrapperSpace);
         }
 
@@ -216,7 +216,7 @@ export const formatSeparatedList = (
             code.add(separator).space().add(options.suffixElement);
         }
 
-        if (options.extraWrapperSpace) {
+        if (items.length !== 0 && options.extraWrapperSpace) {
             code.add(options.extraWrapperSpace);
         }
 
@@ -257,4 +257,38 @@ export const formatId = (code: CodeBuilder, node: CstNode) => {
             code.add(visit(comment))
         })
     }
+}
+
+export function containsSeveralNewlines(text: string): boolean {
+    const index = text.indexOf("\n")
+    if (index === -1) {
+        return false
+    }
+    return text.substring(index + 1).includes("\n")
+}
+
+export function trailingNewlines(node: Cst): string {
+    if (node.$ === "leaf") return ""
+    let lastChild = node.children.at(-1)
+    if (node.$ === "node" && (node.type === "Receiver" || node.type === "ContractInit" || node.type === "Constant")) {
+        const body = childByField(node, "body")
+        if (body) {
+            lastChild = body.children.at(-1)
+        }
+    }
+    if (node.$ === "node" && node.type === "$Function") {
+        const body = childByField(node, "body")
+        if (body) {
+            const innerBody = childByField(body, "body")
+            if (innerBody) {
+                lastChild = innerBody.children.at(-1)
+            } else {
+                lastChild = body.children.at(-1)
+            }
+        }
+    }
+    if (lastChild.$ === "leaf" && lastChild.text.includes("\n")) {
+        return lastChild.text
+    }
+    return ""
 }

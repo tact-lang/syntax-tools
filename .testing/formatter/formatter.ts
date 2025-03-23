@@ -7,6 +7,7 @@ import {visit, childByField} from "../cst-helpers";
 import {formatConstant, formatContract, formatTrait} from "./format-contracts";
 import {formatMessage, formatStruct} from "./format-structs";
 import {formatImport} from "./format-imports";
+import {containsSeveralNewlines, trailingNewlines} from "./format-helpers";
 
 export const format = (node: Cst): string => {
     const code = new CodeBuilder();
@@ -52,17 +53,29 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                 code.newLine();
             }
 
-            const items = childByField(node, "items");
-            if (!items) {
+            const itemsNode = childByField(node, "items");
+            if (!itemsNode) {
                 break
             }
 
-            items.children.forEach((item, index) => {
-                if (item.$ !== "node") return;
+            let needNewLine = false;
+
+            const items = itemsNode.children;
+            items.forEach((item, index) => {
+                if (item.$ === "leaf") {
+                    if (containsSeveralNewlines(item.text)) {
+                        needNewLine = true;
+                    }
+                    return;
+                }
 
                 formatNode(code, item);
-                if (index < items.children.length - 1) {
+                if (index < items.length - 1) {
                     code.newLine();
+                }
+
+                const newlines = trailingNewlines(item)
+                if (!needNewLine && containsSeveralNewlines(newlines)) {
                     code.newLine();
                 }
             });
@@ -110,7 +123,7 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
         case "StatementCondition":
         case "StatementWhile":
         case "StatementBlock":
-            formatStatement(code, node);
+            formatStatement(code, node, true);
             break;
         default:
             if (node.group === "expression") {

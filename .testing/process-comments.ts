@@ -48,17 +48,25 @@ function extractComments([commentPoint, anchor]: [CstNode, string]): undefined |
     }
 
     // find index where we break on the next line
-    const inlineCommentsIndex = actualAnchorIndex + followingLeafs.findIndex(it => it.$ === "leaf" && it.text.includes("\n"))
+    let inlineCommentsIndex = actualAnchorIndex + followingLeafs.findIndex(it => it.$ === "leaf" && it.text.includes("\n"))
 
     // all before, inline comments that we don't touch
     const inlineComments = followingLeafs.slice(0, inlineCommentsIndex - actualAnchorIndex)
 
+    const inlineCommentFirstChildren = commentPoint.children[inlineCommentsIndex];
+    if (inlineCommentFirstChildren.$ === "leaf" && inlineCommentFirstChildren.text.includes("\n")) {
+        // skip leading new lines
+        inlineCommentsIndex++
+    }
     // all after newline (inclusive)
     const remainingLeafs = commentPoint.children.slice(inlineCommentsIndex)
+    if (remainingLeafs.length === 0) {
+        return undefined
+    }
 
     const lastLeaf = remainingLeafs.at(-1);
     // Comment is attached to declaration only when the last whitespace is not several line breaks
-    const isAttachedTo = lastLeaf.$ === "leaf" && !containsSeveralNewlines(lastLeaf.text)
+    const isAttachedTo = lastLeaf && lastLeaf.$ === "leaf" && !containsSeveralNewlines(lastLeaf.text)
     if (!isAttachedTo) {
         // comments are not attached, need to add a separate statement? TODO
         return undefined
@@ -103,7 +111,14 @@ const findNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
     }
     if (node.type === "$Function") {
         const body = childByField(node, "body")
-        return [childByField(body, "body"), "}"]
+        if (body) {
+            const innerBody = childByField(body, "body");
+            if (!innerBody) {
+                return [node, ";"]
+            }
+            return [innerBody, "}"]
+        }
+        return [node, ";"]
     }
     if (node.type === "Constant") {
         return [childByField(node, "body"), ";"]
