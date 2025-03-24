@@ -18,14 +18,14 @@ const code =
     // }
 
     `
-contract Foo {
-    b: Int;
+fun foo() {
+     let result = 
+               self.uB.b2.c1 == 0 &&
+               self.uB.b3 == 14 && // inline
 
-    // ===============================
-    // a
-    // b
-
-    a: Int;
+               // init does not modify default value of self.sA
+               
+               self.sA.a1 == 20;
 }
 `
 

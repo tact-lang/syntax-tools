@@ -258,7 +258,7 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
             code.add(visit(comment))
         }
         code.newLine()
-        indented = true
+        code.dedent()
     }
 
     formatExpression(code, init)

@@ -42,6 +42,18 @@ export class CodeBuilder {
         return this
     }
 
+    newLines(count: number): this {
+        if (count <= 0) {
+            return this
+        }
+
+        for (let i = 0; i < count; i++) {
+            this.newLine()
+        }
+        this.atLineStart = true
+        return this
+    }
+
     indent(): this {
         this.indentStack.push(this.currentIndent)
         this.currentIndent += this.indentStr

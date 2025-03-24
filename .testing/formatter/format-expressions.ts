@@ -4,6 +4,7 @@ import {
     childByType,
     childIdxByField,
     childLeafIdxWithText,
+    countNewlines,
     nonLeafChild,
     textOfId,
     trailingNewlines,
@@ -99,7 +100,7 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             let indented = false
 
             const processBinaryTail = (code: CodeBuilder, node: CstNode): void => {
-                let needWrap = false
+                let newlinesCount = 0
 
                 for (const child of node.children) {
                     if (child.$ === "leaf") continue
@@ -108,48 +109,62 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
                     }
                     code.apply(formatExpression, child)
                     if (child.type === "Operator") {
-                        const newlines = trailingNewlines(child)
+                        newlinesCount = trailingNewlines(child)
 
-                        needWrap = newlines > 0
-
-                        const trailingComments = child.children.filter(
+                        const commentsStart = child.children.findIndex(
                             it => it.$ === "node" && it.type === "Comment",
                         )
+                        const commentsEnd = child.children.length - 1 - [...child.children].reverse().findIndex(
+                            it => it.$ === "node" && it.type === "Comment",
+                        ) + 1
 
-                        let seenComment = false
-                        const needNewlineBeforeComments = child.children.some(it => {
-                            if (it.$ === "leaf" && it.text.includes("\n") && !seenComment) {
-                                return true
-                            }
-                            if (it.$ === "node" && it.type === "Comment") {
-                                seenComment = true
-                            }
-                            return false
-                        })
+                        const comments = child.children.slice(commentsStart, commentsEnd)
+                        const hasComments = comments.find(it => it.$ === "node" && it.type === "Comment")
 
-                        if (trailingComments.length > 0) {
-                            code.space()
-                            trailingComments.forEach((comment, index) => {
-                                code.add(visit(comment))
-                                if (index !== trailingComments.length - 1) {
-                                    code.newLine()
+                        if (hasComments) {
+                            if (newlinesCount === 0) {
+                                // inline comments after operator
+                                code.space()
+                            }
+
+                            const preCommentsNewlines = countNewlines(child.children[commentsStart - 1])
+                            const postCommentsNewlines = countNewlines(child.children[commentsEnd])
+
+                            if (preCommentsNewlines > 0) {
+                                code.newLines(preCommentsNewlines)
+                            } else {
+                                code.space()
+                            }
+
+                            comments.forEach((comment, index) => {
+                                if (comment.$ === "leaf") {
+                                    const newlines = countNewlines(comment)
+                                    code.newLines(newlines)
+                                    return
+                                }
+
+                                if (comment.type === "Comment") {
+                                    code.add(visit(comment))
                                 }
                             })
-                            needWrap = true
-                        } else if (trailingComments.length > 0 && needNewlineBeforeComments) {
-                            code.newLine()
-                        } else if (!needWrap) {
+
+                            code.newLines(postCommentsNewlines - 1)
+
+                            newlinesCount = 1
+                        } else if (newlinesCount === 0) {
                             code.space()
                         }
                     }
 
-                    if (needWrap) {
+                    if (newlinesCount) {
                         if (!indented && lineLengthBeforeLeft > 0) {
                             code.indentCustom(lineLengthBeforeLeft)
                             indented = true
                         }
-                        code.newLine()
-                        needWrap = false
+                        for (let i = 0; i < newlinesCount; i++) {
+                            code.newLine()
+                        }
+                        newlinesCount = 0
                     }
                 }
             }
@@ -158,6 +173,17 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
             const tail = childByField(node, "tail")
 
             if (head && tail) {
+                const operator = childByType(tail, "Operator")
+                if (operator) {
+                    const newlinesCount = trailingNewlines(operator)
+                    if (newlinesCount > 0) {
+                        // multiline expression
+                        code.newLine()
+                        code.indent()
+                        indented = true
+                    }
+                }
+
                 code.apply(formatExpression, head)
                 code.apply(processBinaryTail, tail)
                 if (indented) {

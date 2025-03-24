@@ -566,6 +566,7 @@ export const processDocComments = (node: Cst): Cst => {
                         if (res.floatingComments.length > 0) {
                             statements.splice(i + 1, 0, ...res.floatingComments)
                             i += res.floatingComments.length - 1
+                            endIndex += res.floatingComments.length
                         }
 
                         break
