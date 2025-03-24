@@ -744,6 +744,14 @@ fun foo() {
                 }
             `));
 
+            it('method chain with comment', intact(`
+                fun foo() {
+                    a
+                        .bar() // comment 1
+                        .foo(); /*comment*/
+                }
+            `));
+
             it('field chain with comment', intact(`
                 fun foo() {
                     a.foo /*comment*/;
@@ -1183,6 +1191,7 @@ fun foo() {}`));
 
         it('inline comment for import', intact(`
             import ""; // inline comment
+            import "";
         `));
 
         it('comments for import', intact(`
@@ -1242,6 +1251,8 @@ fun foo() {}`));
             
             // other top comment
             fun bar() {} // inline comment 2
+            
+            fun baz() {}
         `));
 
         // TODO
@@ -1468,6 +1479,21 @@ fun foo() {}`));
             }
         `));
 
+        it('contract with various comments', intact(`
+            contract Foo {
+                init() {} // inline comment
+
+                /*************/
+                /*           */
+                /*************/
+
+                /// Comment
+                fun foo() {}
+
+                // trailing comment
+            }
+        `));
+
         it('trait with abstract constant', intact(`
             trait T {
                 abstract const Foo: Int;
@@ -1496,9 +1522,69 @@ fun foo() {}`));
             }
         `));
 
-        it('function with oneline of', intact(`
+        it('function with oneline body', intact(`
             fun foo() {
                 if (true) { return }
+            }
+        `));
+
+        it('native function', intact(`
+            @name("some")
+            native foo();
+        `));
+
+        it('native function with trailing comment', intact(`
+            @name("some")
+            native foo(); // trailing comment
+            
+            fun foo() {}
+        `));
+
+        it('native function with comment after attribute', intact(`
+            @name("some") // func func
+            native foo();
+        `));
+
+        it('native function with block comment after attribute', test(`
+            @name("some") /* func func */ native foo();
+        `, `
+            @name("some") /* func func */
+            native foo();
+        `));
+
+        it('asm function with trailing comment', intact(`
+            asm fun foo() { ONE } // comment
+            fun foo() {}
+        `));
+
+        it('function declaration with trailing comment', intact(`
+            fun foo(); // comment
+        `));
+
+        it('constant with trailing comments', intact(`
+            const FOO: Int = 100; // comment 1
+            const BAR: Int = 100;
+        `));
+
+        it('constant with comments before `;` and with trailing comments', intact(`
+            const FOO: Int = 100 /*comment 2*/; // comment 1
+            const BAR: Int = 100;
+        `));
+
+        it('constant without value with trailing comments', intact(`
+            const FOO: Int; // comment 1
+            const BAR: Int = 100;
+        `));
+
+        it('constant with value with trailing comments inside trait', intact(`
+            trait Foo {
+                const FOO: Int = 100; // comment 1
+            }
+        `));
+
+        it('constant without value with trailing comments inside trait', intact(`
+            trait Foo {
+                abstract const FOO: Int; // comment 1
             }
         `));
     })

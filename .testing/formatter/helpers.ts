@@ -1,6 +1,7 @@
 import {Cst, CstNode} from "../result"
 import {CodeBuilder} from "../code-builder"
 import {childByField, childrenByType, visit} from "../cst-helpers"
+import {formatTrailingComments} from "./format-comments"
 
 interface CommentWithNewline {
     node: CstNode
@@ -264,13 +265,6 @@ export const getCommentsBetween = (
     }) as CstNode[]
 }
 
-export function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end: Cst) {
-    const comments = getCommentsBetween(node, start, end)
-    comments.forEach(comment => {
-        code.add(visit(comment))
-    })
-}
-
 // name: Id
 //   name: name
 //      "some"
@@ -286,14 +280,15 @@ export const formatId = (code: CodeBuilder, node: CstNode) => {
     const name = idText(node)
     code.add(name)
 
-    const comments = childrenByType(node, "Comment")
+    formatTrailingComments(code, node, 1)
+}
 
-    if (comments.length > 0) {
-        code.space()
-        comments.forEach(comment => {
-            code.add(visit(comment))
-        })
+export function declName(node: CstNode): string {
+    const name = childByField(node, "name")
+    if (!name || name.$ !== "node" || (name.type !== "TypeId" && name.type !== "Id")) {
+        throw new Error(`Invalid name`)
     }
+    return idText(name)
 }
 
 export function containsSeveralNewlines(text: string): boolean {
@@ -327,7 +322,7 @@ export function trailingNewlines(node: Cst): string {
             }
         }
     }
-    if (lastChild.$ === "leaf" && lastChild.text.includes("\n")) {
+    if (lastChild && lastChild.$ === "leaf" && lastChild.text.includes("\n")) {
         return lastChild.text
     }
     return ""

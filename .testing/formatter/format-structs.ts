@@ -1,14 +1,14 @@
 import {CstNode} from "../result"
 import {childByField, childLeafWithText, nonLeafChild, visit} from "../cst-helpers"
 import {CodeBuilder} from "../code-builder"
-import {containsSeveralNewlines, idText} from "./helpers"
+import {containsSeveralNewlines, declName} from "./helpers"
 import {formatExpression} from "./format-expressions"
 import {formatFieldDecl} from "./format-contracts"
 import {formatDocComments} from "./format-doc-comments"
 
 export function formatStruct(code: CodeBuilder, node: CstNode): void {
     formatDocComments(code, node)
-    code.add("struct").space().add(getName(node, "struct"))
+    code.add("struct").space().add(declName(node))
     formatFields(code, node)
 }
 
@@ -28,7 +28,7 @@ export function formatMessage(code: CodeBuilder, node: CstNode): void {
         code.add(")")
     }
 
-    code.space().add(getName(node, "message"))
+    code.space().add(declName(node))
     formatFields(code, node)
 }
 
@@ -112,12 +112,4 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
     })
 
     code.dedent().add("}")
-}
-
-function getName(node: CstNode, type: "struct" | "message"): string {
-    const name = childByField(node, "name")
-    if (!name || name.$ !== "node" || name.type !== "TypeId") {
-        throw new Error(`Invalid ${type} name`)
-    }
-    return idText(name)
 }

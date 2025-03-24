@@ -11,6 +11,7 @@ import {
 import {CodeBuilder} from "../code-builder"
 import {formatId, formatSeparatedList} from "./helpers"
 import {formatType} from "./format-types"
+import {formatTrailingComments} from "./format-comments"
 
 interface ChainCall {
     nodes: CstNode[]
@@ -337,6 +338,7 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
                 const comments = field.children
                     .slice(endIndex)
                     .filter(child => child.$ === "node" && child.type === "Comment")
+
                 if (comments.length > 0) {
                     return comments
                 }
@@ -469,24 +471,7 @@ const formatSuffixCall = (code: CodeBuilder, node: CstNode): void => {
 
     const endIndex = childLeafIdxWithText(args, ")")
 
-    formatSeparatedList(
-        code,
-        args,
-        (code, arg) => {
-            formatExpression(code, arg)
-        },
-        {
-            endIndex,
-        },
-    )
+    formatSeparatedList(code, args, formatExpression, {endIndex})
 
-    const comments = args.children
-        .slice(endIndex)
-        .filter(child => child.$ === "node" && child.type === "Comment")
-    if (comments.length > 0) {
-        code.space()
-        comments.forEach(comment => {
-            code.add(visit(comment))
-        })
-    }
+    formatTrailingComments(code, args, endIndex)
 }

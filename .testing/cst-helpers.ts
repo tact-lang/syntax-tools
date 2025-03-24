@@ -94,8 +94,8 @@ export const childLeafWithText = (node: Cst, text: string): undefined | CstLeaf 
     return undefined
 }
 
-export const childLeafIdxWithText = (node: Cst, text: string): number => {
-    if (node.$ === "leaf") {
+export const childLeafIdxWithText = (node: undefined | Cst, text: string): number => {
+    if (!node || node.$ === "leaf") {
         return -1
     }
     return node.children.findIndex(c => c.$ === "leaf" && c.text === text)

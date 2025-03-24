@@ -16,8 +16,8 @@ import {
     formatId,
     formatSeparatedList,
     getCommentsBetween,
-    processInlineComments,
 } from "./helpers"
+import {formatTrailingComments, formatInlineComments} from "./format-comments"
 
 function trailingNewlines(node: Cst): string {
     if (node.$ === "leaf") return ""
@@ -50,21 +50,6 @@ function trailingNewlines(node: Cst): string {
         return lastChild.text
     }
     return ""
-}
-
-export function processInlineCommentsAfterIndex(
-    code: CodeBuilder,
-    node: CstNode,
-    endIndex: number,
-) {
-    const afterBody = node.children.slice(endIndex + 1)
-    const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment")
-    if (comments.length > 0) {
-        code.space()
-        comments.forEach(comment => {
-            code.add(visit(comment))
-        })
-    }
 }
 
 function semicolonStatement(node: CstNode): boolean {
@@ -119,7 +104,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node")
     if (statements.length === 0) {
         code.add("{}")
-        processInlineCommentsAfterIndex(code, node, endIndex)
+        formatTrailingComments(code, node, endIndex)
         return
     }
 
@@ -187,7 +172,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
 
     code.dedent().add("}")
 
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 export const formatStatement = (code: CodeBuilder, node: Cst, needSemicolon: boolean): void => {
@@ -260,11 +245,11 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
     code.add("let").space().apply(formatId, name)
 
     if (typeOpt) {
-        processInlineComments(node, code, name, typeOpt)
+        formatInlineComments(node, code, name, typeOpt)
         formatAscription(code, typeOpt)
-        processInlineComments(node, code, typeOpt, assign)
+        formatInlineComments(node, code, typeOpt, assign)
     } else {
-        processInlineComments(node, code, name, assign)
+        formatInlineComments(node, code, name, assign)
     }
 
     code.space().add("=").space()
@@ -274,9 +259,9 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
     if (comments.length > 0) {
         code.newLine()
         code.indent()
-        comments.forEach(comment => {
+        for (const comment of comments) {
             code.add(visit(comment))
-        })
+        }
         code.newLine()
         indented = true
     }
@@ -291,7 +276,7 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
     }
 
     const endIndex = childIdxByField(node, "init")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -307,7 +292,7 @@ const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     code.add("return")
     if (exprOpt) {
         code.space()
-        processInlineComments(node, code, returnKeyword, exprOpt)
+        formatInlineComments(node, code, returnKeyword, exprOpt)
         formatExpression(code, exprOpt)
     }
     if (needSemicolon) {
@@ -315,7 +300,7 @@ const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     }
 
     const endIndex = exprOpt ? childIdxByField(node, "expression") : 0 // index of return
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatExpressionStatement = (
@@ -333,7 +318,7 @@ const formatExpressionStatement = (
     }
 
     const endIndex = childIdxByField(node, "expression")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -361,7 +346,7 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     }
 
     code.add("=").space()
-    processInlineComments(node, code, assign, right)
+    formatInlineComments(node, code, assign, right)
 
     formatExpression(code, right)
     if (needSemicolon) {
@@ -369,7 +354,7 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     }
 
     const endIndex = childIdxByField(node, "right")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -384,7 +369,7 @@ const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
     }
 
     code.add("if").space()
-    processInlineComments(node, code, ifKeyword, condition)
+    formatInlineComments(node, code, ifKeyword, condition)
 
     formatExpression(code, condition)
     code.space()
@@ -413,8 +398,8 @@ const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
         }
     }
 
-    const endIndex = childLeafIdxWithText(node, "}")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    const endIndex = childIdxByField(node, falseBranch ? "falseBranch" : "trueBranch")
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -435,8 +420,8 @@ const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
     code.space()
     formatStatements(code, body)
 
-    const endIndex = childLeafIdxWithText(node, "}")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    const endIndex = childIdxByField(node, "body")
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatDestructField = (code: CodeBuilder, field: Cst) => {
@@ -514,7 +499,7 @@ const formatDestructStatement = (
     }
 
     const endIndex = childIdxByField(node, "init")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -535,8 +520,8 @@ const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
     code.space()
     formatStatements(code, body)
 
-    const endIndex = childLeafIdxWithText(node, "}")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    const endIndex = childIdxByField(node, "body")
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
@@ -564,7 +549,7 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: b
     }
 
     const endIndex = childIdxByField(node, "condition")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -600,8 +585,8 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
         formatStatements(code, handlerBody)
     }
 
-    const endIndex = childLeafIdxWithText(node, "}")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    const endIndex = childIdxByField(node, handlerOpt ? "handler" : "body")
+    formatTrailingComments(code, node, endIndex)
 }
 
 const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
@@ -627,6 +612,6 @@ const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
     code.add(")").space()
     formatStatements(code, body)
 
-    const endIndex = childLeafIdxWithText(node, "}")
-    processInlineCommentsAfterIndex(code, node, endIndex)
+    const endIndex = childIdxByField(node, "body")
+    formatTrailingComments(code, node, endIndex)
 }

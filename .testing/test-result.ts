@@ -4,7 +4,7 @@ import * as fs from "fs"
 import {format} from "./formatter/formatter"
 import {simplifyCst} from "./simplify-cst"
 import {processDocComments} from "./process-comments"
-import {visualizeCST} from "./cst-helpers"
+import {parseCode, visit, visualizeCST} from "./cst-helpers"
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}))
 
@@ -18,13 +18,12 @@ const code =
     // }
 
     `
+import ""; // comment
+    
 fun foo() {
-    m.set(1, c);
-
-    // Now delete entries 2 and 3
-
-    m.del(2);
-}`
+    while (true) {} // comment
+}
+`
 
 ;`
 fun foo() {
@@ -48,7 +47,6 @@ fun foo() {
     let Foo { a } = value(); // comment
 }
 `
-
 ;`
 // comment
 import "";
@@ -58,7 +56,6 @@ import ""; // inline comment
 // comment
 fun foo() {}
 `
-
 ;`
 primitive Int;
 
@@ -101,7 +98,6 @@ contract Foo {
 }
 
 `
-
 ;`
 const Foo: Int = 10; // inline comment
 
@@ -116,7 +112,6 @@ fun foo() {
     let a = 100;
 }
 `
-
 ;`
 primitive Int;
 
@@ -202,18 +197,7 @@ contract Foo(param: Int) with Ownable, Baz {
 //             .param
 //     ).call();
 
-const visit = (node: Cst): string => {
-    if (node.$ === "leaf") return node.text
-    return node.children.map(it => visit(it)).join("")
-}
-
-const ctx = createContext(code, space)
-const b: Builder = []
-skip(ctx, b)
-const isParsed = Module(ctx, b)
-log(isParsed)
-
-const root = processDocComments(simplifyCst(CstNode(b, "Root")))
+const root = parseCode(code)
 
 console.log(visualizeCST(root, undefined))
 fs.writeFileSync("out.json", JSON.stringify(root, null, 4))

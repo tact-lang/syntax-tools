@@ -1,11 +1,19 @@
 import {Cst, CstNode} from "../result"
-import {childByField, childLeafWithText, childrenByType, nonLeafChild, visit} from "../cst-helpers"
+import {
+    childByField,
+    childIdxByField,
+    childLeafIdxWithText,
+    childrenByType,
+    nonLeafChild,
+    visit,
+} from "../cst-helpers"
 import {CodeBuilder} from "../code-builder"
 import {formatId, formatSeparatedList, getCommentsBetween, idText} from "./helpers"
 import {formatAscription} from "./format-types"
 import {formatStatements} from "./format-statements"
 import {formatExpression} from "./format-expressions"
 import {formatDocComments} from "./format-doc-comments"
+import {formatComments, formatTrailingComments} from "./format-comments"
 
 export const formatParameter = (code: CodeBuilder, param: CstNode): void => {
     // value: Foo
@@ -59,6 +67,10 @@ export const formatFunction = (code: CodeBuilder, node: CstNode): void => {
         formatStatements(code, childByField(bodyOpt, "body"))
     } else {
         code.add(";")
+
+        // process trailing comments after `;`
+        const semicolonIndex = childLeafIdxWithText(bodyOpt, ";")
+        formatTrailingComments(code, bodyOpt, semicolonIndex)
     }
 }
 
@@ -115,12 +127,7 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
 
     // inline comments after `@name()`
     const comments = getCommentsBetween(node, nativeName, attributesOpt ?? name)
-    if (comments.length > 0) {
-        code.space()
-        comments.forEach(comment => {
-            code.add(visit(comment))
-        })
-    }
+    formatComments(code, comments)
 
     code.newLine()
 
@@ -135,6 +142,10 @@ export const formatNativeFunction = (code: CodeBuilder, node: CstNode): void => 
     }
 
     code.add(";")
+
+    // process trailing comments after `;`
+    const semicolonIndex = childLeafIdxWithText(node, ";")
+    formatTrailingComments(code, node, semicolonIndex)
 }
 
 export const formatAsmFunction = (code: CodeBuilder, node: CstNode): void => {
@@ -163,7 +174,7 @@ export const formatAsmFunction = (code: CodeBuilder, node: CstNode): void => {
     code.add("asm")
 
     if (shuffle) {
-        formatShuffle(code, shuffle)
+        formatAsmShuffle(code, shuffle)
     }
 
     code.space()
@@ -180,17 +191,20 @@ export const formatAsmFunction = (code: CodeBuilder, node: CstNode): void => {
     code.space().add("{")
 
     // format instructions as is, without any changes
-    const openBrace = childLeafWithText(node, "{")
-    const openBraceIndex = node.children.indexOf(openBrace)
-    const instructionsIndex = node.children.indexOf(instructions)
+    const openBraceIndex = childLeafIdxWithText(node, "{")
+    const instructionsIndex = childIdxByField(node, "instructions")
     for (let i = openBraceIndex + 1; i <= instructionsIndex; i++) {
         code.add(visit(node.children[i]))
     }
 
     code.add("}")
+
+    // process trailing comments after `}`
+    const braceIndex = childLeafIdxWithText(node, "}")
+    formatTrailingComments(code, node, braceIndex)
 }
 
-function formatShuffle(code: CodeBuilder, node: CstNode): void {
+function formatAsmShuffle(code: CodeBuilder, node: CstNode): void {
     // (a, b -> 1, 2)
     //  ^^^^ ^^^^^^^
     //  |    |
@@ -260,7 +274,6 @@ export const formatPrimitiveType = (code: CodeBuilder, node: CstNode): void => {
     // |         name
     // keyword
     const name = childByField(node, "name")
-
     if (!name) {
         throw new Error("Invalid primitive type declaration")
     }

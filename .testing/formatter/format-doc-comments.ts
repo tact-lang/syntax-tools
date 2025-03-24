@@ -8,9 +8,9 @@ export const formatDocComments = (code: CodeBuilder, node: CstNode): void => {
 
     const comments = childrenByType(docNode, "Comment")
     if (comments.length > 0) {
-        comments.forEach(comment => {
+        for (const comment of comments) {
             code.add(visit(comment).trim())
             code.newLine()
-        })
+        }
     }
 }
