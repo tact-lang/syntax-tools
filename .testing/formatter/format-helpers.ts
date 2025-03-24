@@ -10,6 +10,7 @@ interface CommentWithNewline {
 interface ListInfo {
     items: ListItemInfo[];
     leadingComments: CommentWithNewline[];
+    inlineLeadingComments: CommentWithNewline[];
     trailingComments: CommentWithNewline[];
     shouldBeMultiline: boolean;
 }
@@ -26,6 +27,7 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
     const result: ListItemInfo[] = [];
     let currentItem: ListItemInfo | null = null;
     let wasComma: boolean = false;
+    let listInlineLeadingComments: CommentWithNewline[] = [];
     let listLeadingComments: CommentWithNewline[] = [];
     let leadingComments: CommentWithNewline[] = [];
     let inLeadingComments: boolean = true
@@ -35,6 +37,7 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
     let i = startIndex;
     let processList: readonly Cst[] = node.children.slice(0, endIndex === 0 ? node.children.length : endIndex);
 
+    let wasInitialNewline = false
     while (i < processList.length) {
         const child = processList[i];
 
@@ -58,6 +61,7 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
                     wasComma = false
                 }
                 shouldBeMultiline = true;
+                wasInitialNewline = true
             }
         } else if (child.type === "Comment") {
             const commentWithNewline: CommentWithNewline = {
@@ -67,7 +71,11 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
             if (currentItem) {
                 currentItem.trailingComments.push(commentWithNewline);
             } else if (result.length === 0) {
-                listLeadingComments.push(commentWithNewline);
+                if (!wasInitialNewline) {
+                    listInlineLeadingComments.push(commentWithNewline);
+                } else {
+                    listLeadingComments.push(commentWithNewline);
+                }
             } else {
                 leadingComments.push(commentWithNewline);
             }
@@ -106,6 +114,7 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
         items: result,
         shouldBeMultiline,
         leadingComments: listLeadingComments,
+        inlineLeadingComments: listInlineLeadingComments,
         trailingComments: leadingComments
     };
 }
@@ -141,6 +150,13 @@ export const formatSeparatedList = (
     code.add(wrapperLeft);
 
     if (shouldBeMultiline) {
+        if (info.inlineLeadingComments.length > 0) {
+            code.space()
+            info.inlineLeadingComments.forEach(comment => {
+                code.add(visit(comment.node));
+            });
+        }
+
         code.newLine().indent();
 
         info.leadingComments.forEach(comment => {
@@ -163,7 +179,7 @@ export const formatSeparatedList = (
             formatItem(code, item.item);
             code.add(separator);
 
-            const trailingComments = options.provideTrailingComments?.(item.item) ?? []
+            const trailingComments = [...options.provideTrailingComments?.(item.item) ?? [], ...item.trailingComments.map(it => it.node)]
             trailingComments.forEach((comment, index) => {
                 code.space().add(visit(comment));
 

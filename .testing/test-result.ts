@@ -18,9 +18,11 @@ const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
 
 `
 fun foo() {
-    Foo {
-        a: SendRemainingBalance | SendDestroyIfZero // send all remaining and destroy escrow
-    };
+    m.set(1, c);
+
+    // Now delete entries 2 and 3
+
+    m.del(2);
 }`;
 
 `

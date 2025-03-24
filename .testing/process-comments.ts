@@ -484,7 +484,8 @@ export const processDocComments = (node: Cst): Cst => {
     }
 
     if (node.type === "body" || node.type === "trueBranch") {
-        let endIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}");
+        const statements = node.children;
+        let endIndex = statements.findIndex(it => it.$ === "leaf" && it.text === "}");
 
         let pendingComments: Cst[] = []
 
@@ -526,6 +527,12 @@ export const processDocComments = (node: Cst): Cst => {
                         if (res.inlineComments.length > 0 && owner !== statement) {
                             owner.children = owner.children.slice(0, owner.children.length - 1 - res.inlineComments.length)
                         }
+
+                        if (res.floatingComments.length > 0) {
+                            statements.splice(i + 1, 0, ...res.floatingComments)
+                            i += res.floatingComments.length - 1
+                        }
+
                         break
                     }
                 }
