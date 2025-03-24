@@ -11,12 +11,7 @@ import {
 import {CodeBuilder} from "../code-builder"
 import {formatExpression} from "./format-expressions"
 import {formatAscription, formatType} from "./format-types"
-import {
-    containsSeveralNewlines,
-    formatId,
-    formatSeparatedList,
-    getCommentsBetween,
-} from "./helpers"
+import {containsSeveralNewlines, formatId, formatSeparatedList, getCommentsBetween} from "./helpers"
 import {formatTrailingComments, formatInlineComments} from "./format-comments"
 
 function trailingNewlines(node: Cst): string {

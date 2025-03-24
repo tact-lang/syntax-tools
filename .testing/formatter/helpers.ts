@@ -1,6 +1,6 @@
 import {Cst, CstNode} from "../result"
 import {CodeBuilder} from "../code-builder"
-import {childByField, childrenByType, visit} from "../cst-helpers"
+import {childByField, visit} from "../cst-helpers"
 import {formatTrailingComments} from "./format-comments"
 
 interface CommentWithNewline {

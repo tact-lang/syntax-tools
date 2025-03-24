@@ -18,10 +18,12 @@ const code =
     // }
 
     `
-import ""; // comment
-    
 fun foo() {
-    while (true) {} // comment
+    throwUnless(709, ctx.value >
+            msg.forwardTonAmount +
+            fwdCount * ctx.readForwardFee() +
+            (2 * self.gasConsumption + self.minTonsForStorage)
+        );
 }
 `
 

@@ -138,3 +138,21 @@ export const visualizeCST = (node: Cst, field: undefined | string, indent: strin
 
     return result + childrenOutput
 }
+
+export function trailingNewlines(node: Cst): number {
+    if (node.$ === "leaf") return 0
+
+    if (node.children.length === 0) {
+        return 0
+    }
+
+    const lastChild = node.children.at(-1)
+    if (lastChild.$ === "leaf") {
+        if (lastChild.text.includes("\n")) {
+            return lastChild.text.split("").filter(it => it === "\n").length
+        }
+        return 0
+    }
+
+    return trailingNewlines(lastChild)
+}

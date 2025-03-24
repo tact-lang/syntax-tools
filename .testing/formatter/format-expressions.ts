@@ -6,6 +6,7 @@ import {
     childLeafIdxWithText,
     nonLeafChild,
     textOfId,
+    trailingNewlines,
     visit,
 } from "../cst-helpers"
 import {CodeBuilder} from "../code-builder"
@@ -106,9 +107,9 @@ export const formatExpression = (code: CodeBuilder, node: Cst): void => {
                     }
                     code.apply(formatExpression, child)
                     if (child.type === "Operator") {
-                        needWrap = child.children.some(
-                            it => it.$ === "leaf" && it.text.includes("\n"),
-                        )
+                        const newlines = trailingNewlines(child)
+
+                        needWrap = newlines > 0
 
                         const trailingComments = child.children.filter(
                             it => it.$ === "node" && it.type === "Comment",
