@@ -13,6 +13,7 @@ import {CodeBuilder} from "../code-builder"
 import {formatId, formatSeparatedList} from "./helpers"
 import {formatType} from "./format-types"
 import {formatTrailingComments} from "./format-comments"
+import {formatDocComments} from "./format-doc-comments"
 
 interface ChainCall {
     nodes: CstNode[]
@@ -306,6 +307,8 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
         fields,
         (code, field) => {
             if (field.$ !== "node") return
+
+            formatDocComments(code, field)
 
             // `value: 100` or just `value`
             const name = childByField(field, "name")

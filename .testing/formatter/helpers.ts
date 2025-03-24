@@ -49,7 +49,7 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
             if (child.text === ",") {
                 wasComma = true
             } else if (/\n/.test(child.text)) {
-                if (currentItem) {
+                if (currentItem && containsSeveralNewlines(child.text)) {
                     currentItem.hasTrailingNewline = true
                 }
 
@@ -183,6 +183,10 @@ export const formatSeparatedList = (
 
             formatItem(code, item.item)
             code.add(separator)
+
+            if (item.hasTrailingNewline) {
+                code.newLine()
+            }
 
             const trailingComments = [
                 ...(options.provideTrailingComments?.(item.item) ?? []),

@@ -457,6 +457,15 @@ export const processDocComments = (node: Cst): Cst => {
                     }
                 }
 
+                const nextItem = items[i + 1]
+                if (nextItem && nextItem.$ === "leaf" && containsSeveralNewlines(nextItem.text)) {
+                    // not attached to anything
+                    items.splice(i - 1, 0, ...pendingComments)
+                    i += pendingComments.length
+                    pendingComments = []
+                    continue
+                }
+
                 pendingComments.push(item)
 
                 // remove comment and go back to not increment too much

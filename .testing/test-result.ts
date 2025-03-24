@@ -18,12 +18,14 @@ const code =
     // }
 
     `
-fun foo() {
-    throwUnless(709, ctx.value >
-            msg.forwardTonAmount +
-            fwdCount * ctx.readForwardFee() +
-            (2 * self.gasConsumption + self.minTonsForStorage)
-        );
+contract Foo {
+    b: Int;
+
+    // ===============================
+    // a
+    // b
+
+    a: Int;
 }
 `
 

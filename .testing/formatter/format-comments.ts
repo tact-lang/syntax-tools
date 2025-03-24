@@ -7,6 +7,8 @@ export function formatTrailingComments(code: CodeBuilder, node: CstNode, startFr
     if (startFrom < 0) return
 
     const afterBody = node.children.slice(startFrom + 1)
+    if (afterBody.length === 0) return
+
     const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment")
     formatComments(code, comments)
 }
