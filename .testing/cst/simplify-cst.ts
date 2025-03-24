@@ -1,4 +1,4 @@
-import {Cst} from "./result"
+import {Cst} from "./cst-parser"
 
 export const simplifyCst = (node: Cst): Cst => {
     if (node.$ === "leaf") {

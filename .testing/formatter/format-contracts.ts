@@ -1,4 +1,4 @@
-import {Cst, CstNode} from "../result"
+import {Cst, CstNode} from "../cst/cst-parser"
 import {
     childByField,
     childIdxByField,
@@ -7,8 +7,8 @@ import {
     childrenByType,
     nonLeafChild,
     visit,
-} from "../cst-helpers"
-import {CodeBuilder} from "../code-builder"
+} from "../cst/cst-helpers"
+import {CodeBuilder} from "./code-builder"
 import {
     containsSeveralNewlines,
     declName,

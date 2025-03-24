@@ -1,4 +1,4 @@
-import {Builder, createContext, Cst, CstLeaf, CstNode, Module, skip, space} from "./result"
+import {Builder, createContext, Cst, CstLeaf, CstNode, Module, skip, space} from "./cst-parser"
 import {processDocComments} from "./process-comments"
 import {simplifyCst} from "./simplify-cst"
 

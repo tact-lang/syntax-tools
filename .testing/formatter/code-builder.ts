@@ -1,4 +1,4 @@
-import {Cst} from "./result"
+import {Cst} from "../cst/cst-parser"
 
 export class CodeBuilder {
     private parts: string[] = []

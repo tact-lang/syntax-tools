@@ -1,4 +1,4 @@
-import {Cst, CstNode} from "../result"
+import {Cst, CstNode} from "../cst/cst-parser"
 import {
     childByField,
     childByType,
@@ -9,8 +9,8 @@ import {
     textOfId,
     trailingNewlines,
     visit,
-} from "../cst-helpers"
-import {CodeBuilder} from "../code-builder"
+} from "../cst/cst-helpers"
+import {CodeBuilder} from "./code-builder"
 import {formatId, formatSeparatedList} from "./helpers"
 import {formatType} from "./format-types"
 import {formatTrailingComments} from "./format-comments"

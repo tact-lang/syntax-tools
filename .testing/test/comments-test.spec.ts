@@ -1,4 +1,4 @@
-import {childByField, childByType, childrenByType, parseCode, visit} from "./cst-helpers"
+import {childByField, childByType, childrenByType, parseCode, visit} from "../cst/cst-helpers"
 
 describe("comments", () => {
     function test(code: string, itemType: string, index: number, expected: string): () => void {

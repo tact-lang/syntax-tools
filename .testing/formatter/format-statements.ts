@@ -1,4 +1,4 @@
-import {Cst, CstNode} from "../result"
+import {Cst, CstNode} from "../cst/cst-parser"
 import {
     childByField,
     childByType,
@@ -7,8 +7,8 @@ import {
     childLeafWithText,
     nonLeafChild,
     visit,
-} from "../cst-helpers"
-import {CodeBuilder} from "../code-builder"
+} from "../cst/cst-helpers"
+import {CodeBuilder} from "./code-builder"
 import {formatExpression} from "./format-expressions"
 import {formatAscription, formatType} from "./format-types"
 import {containsSeveralNewlines, formatId, formatSeparatedList, getCommentsBetween} from "./helpers"

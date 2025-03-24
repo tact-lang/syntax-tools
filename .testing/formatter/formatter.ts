@@ -1,5 +1,5 @@
-import {Cst} from "../result"
-import {CodeBuilder} from "../code-builder"
+import {Cst} from "../cst/cst-parser"
+import {CodeBuilder} from "./code-builder"
 import {
     formatFunction,
     formatNativeFunction,
@@ -8,7 +8,7 @@ import {
 } from "./format-declarations"
 import {formatStatement} from "./format-statements"
 import {formatExpression} from "./format-expressions"
-import {visit, childByField} from "../cst-helpers"
+import {visit, childByField} from "../cst/cst-helpers"
 import {formatConstant, formatContract, formatTrait} from "./format-contracts"
 import {formatMessage, formatStruct} from "./format-structs"
 import {formatImport} from "./format-imports"

@@ -1,4 +1,4 @@
-import {Cst, CstNode} from "./result"
+import {Cst, CstNode} from "./cst-parser"
 import {
     childByField,
     childByType,

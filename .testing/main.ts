@@ -172,4 +172,4 @@ const lex = (ctx: Context, b: Builder, rule: Rule): boolean => {
 
 const parserGenerated = generate(parserAst, {minified: false}).code
 const parserResult = PARSER_HEADER + parserGenerated
-fs.writeFileSync(__dirname + "/result.ts", parserResult)
+fs.writeFileSync(__dirname + "/cst-parser.ts", parserResult)

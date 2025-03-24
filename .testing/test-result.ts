@@ -1,10 +1,7 @@
-import {Builder, createContext, Cst, CstNode, Module, skip, space} from "./result"
 import {inspect} from "util"
 import * as fs from "fs"
 import {format} from "./formatter/formatter"
-import {simplifyCst} from "./simplify-cst"
-import {processDocComments} from "./process-comments"
-import {parseCode, visit, visualizeCST} from "./cst-helpers"
+import {parseCode, visit, visualizeCST} from "./cst/cst-helpers"
 
 const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}))
 
@@ -19,13 +16,7 @@ const code =
 
     `
 fun foo() {
-     let result = 
-               self.uB.b2.c1 == 0 &&
-               self.uB.b3 == 14 && // inline
-
-               // init does not modify default value of self.sA
-               
-               self.sA.a1 == 20;
+     do {} until (true); // comment 1
 }
 `
 
@@ -202,6 +193,10 @@ contract Foo(param: Int) with Ownable, Baz {
 //     ).call();
 
 const root = parseCode(code)
+if (root === undefined) {
+    console.log("cannot parse code")
+    process.exit(1)
+}
 
 console.log(visualizeCST(root, undefined))
 fs.writeFileSync("out.json", JSON.stringify(root, null, 4))

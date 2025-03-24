@@ -1,5 +1,5 @@
-import {format} from "./formatter/formatter";
-import {parseCode} from "./cst-helpers";
+import {format} from "../formatter/formatter";
+import {parseCode} from "../cst/cst-helpers";
 
 function normalizeIndentation(input: string): string {
     const lines = input.split('\n');

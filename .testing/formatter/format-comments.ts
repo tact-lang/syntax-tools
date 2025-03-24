@@ -1,6 +1,6 @@
-import {CodeBuilder} from "../code-builder"
-import {Cst, CstNode} from "../result"
-import {visit} from "../cst-helpers"
+import {CodeBuilder} from "./code-builder"
+import {Cst, CstNode} from "../cst/cst-parser"
+import {visit} from "../cst/cst-helpers"
 import {getCommentsBetween} from "./helpers"
 
 export function formatTrailingComments(code: CodeBuilder, node: CstNode, startFrom: number) {
