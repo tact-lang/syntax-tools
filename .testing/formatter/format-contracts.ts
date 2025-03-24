@@ -1,101 +1,107 @@
-import {Cst, CstNode} from "../result";
+import {Cst, CstNode} from "../result"
 import {
     childByField,
     childIdxByType,
     childLeafIdxWithText,
     childrenByType,
     nonLeafChild,
-    visit
-} from "../cst-helpers";
-import {CodeBuilder} from "../code-builder";
-import {containsSeveralNewlines, formatId, formatSeparatedList, idText, trailingNewlines} from "./format-helpers";
-import {formatFunction, formatParameter} from "./format-declarations";
-import {formatStatements, processInlineCommentsAfterIndex} from "./format-statements";
-import {formatAscription} from "./format-types";
-import {formatExpression} from "./format-expressions";
-import {formatDocComments} from "./format-doc-comments";
+    visit,
+} from "../cst-helpers"
+import {CodeBuilder} from "../code-builder"
+import {
+    containsSeveralNewlines,
+    formatId,
+    formatSeparatedList,
+    idText,
+    trailingNewlines,
+} from "./helpers"
+import {formatFunction, formatParameter} from "./format-declarations"
+import {formatStatements, processInlineCommentsAfterIndex} from "./format-statements"
+import {formatAscription} from "./format-types"
+import {formatExpression} from "./format-expressions"
+import {formatDocComments} from "./format-doc-comments"
 
 export function formatContract(code: CodeBuilder, node: CstNode): void {
     formatDocComments(code, node)
 
-    formatContractTraitAttributes(code, node);
-    code.add("contract").space().add(getName(node, "contract"));
-    formatContractParameters(code, node);
-    formatInheritedTraits(code, node);
+    formatContractTraitAttributes(code, node)
+    code.add("contract").space().add(getName(node, "contract"))
+    formatContractParameters(code, node)
+    formatInheritedTraits(code, node)
     formatContractTraitBody(code, node, (code, decl) => {
         switch (decl.type) {
             case "ContractInit":
-                formatContractInit(code, decl);
-                break;
+                formatContractInit(code, decl)
+                break
             case "Receiver":
-                formatReceiver(code, decl);
-                break;
+                formatReceiver(code, decl)
+                break
             case "$Function":
-                formatFunction(code, decl);
-                break;
+                formatFunction(code, decl)
+                break
             case "Constant":
-                formatConstant(code, decl);
-                break;
+                formatConstant(code, decl)
+                break
             case "FieldDecl":
-                formatFieldDecl(code, decl, true);
-                break;
+                formatFieldDecl(code, decl, true)
+                break
             case "Comment":
-                code.add(visit(decl).trim());
-                break;
+                code.add(visit(decl).trim())
+                break
             default:
-                throw new Error(`Unknown contract declaration type: ${decl.type}`);
+                throw new Error(`Unknown contract declaration type: ${decl.type}`)
         }
-    });
+    })
 }
 
 export function formatTrait(code: CodeBuilder, node: CstNode): void {
     formatDocComments(code, node)
 
-    formatContractTraitAttributes(code, node);
-    code.add("trait").space().add(getName(node, "trait"));
-    formatInheritedTraits(code, node);
+    formatContractTraitAttributes(code, node)
+    code.add("trait").space().add(getName(node, "trait"))
+    formatInheritedTraits(code, node)
     formatContractTraitBody(code, node, (code, decl) => {
         switch (decl.type) {
             case "Receiver":
-                formatReceiver(code, decl);
-                break;
+                formatReceiver(code, decl)
+                break
             case "$Function":
-                formatFunction(code, decl);
-                break;
+                formatFunction(code, decl)
+                break
             case "Constant":
-                formatConstant(code, decl);
-                break;
+                formatConstant(code, decl)
+                break
             case "FieldDecl":
-                formatFieldDecl(code, decl, true);
-                break;
+                formatFieldDecl(code, decl, true)
+                break
             case "Comment":
-                code.add(visit(decl).trim());
-                break;
+                code.add(visit(decl).trim())
+                break
             default:
-                throw new Error(`Unknown trait declaration type: ${decl.type}`);
+                throw new Error(`Unknown trait declaration type: ${decl.type}`)
         }
-    });
+    })
 }
 
 function formatContractInit(code: CodeBuilder, decl: CstNode): void {
     formatDocComments(code, decl)
 
-    code.add("init");
+    code.add("init")
 
     // init(foo: Int) {}
     //      ^^^^^^^^
-    const paramsOpt = childByField(decl, "parameters");
+    const paramsOpt = childByField(decl, "parameters")
     if (paramsOpt) {
-        formatSeparatedList(code, paramsOpt, formatParameter);
+        formatSeparatedList(code, paramsOpt, formatParameter)
     }
 
-    const body = childByField(decl, "body");
+    const body = childByField(decl, "body")
     if (!body) {
-        throw new Error("Invalid contract init declaration");
+        throw new Error("Invalid contract init declaration")
     }
 
-    code.space();
-    formatStatements(code, body);
+    code.space()
+    formatStatements(code, body)
 }
 
 function formatReceiver(code: CodeBuilder, decl: CstNode): void {
@@ -107,23 +113,23 @@ function formatReceiver(code: CodeBuilder, decl: CstNode): void {
     // |       |               body
     // |       paramOpt
     // type
-    const type = childByField(decl, "type");
-    const paramOpt = childByField(decl, "param");
-    const body = childByField(decl, "body");
+    const type = childByField(decl, "type")
+    const paramOpt = childByField(decl, "param")
+    const body = childByField(decl, "body")
 
     if (!type || !body) {
-        throw new Error("Invalid receiver declaration");
+        throw new Error("Invalid receiver declaration")
     }
 
     // receive/external/bounced
-    const receiverKind = childByField(type, "name");
+    const receiverKind = childByField(type, "name")
     if (!receiverKind) {
-        throw new Error("Invalid receiver type");
+        throw new Error("Invalid receiver type")
     }
 
-    code.add(visit(receiverKind));
+    code.add(visit(receiverKind))
     if (paramOpt) {
-        code.add("(");
+        code.add("(")
         if (paramOpt.type === "Parameter") {
             // receive(param: Slice) {}
             //         ^^^^^^^^^^^^ this
@@ -131,14 +137,14 @@ function formatReceiver(code: CodeBuilder, decl: CstNode): void {
         } else if (paramOpt.type === "StringLiteral") {
             // receive("hello") {}
             //         ^^^^^^^ this
-            formatExpression(code, paramOpt);
+            formatExpression(code, paramOpt)
         }
-        code.add(")");
+        code.add(")")
     } else {
-        code.add("()");
+        code.add("()")
     }
-    code.space();
-    formatStatements(code, body);
+    code.space()
+    formatStatements(code, body)
 }
 
 export function formatConstant(code: CodeBuilder, decl: CstNode): void {
@@ -150,32 +156,32 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     //       |   |     bodyOpt
     //       |   type
     //       name
-    const name = childByField(decl, "name");
-    const type = childByField(decl, "type");
-    const bodyOpt = childByField(decl, "body");
+    const name = childByField(decl, "name")
+    const type = childByField(decl, "type")
+    const bodyOpt = childByField(decl, "body")
 
     if (!name || !type) {
-        throw new Error("Invalid constant declaration");
+        throw new Error("Invalid constant declaration")
     }
 
-    const attributes = childByField(decl, "attributes");
+    const attributes = childByField(decl, "attributes")
     formatConstantAttributes(code, attributes)
 
     // const FOO: Int
-    code.add("const").space().apply(formatId, name).apply(formatAscription, type);
+    code.add("const").space().apply(formatId, name).apply(formatAscription, type)
 
     if (bodyOpt && bodyOpt.type === "ConstantDefinition") {
         // const Foo: Int = 100;
         //               ^^^^^^^ this
-        code.space().add("=").space();
+        code.space().add("=").space()
         // const Foo: Int = 100;
         //                  ^^^ this
-        const value = nonLeafChild(bodyOpt);
-        code.apply(formatExpression, value).add(";");
+        const value = nonLeafChild(bodyOpt)
+        code.apply(formatExpression, value).add(";")
 
-        const comments = bodyOpt.children.filter(it => it.$ === "node" && it.type === "Comment");
+        const comments = childrenByType(bodyOpt, "Comment")
         if (comments.length > 0) {
-            code.space();
+            code.space()
             comments.forEach(comment => {
                 code.add(visit(comment))
             })
@@ -183,23 +189,23 @@ export function formatConstant(code: CodeBuilder, decl: CstNode): void {
     } else if (!bodyOpt || bodyOpt.type === "ConstantDeclaration") {
         // const Foo: Int;
         //               ^ this
-        code.add(";");
+        code.add(";")
     }
 }
 
 function formatConstantAttributes(code: CodeBuilder, attributes: CstNode | undefined) {
-    if (!attributes) return;
+    if (!attributes) return
 
-    const attrs = childrenByType(attributes, "ConstantAttribute");
+    const attrs = childrenByType(attributes, "ConstantAttribute")
     for (const attr of attrs) {
-        formatConstantAttribute(code, attr);
+        formatConstantAttribute(code, attr)
     }
 }
 
 function formatConstantAttribute(code: CodeBuilder, attr: Cst) {
-    const attrName = childByField(attr, "name");
-    if (!attrName) return;
-    code.add(`${idText(attr)}`).space();
+    const attrName = childByField(attr, "name")
+    if (!attrName) return
+    code.add(`${idText(attr)}`).space()
 }
 
 export function formatFieldDecl(code: CodeBuilder, decl: CstNode, needSemicolon: boolean): void {
@@ -211,26 +217,26 @@ export function formatFieldDecl(code: CodeBuilder, decl: CstNode, needSemicolon:
     // |   |       initOpt
     // |   type
     // name
-    const name = childByField(decl, "name");
-    const type = childByField(decl, "type");
-    const initOpt = childByField(decl, "expression");
+    const name = childByField(decl, "name")
+    const type = childByField(decl, "type")
+    const initOpt = childByField(decl, "expression")
 
     if (!name || !type) {
-        throw new Error("Invalid field declaration");
+        throw new Error("Invalid field declaration")
     }
 
     // foo: Int
-    code.apply(formatId, name).apply(formatAscription, type);
+    code.apply(formatId, name).apply(formatAscription, type)
 
     if (initOpt) {
         // foo: Int = 100;
         //            ^^^ this
-        const value = nonLeafChild(initOpt);
+        const value = nonLeafChild(initOpt)
         //  = 100
-        code.space().add("=").space().apply(formatExpression, value);
+        code.space().add("=").space().apply(formatExpression, value)
     }
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
     const endIndex = childLeafIdxWithText(decl, ";")
@@ -238,113 +244,122 @@ export function formatFieldDecl(code: CodeBuilder, decl: CstNode, needSemicolon:
 }
 
 function getName(node: CstNode, type: "contract" | "trait"): string {
-    const name = childByField(node, "name");
+    const name = childByField(node, "name")
     if (!name || name.$ !== "node" || name.type !== "Id") {
-        throw new Error(`Invalid ${type} name`);
+        throw new Error(`Invalid ${type} name`)
     }
-    return idText(name);
+    return idText(name)
 }
 
 function formatContractTraitAttribute(attr: Cst, code: CodeBuilder) {
-    const name = childByField(attr, "name");
-    if (!name) return;
-    code.add("@interface").add("(").apply(formatExpression, name).add(")");
+    const name = childByField(attr, "name")
+    if (!name) return
+    code.add("@interface").add("(").apply(formatExpression, name).add(")")
 }
 
 function formatContractTraitAttributes(code: CodeBuilder, node: CstNode): void {
     // @interface("name")
     // ^^^^^^^^^^^^^^^^^^ this
     // contract Foo {}
-    const attributes = childByField(node, "attributes");
-    if (!attributes) return;
+    const attributes = childByField(node, "attributes")
+    if (!attributes) return
 
     if (attributes.type === "ContractAttribute") {
         // single attribute
-        formatContractTraitAttribute(attributes, code);
+        formatContractTraitAttribute(attributes, code)
         code.newLine()
         return
     }
 
-    const attrs = childrenByType(attributes, "ContractAttribute");
+    const attrs = childrenByType(attributes, "ContractAttribute")
     attrs.forEach((attr, i) => {
-        formatContractTraitAttribute(attr, code);
+        formatContractTraitAttribute(attr, code)
         if (i < attrs.length - 1) {
-            code.newLine();
+            code.newLine()
         }
-    });
+    })
     if (attrs.length > 0) {
-        code.newLine();
+        code.newLine()
     }
 }
 
 function formatInheritedTraits(code: CodeBuilder, node: CstNode): void {
     // contract Foo with Bar, Baz {}
     //              ^^^^^^^^^^^^^ this
-    const traits = childByField(node, "traits");
-    if (!traits) return;
+    const traits = childByField(node, "traits")
+    if (!traits) return
 
-    code.space().add("with").space();
+    code.space().add("with").space()
 
     // ["with", " ", "Bar", ", ", "Baz"]
     //               ^ starts from here
     const namesIndex = childIdxByType(traits, "Id")
 
-    formatSeparatedList(code, traits, (code, trait) => {
-        code.apply(formatId, trait);
-    }, {
-        wrapperLeft: "",
-        wrapperRight: "",
-        startIndex: namesIndex,
-        endIndex: 0,
-    });
+    formatSeparatedList(
+        code,
+        traits,
+        (code, trait) => {
+            code.apply(formatId, trait)
+        },
+        {
+            wrapperLeft: "",
+            wrapperRight: "",
+            startIndex: namesIndex,
+            endIndex: 0,
+        },
+    )
 }
 
 function formatContractParameters(code: CodeBuilder, node: CstNode): void {
     // contract Foo(value: Int) {}
     //             ^^^^^^^^^^^^ this
-    const paramsOpt = childByField(node, "parameters");
-    if (!paramsOpt) return;
-    formatSeparatedList(code, paramsOpt, formatParameter);
+    const paramsOpt = childByField(node, "parameters")
+    if (!paramsOpt) return
+    formatSeparatedList(code, paramsOpt, formatParameter)
 }
 
-function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclaration: (code: CodeBuilder, decl: CstNode) => void): void {
-    const children = node.children;
+function formatContractTraitBody(
+    code: CodeBuilder,
+    node: CstNode,
+    formatDeclaration: (code: CodeBuilder, decl: CstNode) => void,
+): void {
+    const children = node.children
 
     // contract or trait can contain only comments, so we need to handle this case properly
-    const hasComments = children.find(it => it.$ === "node" && it.type === "Comment");
+    const hasComments = children.find(it => it.$ === "node" && it.type === "Comment")
 
-    const declarationsNode = childByField(node, "declarations");
+    const declarationsNode = childByField(node, "declarations")
     if ((!declarationsNode || declarationsNode.children.length === 0) && !hasComments) {
         code.space().add("{}")
         return
     }
 
-    code.space().add("{").newLine().indent();
+    code.space().add("{").newLine().indent()
 
-    const declarations = declarationsNode?.children ?? [];
+    const declarations = declarationsNode?.children ?? []
 
-    let needNewLine = false;
+    let needNewLine = false
     declarations.forEach(decl => {
         if (decl.$ === "leaf") {
             if (containsSeveralNewlines(decl.text)) {
-                needNewLine = true;
+                needNewLine = true
             }
-            return;
+            return
         }
 
         if (needNewLine) {
-            code.newLine();
+            code.newLine()
             needNewLine = false
         }
 
-        formatDeclaration(code, decl);
-        code.newLine();
+        formatDeclaration(code, decl)
+        code.newLine()
 
         const newlines = trailingNewlines(decl)
         if (!needNewLine && containsSeveralNewlines(newlines)) {
-            code.newLine();
+            code.newLine()
         }
-    });
+    })
 
     if (!declarationsNode) {
         // empty contract
@@ -353,12 +368,12 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
 
         const comments = node.children
             .slice(openBraceIndex + 1, closeBraceIndex)
-            .filter(it => it.$ === "node" && it.type === "Comment");
+            .filter(it => it.$ === "node" && it.type === "Comment")
         comments.forEach(child => {
             code.add(visit(child).trim())
             code.newLine()
         })
     }
 
-    code.dedent().add("}");
+    code.dedent().add("}")
 }

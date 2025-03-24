@@ -1,113 +1,117 @@
-import {Cst, CstNode} from "../result";
-import {CodeBuilder} from "../code-builder";
-import {childByField, visit} from "../cst-helpers";
+import {Cst, CstNode} from "../result"
+import {CodeBuilder} from "../code-builder"
+import {childByField, childrenByType, visit} from "../cst-helpers"
 
 interface CommentWithNewline {
-    node: CstNode;
-    hasNewline: boolean;
+    node: CstNode
+    hasNewline: boolean
 }
 
 interface ListInfo {
-    items: ListItemInfo[];
-    leadingComments: CommentWithNewline[];
-    inlineLeadingComments: CommentWithNewline[];
-    trailingComments: CommentWithNewline[];
-    shouldBeMultiline: boolean;
+    items: ListItemInfo[]
+    leadingComments: CommentWithNewline[]
+    inlineLeadingComments: CommentWithNewline[]
+    trailingComments: CommentWithNewline[]
+    shouldBeMultiline: boolean
 }
 
 interface ListItemInfo {
-    item: Cst;
-    leadingComments: CommentWithNewline[];
-    trailingComments: CommentWithNewline[];
-    hasLeadingNewline: boolean;
-    hasTrailingNewline: boolean;
+    item: Cst
+    leadingComments: CommentWithNewline[]
+    trailingComments: CommentWithNewline[]
+    hasLeadingNewline: boolean
+    hasTrailingNewline: boolean
 }
 
 export function collectListInfo(node: CstNode, startIndex: number, endIndex: number): ListInfo {
-    const result: ListItemInfo[] = [];
-    let currentItem: ListItemInfo | null = null;
-    let wasComma: boolean = false;
-    let listInlineLeadingComments: CommentWithNewline[] = [];
-    let listLeadingComments: CommentWithNewline[] = [];
-    let leadingComments: CommentWithNewline[] = [];
+    const result: ListItemInfo[] = []
+    let currentItem: ListItemInfo | null = null
+    let wasComma: boolean = false
+    let listInlineLeadingComments: CommentWithNewline[] = []
+    let listLeadingComments: CommentWithNewline[] = []
+    let leadingComments: CommentWithNewline[] = []
     let inLeadingComments: boolean = true
 
-    let shouldBeMultiline = false;
+    let shouldBeMultiline = false
 
-    let i = startIndex;
-    let processList: readonly Cst[] = node.children.slice(0, endIndex === 0 ? node.children.length : endIndex);
+    let i = startIndex
+    let processList: readonly Cst[] = node.children.slice(
+        0,
+        endIndex === 0 ? node.children.length : endIndex,
+    )
 
     let wasInitialNewline = false
     while (i < processList.length) {
-        const child = processList[i];
+        const child = processList[i]
 
         if (child.$ === "leaf") {
             if (child.text === ",") {
                 wasComma = true
             } else if (/\n/.test(child.text)) {
                 if (currentItem) {
-                    currentItem.hasTrailingNewline = true;
+                    currentItem.hasTrailingNewline = true
                 }
 
                 if (leadingComments.length > 0) {
-                    leadingComments[leadingComments.length - 1].hasNewline = true;
+                    leadingComments[leadingComments.length - 1].hasNewline = true
                 } else if (listLeadingComments.length > 0 && inLeadingComments) {
-                    listLeadingComments[listLeadingComments.length - 1].hasNewline = true;
+                    listLeadingComments[listLeadingComments.length - 1].hasNewline = true
                 }
 
                 if (currentItem && wasComma) {
-                    result.push(currentItem);
-                    currentItem = null;
+                    result.push(currentItem)
+                    currentItem = null
                     wasComma = false
                 }
-                shouldBeMultiline = true;
+                shouldBeMultiline = true
                 wasInitialNewline = true
             }
         } else if (child.type === "Comment") {
             const commentWithNewline: CommentWithNewline = {
                 node: child,
-                hasNewline: false
-            };
+                hasNewline: false,
+            }
             if (currentItem) {
-                currentItem.trailingComments.push(commentWithNewline);
+                currentItem.trailingComments.push(commentWithNewline)
             } else if (result.length === 0) {
                 if (!wasInitialNewline) {
-                    listInlineLeadingComments.push(commentWithNewline);
+                    listInlineLeadingComments.push(commentWithNewline)
                 } else {
-                    listLeadingComments.push(commentWithNewline);
+                    listLeadingComments.push(commentWithNewline)
                 }
             } else {
-                leadingComments.push(commentWithNewline);
+                leadingComments.push(commentWithNewline)
             }
         } else {
             if (child.type === "tail" || child.type === "fields") {
-                processList = child.children;
+                processList = child.children
                 i = 0
                 continue
             }
 
             if (currentItem) {
-                result.push(currentItem);
-                currentItem = null;
-                leadingComments = [];
+                result.push(currentItem)
+                currentItem = null
+                leadingComments = []
             }
 
             currentItem = {
                 item: child,
                 leadingComments: leadingComments,
                 trailingComments: [],
-                hasLeadingNewline: leadingComments.some(c => c.hasNewline) ||
+                hasLeadingNewline:
+                    leadingComments.some(c => c.hasNewline) ||
                     (result.length > 0 && result[result.length - 1].hasTrailingNewline),
                 hasTrailingNewline: false,
-            };
-            leadingComments = [];
+            }
+            leadingComments = []
             inLeadingComments = false
         }
-        i++;
+        i++
     }
 
     if (currentItem) {
-        result.push(currentItem);
+        result.push(currentItem)
     }
 
     return {
@@ -115,8 +119,8 @@ export function collectListInfo(node: CstNode, startIndex: number, endIndex: num
         shouldBeMultiline,
         leadingComments: listLeadingComments,
         inlineLeadingComments: listInlineLeadingComments,
-        trailingComments: leadingComments
-    };
+        trailingComments: leadingComments,
+    }
 }
 
 export const formatSeparatedList = (
@@ -124,16 +128,16 @@ export const formatSeparatedList = (
     node: CstNode,
     formatItem: (code: CodeBuilder, item: Cst) => void,
     options: {
-        startIndex?: number;
-        endIndex?: number;
-        wrapperLeft?: string,
-        wrapperRight?: string,
-        extraWrapperSpace?: string,
-        suffixElement?: string,
-        needSeparatorAfterSuffixElement?: boolean,
-        separator?: string,
-        provideTrailingComments?: (item: Cst) => undefined | Cst[],
-    } = {}
+        startIndex?: number
+        endIndex?: number
+        wrapperLeft?: string
+        wrapperRight?: string
+        extraWrapperSpace?: string
+        suffixElement?: string
+        needSeparatorAfterSuffixElement?: boolean
+        separator?: string
+        provideTrailingComments?: (item: Cst) => undefined | Cst[]
+    } = {},
 ): void => {
     const {
         wrapperLeft = "(",
@@ -141,117 +145,124 @@ export const formatSeparatedList = (
         separator = ",",
         startIndex = 1,
         endIndex = -1,
-    } = options;
+    } = options
 
-    const info = collectListInfo(node, startIndex, endIndex);
+    const info = collectListInfo(node, startIndex, endIndex)
     const items = info.items
     const shouldBeMultiline = info.shouldBeMultiline
 
-    code.add(wrapperLeft);
+    code.add(wrapperLeft)
 
     if (shouldBeMultiline) {
         if (info.inlineLeadingComments.length > 0) {
             code.space()
             info.inlineLeadingComments.forEach(comment => {
-                code.add(visit(comment.node));
-            });
+                code.add(visit(comment.node))
+            })
         }
 
-        code.newLine().indent();
+        code.newLine().indent()
 
         info.leadingComments.forEach(comment => {
-            code.add(visit(comment.node));
+            code.add(visit(comment.node))
             if (comment.hasNewline) {
-                code.newLine();
+                code.newLine()
             }
-        });
+        })
 
-        items.forEach((item) => {
+        items.forEach(item => {
             item.leadingComments.forEach(comment => {
-                code.add(visit(comment.node));
+                code.add(visit(comment.node))
                 if (comment.hasNewline) {
-                    code.newLine();
+                    code.newLine()
                 } else {
-                    code.space();
+                    code.space()
                 }
-            });
+            })
 
-            formatItem(code, item.item);
-            code.add(separator);
+            formatItem(code, item.item)
+            code.add(separator)
 
-            const trailingComments = [...options.provideTrailingComments?.(item.item) ?? [], ...item.trailingComments.map(it => it.node)]
+            const trailingComments = [
+                ...(options.provideTrailingComments?.(item.item) ?? []),
+                ...item.trailingComments.map(it => it.node),
+            ]
             trailingComments.forEach((comment, index) => {
-                code.space().add(visit(comment));
+                code.space().add(visit(comment))
 
                 if (index !== trailingComments.length - 1) {
-                    code.newLine();
+                    code.newLine()
                 }
-            });
+            })
 
-            code.newLine();
-        });
+            code.newLine()
+        })
 
         if (options.suffixElement) {
             code.add(options.suffixElement)
             if (options.needSeparatorAfterSuffixElement) {
                 code.add(separator)
             }
-            code.newLine();
+            code.newLine()
         }
 
         if (info.trailingComments.length > 0) {
             info.trailingComments.forEach((comment, index) => {
-                code.add(visit(comment.node));
+                code.add(visit(comment.node))
                 if (comment.hasNewline || index === info.trailingComments.length - 1) {
-                    code.newLine();
+                    code.newLine()
                 }
-            });
+            })
         }
 
-        code.dedent().add(wrapperRight);
+        code.dedent().add(wrapperRight)
     } else {
         if (items.length !== 0 && options.extraWrapperSpace) {
-            code.add(options.extraWrapperSpace);
+            code.add(options.extraWrapperSpace)
         }
 
-        info.leadingComments.forEach((comment) => {
-            code.add(visit(comment.node));
+        info.leadingComments.forEach(comment => {
+            code.add(visit(comment.node))
 
             if (comment.hasNewline) {
-                code.newLine();
+                code.newLine()
             } else {
-                code.space();
+                code.space()
             }
-        });
+        })
 
         items.forEach((item, index) => {
-            formatItem(code, item.item);
+            formatItem(code, item.item)
             if (index < items.length - 1) {
-                code.add(separator).space();
+                code.add(separator).space()
             }
-        });
+        })
 
         if (options.suffixElement) {
-            code.add(separator).space().add(options.suffixElement);
+            code.add(separator).space().add(options.suffixElement)
         }
 
         if (items.length !== 0 && options.extraWrapperSpace) {
-            code.add(options.extraWrapperSpace);
+            code.add(options.extraWrapperSpace)
         }
 
-        code.add(wrapperRight);
+        code.add(wrapperRight)
     }
-};
+}
 
-export const getCommentsBetween = (node: CstNode, startNode: undefined | Cst, endNode: undefined | Cst): CstNode[] => {
-    const startIndex = startNode ? node.children.indexOf(startNode) : -1;
-    const endIndex = endNode ? node.children.indexOf(endNode) : node.children.length;
+export const getCommentsBetween = (
+    node: CstNode,
+    startNode: undefined | Cst,
+    endNode: undefined | Cst,
+): CstNode[] => {
+    const startIndex = startNode ? node.children.indexOf(startNode) : -1
+    const endIndex = endNode ? node.children.indexOf(endNode) : node.children.length
 
     return node.children.filter((child, childIndex) => {
-        if (child.$ !== "node" || child.type !== "Comment") return false;
-        return childIndex > startIndex && childIndex < endIndex;
-    }) as CstNode[];
-};
+        if (child.$ !== "node" || child.type !== "Comment") return false
+        return childIndex > startIndex && childIndex < endIndex
+    }) as CstNode[]
+}
 
 export function processInlineComments(node: CstNode, code: CodeBuilder, start: Cst, end: Cst) {
     const comments = getCommentsBetween(node, start, end)
@@ -264,21 +275,21 @@ export function processInlineComments(node: CstNode, code: CodeBuilder, start: C
 //   name: name
 //      "some"
 export const idText = (node: Cst): string => {
-    const name = childByField(node, "name");
-    if (!name) return;
+    const name = childByField(node, "name")
+    if (!name) return
     const child = name.children[0]
-    if (!child) return;
-    return visit(child);
+    if (!child) return
+    return visit(child)
 }
 
 export const formatId = (code: CodeBuilder, node: CstNode) => {
-    const name = idText(node);
+    const name = idText(node)
     code.add(name)
 
-    const comments = node.children.filter(it => it.$ === "node" && it.type === "Comment");
+    const comments = childrenByType(node, "Comment")
 
     if (comments.length > 0) {
-        code.space();
+        code.space()
         comments.forEach(comment => {
             code.add(visit(comment))
         })
@@ -296,7 +307,10 @@ export function containsSeveralNewlines(text: string): boolean {
 export function trailingNewlines(node: Cst): string {
     if (node.$ === "leaf") return ""
     let lastChild = node.children.at(-1)
-    if (node.$ === "node" && (node.type === "Receiver" || node.type === "ContractInit" || node.type === "Constant")) {
+    if (
+        node.$ === "node" &&
+        (node.type === "Receiver" || node.type === "ContractInit" || node.type === "Constant")
+    ) {
         const body = childByField(node, "body")
         if (body) {
             lastChild = body.children.at(-1)

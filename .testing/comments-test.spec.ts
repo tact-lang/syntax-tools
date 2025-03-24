@@ -1,6 +1,6 @@
-import {childByField, childByType, childrenByType, parseCode, visit} from "./cst-helpers";
+import {childByField, childByType, childrenByType, parseCode, visit} from "./cst-helpers"
 
-describe('comments', () => {
+describe("comments", () => {
     function test(code: string, itemType: string, index: number, expected: string): () => void {
         return () => {
             const root = parseCode(code)
@@ -20,27 +20,59 @@ describe('comments', () => {
         }
     }
 
-    it('should correctly attach doc comments to function', test(`
+    it(
+        "should correctly attach doc comments to function",
+        test(
+            `
         /// Some doc comment of function foo
         fun foo() {}
-    `, "$Function", 0, "/// Some doc comment of function foo"))
+    `,
+            "$Function",
+            0,
+            "/// Some doc comment of function foo",
+        ),
+    )
 
-    it('should correctly attach doc comments to struct', test(`
+    it(
+        "should correctly attach doc comments to struct",
+        test(
+            `
         /// Some doc comment of struct Foo
         struct Foo {}
-    `, "StructDecl", 0, "/// Some doc comment of struct Foo"))
+    `,
+            "StructDecl",
+            0,
+            "/// Some doc comment of struct Foo",
+        ),
+    )
 
-    it('should correctly attach doc comments to struct after function', test(`
+    it(
+        "should correctly attach doc comments to struct after function",
+        test(
+            `
         fun foo() {}
     
         /// Some doc comment of struct Foo
         struct Foo {}
-    `, "StructDecl", 0, "/// Some doc comment of struct Foo"))
+    `,
+            "StructDecl",
+            0,
+            "/// Some doc comment of struct Foo",
+        ),
+    )
 
-    it('should correctly attach doc comments to struct after function with inline comment', test(`
+    it(
+        "should correctly attach doc comments to struct after function with inline comment",
+        test(
+            `
         fun foo() {} // inline comment of foo
     
         /// Some doc comment of struct Foo
         struct Foo {}
-    `, "StructDecl", 0, "/// Some doc comment of struct Foo"))
-});
+    `,
+            "StructDecl",
+            0,
+            "/// Some doc comment of struct Foo",
+        ),
+    )
+})

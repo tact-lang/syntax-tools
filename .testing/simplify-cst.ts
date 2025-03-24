@@ -1,4 +1,4 @@
-import {Cst} from "./result";
+import {Cst} from "./result"
 
 export const simplifyCst = (node: Cst): Cst => {
     if (node.$ === "leaf") {
@@ -13,7 +13,7 @@ export const simplifyCst = (node: Cst): Cst => {
                     return it.children.flatMap(it => simplifyCst(it))
                 }
                 return simplifyCst(it)
-            })
+            }),
         }
     }
 
@@ -25,29 +25,35 @@ export const simplifyCst = (node: Cst): Cst => {
                     return it.children.flatMap(it => simplifyCst(it))
                 }
                 return simplifyCst(it)
-            })
+            }),
         }
     }
 
     if (node.type === "IntegerLiteral" && node.children.length === 1) {
         const child = simplifyCst(node.children[0])
         if (child.$ !== "node") return child
-        const value = child.children[0];
+        const value = child.children[0]
         if (value.$ !== "node") return child
         return {
             ...node,
             children: [
                 {
                     ...value,
-                    field: "value"
-                }
-            ]
+                    field: "value",
+                },
+            ],
         }
     }
 
-    if ((node.type === "Binary" || node.type === "Unary" || node.type === "Suffix" || node.type === "Conditional") && node.children.length === 1) {
+    if (
+        (node.type === "Binary" ||
+            node.type === "Unary" ||
+            node.type === "Suffix" ||
+            node.type === "Conditional") &&
+        node.children.length === 1
+    ) {
         const firstChild = node.children[0]
-        const result = simplifyCst(firstChild);
+        const result = simplifyCst(firstChild)
         if (result.$ === "leaf") return result
         return {
             ...result,
@@ -60,7 +66,14 @@ export const simplifyCst = (node: Cst): Cst => {
         if (it.$ !== "node") return it
 
         if (it.children.length === 1 && it.field === it.type) {
-            if (it.type === "declarations" || it.type === "items"  || it.type === "attributes" || it.type === "imports" || it.type === "fields" || it.type === "ids") {
+            if (
+                it.type === "declarations" ||
+                it.type === "items" ||
+                it.type === "attributes" ||
+                it.type === "imports" ||
+                it.type === "fields" ||
+                it.type === "ids"
+            ) {
                 // don't need to flatten lists with a single element
                 return it
             }
@@ -80,4 +93,4 @@ export const simplifyCst = (node: Cst): Cst => {
         ...node,
         children: processedChildren.flatMap(it => simplifyCst(it)),
     }
-};
+}

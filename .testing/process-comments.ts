@@ -1,5 +1,11 @@
-import {Cst, CstNode} from "./result";
-import {childByField, childByType, childIdxByField, childIdxByType, childLeafIdxWithText} from "./cst-helpers";
+import {Cst, CstNode} from "./result"
+import {
+    childByField,
+    childByType,
+    childIdxByField,
+    childIdxByType,
+    childLeafIdxWithText,
+} from "./cst-helpers"
 
 let pendingComments: Cst[] = []
 
@@ -33,16 +39,19 @@ interface CommentsExtraction {
 //       ^^^^^^^^^^ this
 //
 // Comments here can be both inline (attached to node) and plain one (actually attached to the next declaration)
-function extractComments([commentPoint, anchor]: [CstNode, Anchor]): undefined | CommentsExtraction {
-    const anchorIndex = typeof anchor === "string"
-        ? childLeafIdxWithText(commentPoint, anchor)
-        : anchor(commentPoint)
+function extractComments([commentPoint, anchor]: [CstNode, Anchor]):
+    | CommentsExtraction
+    | undefined {
+    const anchorIndex =
+        typeof anchor === "string"
+            ? childLeafIdxWithText(commentPoint, anchor)
+            : anchor(commentPoint)
     if (anchorIndex === -1) {
         // No anchor, bug?
         return undefined
     }
 
-    const actualAnchorIndex = anchorIndex + 1;
+    const actualAnchorIndex = anchorIndex + 1
     const followingLeafs = commentPoint.children.slice(actualAnchorIndex)
     const hasComments = followingLeafs.some(it => it.$ === "node" && it.type === "Comment")
     if (!hasComments) {
@@ -51,13 +60,15 @@ function extractComments([commentPoint, anchor]: [CstNode, Anchor]): undefined |
     }
 
     // find index where we break on the next line
-    let inlineCommentsIndex = actualAnchorIndex + followingLeafs.findIndex(it => it.$ === "leaf" && it.text.includes("\n"))
+    let inlineCommentsIndex =
+        actualAnchorIndex +
+        followingLeafs.findIndex(it => it.$ === "leaf" && it.text.includes("\n"))
 
     // all before, inline comments that we don't touch
     const inlineLeafs = followingLeafs.slice(0, inlineCommentsIndex - actualAnchorIndex)
-    const inlineComments = inlineLeafs.filter(it => it.$ === "node" && it.type === "Comment");
+    const inlineComments = inlineLeafs.filter(it => it.$ === "node" && it.type === "Comment")
 
-    const inlineCommentFirstChildren = commentPoint.children[inlineCommentsIndex];
+    const inlineCommentFirstChildren = commentPoint.children[inlineCommentsIndex]
     if (inlineCommentFirstChildren.$ === "leaf" && inlineCommentFirstChildren.text.includes("\n")) {
         // skip leading new lines
         inlineCommentsIndex++
@@ -73,9 +84,10 @@ function extractComments([commentPoint, anchor]: [CstNode, Anchor]): undefined |
         }
     }
 
-    const lastLeaf = remainingLeafs.at(-1);
+    const lastLeaf = remainingLeafs.at(-1)
     // Comment is attached to declaration only when the last whitespace is not several line breaks
-    const isAttachedTo = lastLeaf && lastLeaf.$ === "leaf" && !containsSeveralNewlines(lastLeaf.text)
+    const isAttachedTo =
+        lastLeaf && lastLeaf.$ === "leaf" && !containsSeveralNewlines(lastLeaf.text)
     if (!isAttachedTo) {
         // comments are not attached, need to add a separate statement? TODO
         return {
@@ -86,7 +98,9 @@ function extractComments([commentPoint, anchor]: [CstNode, Anchor]): undefined |
         }
     }
 
-    const reverseDoubleNewlineIndex = [...remainingLeafs].reverse().findIndex(it => it.$ === "leaf" && containsSeveralNewlines(it.text));
+    const reverseDoubleNewlineIndex = [...remainingLeafs]
+        .reverse()
+        .findIndex(it => it.$ === "leaf" && containsSeveralNewlines(it.text))
 
     if (reverseDoubleNewlineIndex !== -1) {
         const index = remainingLeafs.length - reverseDoubleNewlineIndex
@@ -139,7 +153,7 @@ const findNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
     if (node.type === "$Function") {
         const body = childByField(node, "body")
         if (body) {
-            const innerBody = childByField(body, "body");
+            const innerBody = childByField(body, "body")
             if (!innerBody) {
                 return [node, ";"]
             }
@@ -151,7 +165,7 @@ const findNodeWithComments = (node: CstNode): undefined | [CstNode, string] => {
         return [childByField(node, "body"), ";"]
     }
 
-    const lastChildren = node.children.at(-1);
+    const lastChildren = node.children.at(-1)
     if (lastChildren.$ !== "node") return undefined
     return [lastChildren, "}"]
 }
@@ -189,7 +203,7 @@ export const processDocComments = (node: Cst): Cst => {
             // no need to do anything
             return {
                 ...node,
-                children: node.children.map(it => processDocComments(it))
+                children: node.children.map(it => processDocComments(it)),
             }
         }
 
@@ -197,7 +211,7 @@ export const processDocComments = (node: Cst): Cst => {
             // no nodes before Module, skip
             return {
                 ...node,
-                children: node.children.map(it => processDocComments(it))
+                children: node.children.map(it => processDocComments(it)),
             }
         }
 
@@ -207,11 +221,11 @@ export const processDocComments = (node: Cst): Cst => {
             // no comments, no need to do anything
             return {
                 ...node,
-                children: node.children.map(it => processDocComments(it))
+                children: node.children.map(it => processDocComments(it)),
             }
         }
 
-        const lastLeaf = initialLeafs.at(-1);
+        const lastLeaf = initialLeafs.at(-1)
 
         // Comment is attached to declaration only when the last whitespace is not several line breaks
         const isAttachedTo = lastLeaf.$ === "leaf" && !containsSeveralNewlines(lastLeaf.text)
@@ -219,14 +233,18 @@ export const processDocComments = (node: Cst): Cst => {
             // if comments are not attached, then we don't need to do anything
             return {
                 ...node,
-                children: node.children.map(it => processDocComments(it))
+                children: node.children.map(it => processDocComments(it)),
             }
         }
 
         // skip top level whitespaces before comment
-        let firstCommentIndex = initialLeafs.findIndex(it => it.$ === "node" && it.type === "Comment")
+        let firstCommentIndex = initialLeafs.findIndex(
+            it => it.$ === "node" && it.type === "Comment",
+        )
 
-        const reverseDoubleNewlineIndex = [...initialLeafs].reverse().findIndex(it => it.$ === "leaf" && containsSeveralNewlines(it.text));
+        const reverseDoubleNewlineIndex = [...initialLeafs]
+            .reverse()
+            .findIndex(it => it.$ === "leaf" && containsSeveralNewlines(it.text))
 
         if (reverseDoubleNewlineIndex !== -1) {
             firstCommentIndex = initialLeafs.length - reverseDoubleNewlineIndex
@@ -235,10 +253,13 @@ export const processDocComments = (node: Cst): Cst => {
         pendingComments = initialLeafs.slice(firstCommentIndex)
 
         // remove all extracted comments from Root
-        const newChildren = [...node.children.slice(0, firstCommentIndex), ...node.children.slice(moduleIndex)];
+        const newChildren = [
+            ...node.children.slice(0, firstCommentIndex),
+            ...node.children.slice(moduleIndex),
+        ]
         return {
             ...node,
-            children: newChildren.map(it => processDocComments(it))
+            children: newChildren.map(it => processDocComments(it)),
         }
     }
 
@@ -271,7 +292,7 @@ export const processDocComments = (node: Cst): Cst => {
         // collect all nodes until some declaration
         const comments: Cst[] = []
         for (let index = 0; index < childrenToProcess.length; index++) {
-            const element = childrenToProcess[index];
+            const element = childrenToProcess[index]
             if (element.$ === "node" && element.type !== "Comment") {
                 // found declaration
                 break
@@ -284,7 +305,7 @@ export const processDocComments = (node: Cst): Cst => {
             // no comments, no need to do anything
             return {
                 ...node,
-                children: node.children.map(it => processDocComments(it))
+                children: node.children.map(it => processDocComments(it)),
             }
         }
 
@@ -397,13 +418,13 @@ export const processDocComments = (node: Cst): Cst => {
     }
 
     if (node.type === "items" || node.type === "declarations" || node.type === "imports") {
-        const items = node.children;
+        const items = node.children
 
-        let prevFieldsIndex = 0;
+        let prevFieldsIndex = 0
         for (let i = 0; i < items.length; i++) {
-            const item = items[i];
+            const item = items[i]
 
-            if (item.$ !== "node") continue;
+            if (item.$ !== "node") continue
 
             // If there are some pending comments, we insert it as a new children
             if (pendingComments.length > 0 && item.type !== "Comment") {
@@ -421,7 +442,9 @@ export const processDocComments = (node: Cst): Cst => {
             if (item.type === "Comment") {
                 // this comment may be inline comment
                 const children = items.slice(prevFieldsIndex, i)
-                const inlineComment = !children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+                const inlineComment = !children.some(
+                    it => it.$ === "leaf" && it.text.includes("\n"),
+                )
                 if (inlineComment) {
                     const prevItem = items[prevFieldsIndex]
                     if (prevItem.$ === "node") {
@@ -430,7 +453,7 @@ export const processDocComments = (node: Cst): Cst => {
                         // remove comment and go back to not increment too much
                         items.splice(i, 1)
                         i--
-                        continue;
+                        continue
                     }
                 }
 
@@ -439,27 +462,27 @@ export const processDocComments = (node: Cst): Cst => {
                 // remove comment and go back to not increment too much
                 items.splice(i, 1)
                 i--
-                continue;
+                continue
             }
 
             prevFieldsIndex = i
 
-            const found = findNodeWithComments(item);
+            const found = findNodeWithComments(item)
             if (!found) {
-                continue;
+                continue
             }
 
             const commentOwner = found
             if (!commentOwner[0]) {
-                continue;
+                continue
             }
 
-            const res = extractComments(commentOwner);
+            const res = extractComments(commentOwner)
             if (!res) {
-                continue;
+                continue
             }
 
-            const {comments, startIndex, floatingComments} = res;
+            const {comments, startIndex, floatingComments} = res
 
             const owner = commentOwner[0]
             owner.children = owner.children.slice(0, startIndex)
@@ -484,13 +507,13 @@ export const processDocComments = (node: Cst): Cst => {
     }
 
     if (node.type === "body" || node.type === "trueBranch") {
-        const statements = node.children;
-        let endIndex = statements.findIndex(it => it.$ === "leaf" && it.text === "}");
+        const statements = node.children
+        let endIndex = statements.findIndex(it => it.$ === "leaf" && it.text === "}")
 
         let pendingComments: Cst[] = []
 
         for (let i = 0; i < endIndex; i++) {
-            const statement = node.children[i];
+            const statement = node.children[i]
             if (statement.$ === "leaf") {
                 continue
             }
@@ -503,18 +526,18 @@ export const processDocComments = (node: Cst): Cst => {
             }
 
             if (statement.group === "statement") {
-                const found = findStatementNodeWithComments(statement);
+                const found = findStatementNodeWithComments(statement)
                 if (!found) {
-                    continue;
+                    continue
                 }
 
                 const ownerAndAnchor = found
                 if (!ownerAndAnchor[0]) {
-                    continue;
+                    continue
                 }
                 const owner = ownerAndAnchor[0]
 
-                const anchors = found[1];
+                const anchors = found[1]
                 for (const anchor of anchors) {
                     const res = extractComments([owner, anchor])
                     if (res) {
@@ -525,7 +548,10 @@ export const processDocComments = (node: Cst): Cst => {
                         pendingComments = res.comments
                         owner.children = owner.children.slice(0, res.startIndex)
                         if (res.inlineComments.length > 0 && owner !== statement) {
-                            owner.children = owner.children.slice(0, owner.children.length - 1 - res.inlineComments.length)
+                            owner.children = owner.children.slice(
+                                0,
+                                owner.children.length - 1 - res.inlineComments.length,
+                            )
                         }
 
                         if (res.floatingComments.length > 0) {
@@ -585,19 +611,13 @@ export const processDocComments = (node: Cst): Cst => {
     }
 
     if (node.type === "fields") {
-        const items = node.children;
+        const items = node.children
 
-        const head = childByField(node, "head")
-        // if (head && head.type === "StructFieldInitializer") {
-        //     // skip Foo {}
-        //     return node
-        // }
-
-        let prevFieldsIndex = 0;
+        let prevFieldsIndex = 0
         for (let i = 0; i < items.length; i++) {
-            const item = items[i];
+            const item = items[i]
 
-            if (item.$ !== "node") continue;
+            if (item.$ !== "node") continue
 
             // If there are some pending comments, we insert it as a new children
             if (pendingComments.length > 0 && item.type !== "Comment") {
@@ -615,7 +635,9 @@ export const processDocComments = (node: Cst): Cst => {
             if (item.type === "Comment") {
                 // this comment may be inline comment
                 const children = items.slice(prevFieldsIndex, i)
-                const inlineComment = !children.some(it => it.$ === "leaf" && it.text.includes("\n"))
+                const inlineComment = !children.some(
+                    it => it.$ === "leaf" && it.text.includes("\n"),
+                )
                 if (inlineComment) {
                     const prevItem = items[prevFieldsIndex]
                     if (prevItem.$ === "node") {
@@ -624,7 +646,7 @@ export const processDocComments = (node: Cst): Cst => {
                         // remove comment and go back to not increment too much
                         items.splice(i, 1)
                         i--
-                        continue;
+                        continue
                     }
                 }
 
@@ -633,24 +655,24 @@ export const processDocComments = (node: Cst): Cst => {
                 // remove comment and go back to not increment too much
                 items.splice(i, 1)
                 i--
-                continue;
+                continue
             }
 
             prevFieldsIndex = i
 
             if (item.type === "StructFieldInitializer") {
-                const found = findStatementNodeWithComments(item);
+                const found = findStatementNodeWithComments(item)
                 if (!found) {
-                    continue;
+                    continue
                 }
 
                 const ownerAndAnchor = found
                 if (!ownerAndAnchor[0]) {
-                    continue;
+                    continue
                 }
                 const owner = ownerAndAnchor[0]
 
-                const anchors = found[1];
+                const anchors = found[1]
                 for (const anchor of anchors) {
                     const res = extractComments([owner, anchor])
                     if (res) {
@@ -661,7 +683,10 @@ export const processDocComments = (node: Cst): Cst => {
                         pendingComments = res.comments
                         owner.children = owner.children.slice(0, res.startIndex)
                         if (res.inlineComments.length > 0 && owner !== item) {
-                            owner.children = owner.children.slice(0, owner.children.length - 1 - res.inlineComments.length)
+                            owner.children = owner.children.slice(
+                                0,
+                                owner.children.length - 1 - res.inlineComments.length,
+                            )
                         }
                         break
                     }
@@ -684,8 +709,12 @@ export const processDocComments = (node: Cst): Cst => {
 export type Anchor = string | ((n: CstNode) => number)
 
 const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, Anchor[]] => {
-    if (node.type === "StatementWhile" || node.type === "StatementForEach" || node.type === "StatementRepeat") {
-        const body = childByField(node, "body");
+    if (
+        node.type === "StatementWhile" ||
+        node.type === "StatementForEach" ||
+        node.type === "StatementRepeat"
+    ) {
+        const body = childByField(node, "body")
         return [body, ["}"]]
     }
 
@@ -694,28 +723,28 @@ const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, Anc
     }
 
     if (node.type === "StatementTry") {
-        const body = childByField(node, "body");
-        const handler = childByField(node, "handler");
+        const body = childByField(node, "body")
+        const handler = childByField(node, "handler")
         if (!handler) {
             return [body, ["}"]]
         }
-        const handlerBody = childByField(handler, "body");
+        const handlerBody = childByField(handler, "body")
         return [handlerBody, ["}"]]
     }
 
     if (node.type === "StatementCondition") {
-        const trueBranch = childByField(node, "trueBranch");
-        const falseBranch = childByField(node, "falseBranch");
+        const trueBranch = childByField(node, "trueBranch")
+        const falseBranch = childByField(node, "falseBranch")
         if (!falseBranch) {
             return [trueBranch, ["}"]]
         }
-        const falseBranch2 = childByType(falseBranch, "FalseBranch");
+        const falseBranch2 = childByType(falseBranch, "FalseBranch")
         if (falseBranch2) {
-            const body = childByField(falseBranch2, "body");
+            const body = childByField(falseBranch2, "body")
             return [body, ["}"]]
         }
 
-        const falseBranchIf = childByType(falseBranch, "StatementCondition");
+        const falseBranchIf = childByType(falseBranch, "StatementCondition")
         if (!falseBranchIf || falseBranchIf.$ === "leaf") {
             return undefined
         }
@@ -723,18 +752,27 @@ const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, Anc
     }
 
     if (node.children.length > 0) {
-        const child = node.children.at(-1);
+        const child = node.children.at(-1)
         if (child.$ === "node") {
             return findStatementNodeWithComments(child)
         }
 
-        return [node, [(n) => {
-            const index = [...n.children].reverse().findIndex(it => it.$ === "node" && it.type !== "Comment");
-            if (index === -1) {
-                return childLeafIdxWithText(n, ")")
-            }
-            return n.children.length - 1 - index
-        }, ";", "}"]]
+        return [
+            node,
+            [
+                n => {
+                    const index = [...n.children]
+                        .reverse()
+                        .findIndex(it => it.$ === "node" && it.type !== "Comment")
+                    if (index === -1) {
+                        return childLeafIdxWithText(n, ")")
+                    }
+                    return n.children.length - 1 - index
+                },
+                ";",
+                "}",
+            ],
+        ]
     }
 
     return [node, [";"]]

@@ -1,65 +1,67 @@
-import {CstNode} from "../result";
-import {childByField, childLeafWithText, nonLeafChild, visit} from "../cst-helpers";
-import {CodeBuilder} from "../code-builder";
-import {containsSeveralNewlines, idText} from "./format-helpers";
-import {formatExpression} from "./format-expressions";
-import {formatFieldDecl} from "./format-contracts";
-import {formatDocComments} from "./format-doc-comments";
+import {CstNode} from "../result"
+import {childByField, childLeafWithText, nonLeafChild, visit} from "../cst-helpers"
+import {CodeBuilder} from "../code-builder"
+import {containsSeveralNewlines, idText} from "./helpers"
+import {formatExpression} from "./format-expressions"
+import {formatFieldDecl} from "./format-contracts"
+import {formatDocComments} from "./format-doc-comments"
 
 export function formatStruct(code: CodeBuilder, node: CstNode): void {
     formatDocComments(code, node)
-    code.add("struct").space().add(getName(node, "struct"));
-    formatFields(code, node);
+    code.add("struct").space().add(getName(node, "struct"))
+    formatFields(code, node)
 }
 
 export function formatMessage(code: CodeBuilder, node: CstNode): void {
     formatDocComments(code, node)
-    code.add("message");
+    code.add("message")
 
     // message(0x100) Foo {}
     //         ^^^^^ this
-    const opcodeOpt = childByField(node, "opcode");
+    const opcodeOpt = childByField(node, "opcode")
     if (opcodeOpt) {
-        code.add("(");
+        code.add("(")
         const expression = nonLeafChild(opcodeOpt)
         if (expression) {
-            formatExpression(code, expression);
+            formatExpression(code, expression)
         }
-        code.add(")");
+        code.add(")")
     }
 
-    code.space().add(getName(node, "message"));
-    formatFields(code, node);
+    code.space().add(getName(node, "message"))
+    formatFields(code, node)
 }
 
 function formatFields(code: CodeBuilder, node: CstNode): void {
-    const children = node.children;
+    const children = node.children
 
     // struct can contain only comments, so we need to handle this case properly
-    const hasComments = children.find(it => it.$ === "node" && it.type === "Comment");
+    const hasComments = children.find(it => it.$ === "node" && it.type === "Comment")
 
-    const fieldsNode = childByField(node, "fields");
+    const fieldsNode = childByField(node, "fields")
     if ((!fieldsNode || fieldsNode.children.length === 0) && !hasComments) {
         code.space().add("{}")
         return
     }
 
-    const fields = fieldsNode?.children.filter(it => it.$ === "node" && it.type === "FieldDecl") ?? [];
-    const firstField = fields.at(0);
+    const fields =
+        fieldsNode?.children.filter(it => it.$ === "node" && it.type === "FieldDecl") ?? []
+    const firstField = fields.at(0)
 
-    const oneLiner = fields.length === 1 &&
+    const oneLiner =
+        fields.length === 1 &&
         firstField &&
         childLeafWithText(fieldsNode, ";") === undefined &&
         !hasComments
 
     if (oneLiner && firstField && firstField.$ === "node") {
-        code.space().add("{").space();
-        formatFieldDecl(code, firstField, false);
-        code.space().add("}");
+        code.space().add("{").space()
+        formatFieldDecl(code, firstField, false)
+        code.space().add("}")
         return
     }
 
-    code.space().add("{").newLine().indent();
+    code.space().add("{").newLine().indent()
 
     children.forEach(child => {
         if (child.$ === "leaf") return
@@ -74,12 +76,12 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
 
             let needNewline = false
             let needNewlineBetween = false
-            fields.forEach((field) => {
+            fields.forEach(field => {
                 if (field.$ === "leaf") {
                     if (containsSeveralNewlines(field.text)) {
-                        needNewlineBetween = true;
+                        needNewlineBetween = true
                     }
-                    return;
+                    return
                 }
 
                 if (needNewlineBetween) {
@@ -98,7 +100,7 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
                     if (needNewline) {
                         code.newLine()
                     }
-                    formatFieldDecl(code, field, true);
+                    formatFieldDecl(code, field, true)
                     needNewline = true
                 }
             })
@@ -109,13 +111,13 @@ function formatFields(code: CodeBuilder, node: CstNode): void {
         }
     })
 
-    code.dedent().add("}");
+    code.dedent().add("}")
 }
 
 function getName(node: CstNode, type: "struct" | "message"): string {
-    const name = childByField(node, "name");
+    const name = childByField(node, "name")
     if (!name || name.$ !== "node" || name.type !== "TypeId") {
-        throw new Error(`Invalid ${type} name`);
+        throw new Error(`Invalid ${type} name`)
     }
-    return idText(name);
+    return idText(name)
 }

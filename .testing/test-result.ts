@@ -1,31 +1,32 @@
-import {Builder, createContext, Cst, CstNode, Module, skip, space} from "./result";
-import {inspect} from "util";
-import * as fs from "fs";
-import {format} from "./formatter/formatter";
-import {simplifyCst} from "./simplify-cst";
-import {processDocComments} from "./process-comments";
-import {visualizeCST} from "./cst-helpers";
+import {Builder, createContext, Cst, CstNode, Module, skip, space} from "./result"
+import {inspect} from "util"
+import * as fs from "fs"
+import {format} from "./formatter/formatter"
+import {simplifyCst} from "./simplify-cst"
+import {processDocComments} from "./process-comments"
+import {visualizeCST} from "./cst-helpers"
 
-const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}));
+const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}))
 
-const code = // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
-// const code = fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
+const code =
+    // fs.readFileSync("jetton-minter-discoverable.tact", "utf8");
+    // const code = fs.readFileSync("/Users/petrmakhnev/tact/src/stdlib/stdlib/std/internal/address.tact", "utf8");
 
     // struct Foo {
     //     name: String;
     //     value: Int;
     // }
 
-`
+    `
 fun foo() {
     m.set(1, c);
 
     // Now delete entries 2 and 3
 
     m.del(2);
-}`;
+}`
 
-`
+;`
 fun foo() {
     do {} until (true); // comment 1
        
@@ -46,9 +47,9 @@ fun foo() {
     // comment1
     let Foo { a } = value(); // comment
 }
-`;
-
 `
+
+;`
 // comment
 import "";
 // other comment
@@ -56,9 +57,9 @@ import ""; // inline comment
 
 // comment
 fun foo() {}
-`;
+`
 
-    `
+;`
 primitive Int;
 
 asm fun foo() {}
@@ -99,9 +100,9 @@ contract Foo {
     bar: Int = 100;
 }
 
-`;
-
 `
+
+;`
 const Foo: Int = 10; // inline comment
 
 // comment
@@ -114,9 +115,9 @@ contract Foo {}
 fun foo() {
     let a = 100;
 }
-`;
-
 `
+
+;`
 primitive Int;
 
 struct Foo {}
@@ -179,8 +180,7 @@ contract Foo(param: Int) with Ownable, Baz {
     get fun foo() {}
     get(10) fun foo() {}
 }
-`;
-
+`
 
 // message(100 + 200) Foo {
 //     value: Int = 0;
@@ -207,24 +207,23 @@ const visit = (node: Cst): string => {
     return node.children.map(it => visit(it)).join("")
 }
 
-const ctx = createContext(code, space);
+const ctx = createContext(code, space)
 const b: Builder = []
 skip(ctx, b)
 const isParsed = Module(ctx, b)
 log(isParsed)
 
-const root = processDocComments(simplifyCst(CstNode(b, "Root")));
+const root = processDocComments(simplifyCst(CstNode(b, "Root")))
 
-console.log(visualizeCST(root, undefined));
-fs.writeFileSync("out.json", JSON.stringify(root, null, 4));
+console.log(visualizeCST(root, undefined))
+fs.writeFileSync("out.json", JSON.stringify(root, null, 4))
 
 console.log(visit(root) === code)
 
-const result = format(root);
-console.log(result);
+const result = format(root)
+console.log(result)
 
 fs.writeFileSync("minter.fmt.tact", result)
-
 
 // console.log(visit(root));
 
@@ -281,18 +280,3 @@ fs.writeFileSync("minter.fmt.tact", result)
 // //         }))
 // //     }
 // }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

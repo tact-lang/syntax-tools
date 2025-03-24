@@ -1,4 +1,4 @@
-import {Cst, CstNode} from "../result";
+import {Cst, CstNode} from "../result"
 import {
     childByField,
     childByType,
@@ -6,17 +6,18 @@ import {
     childLeafIdxWithText,
     childLeafWithText,
     nonLeafChild,
-    visit
-} from "../cst-helpers";
-import {CodeBuilder} from "../code-builder";
-import {formatExpression} from "./format-expressions";
-import {formatAscription, formatType} from "./format-types";
+    visit,
+} from "../cst-helpers"
+import {CodeBuilder} from "../code-builder"
+import {formatExpression} from "./format-expressions"
+import {formatAscription, formatType} from "./format-types"
 import {
     containsSeveralNewlines,
     formatId,
-    formatSeparatedList, getCommentsBetween,
-    processInlineComments
-} from "./format-helpers";
+    formatSeparatedList,
+    getCommentsBetween,
+    processInlineComments,
+} from "./helpers"
 
 function trailingNewlines(node: Cst): string {
     if (node.$ === "leaf") return ""
@@ -36,7 +37,12 @@ function trailingNewlines(node: Cst): string {
             return trailingNewlines(falseCondition)
         }
     }
-    if (node.$ === "node" && (node.type === "StatementWhile" || node.type === "StatementForEach" || node.type === "StatementRepeat")) {
+    if (
+        node.$ === "node" &&
+        (node.type === "StatementWhile" ||
+            node.type === "StatementForEach" ||
+            node.type === "StatementRepeat")
+    ) {
         const body = childByField(node, "body")
         lastChild = body.children.at(-1)
     }
@@ -46,11 +52,15 @@ function trailingNewlines(node: Cst): string {
     return ""
 }
 
-export function processInlineCommentsAfterIndex(code: CodeBuilder, node: CstNode, endIndex: number) {
+export function processInlineCommentsAfterIndex(
+    code: CodeBuilder,
+    node: CstNode,
+    endIndex: number,
+) {
     const afterBody = node.children.slice(endIndex + 1)
-    const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment");
+    const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment")
     if (comments.length > 0) {
-        code.space();
+        code.space()
         comments.forEach(comment => {
             code.add(visit(comment))
         })
@@ -58,16 +68,21 @@ export function processInlineCommentsAfterIndex(code: CodeBuilder, node: CstNode
 }
 
 function semicolonStatement(node: CstNode): boolean {
-    return node.type === "StatementLet" ||
+    return (
+        node.type === "StatementLet" ||
         node.type === "StatementDestruct" ||
         node.type === "StatementReturn" ||
         node.type === "StatementExpression" ||
         node.type === "StatementAssign" ||
         node.type === "StatementUntil"
+    )
 }
 
 function canBeSingleLine(node: CstNode): boolean {
-    if (node.children.some(it => it.$ === "node" && it.type === "Comment" && visit(it).startsWith("//"))) {
+    const hasInlineComments = node.children.some(
+        it => it.$ === "node" && it.type === "Comment" && visit(it).startsWith("//"),
+    )
+    if (hasInlineComments) {
         return false
     }
     if (node.type === "StatementUntil") {
@@ -84,22 +99,24 @@ function canBeSingleLine(node: CstNode): boolean {
 
 export function singleLineStatement(node: CstNode): boolean {
     const endIndex = childLeafIdxWithText(node, "}")
-    const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
+    const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node")
     if (statements.length === 0) {
         return false
     }
 
     const comments = statements.filter(it => it.$ === "node" && it.type === "Comment")
-    return statements.length === 1 &&
+    return (
+        statements.length === 1 &&
         childLeafWithText(statements[0], ";") === undefined &&
         semicolonStatement(statements[0]) &&
         canBeSingleLine(statements[0]) &&
         comments.length === 0
+    )
 }
 
 export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     const endIndex = childLeafIdxWithText(node, "}")
-    const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node");
+    const statements = node.children.slice(0, endIndex).filter(it => it.$ === "node")
     if (statements.length === 0) {
         code.add("{}")
         processInlineCommentsAfterIndex(code, node, endIndex)
@@ -107,9 +124,9 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     }
 
     if (singleLineStatement(node)) {
-        code.add("{").space();
-        formatStatement(code, statements[0], false);
-        code.space().add("}");
+        code.add("{").space()
+        formatStatement(code, statements[0], false)
+        code.space().add("}")
         return
     }
 
@@ -119,24 +136,24 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
     let seenFirstNewline = false
 
     for (let i = 0; i < endIndex; i++) {
-        const statement = node.children[i];
+        const statement = node.children[i]
         if (statement.$ === "leaf") {
             if (!seenFirstNewline && statement.text.includes("\n")) {
                 // add initial new line after `{`
-                code.newLine().indent();
+                code.newLine().indent()
                 seenFirstNewline = true
                 continue
             }
 
             // don't add extra leading line
             if (i !== 1 && containsSeveralNewlines(statement.text)) {
-                needNewLine = true;
+                needNewLine = true
             }
             continue
         }
 
         if (needNewLine) {
-            code.newLine();
+            code.newLine()
             needNewLine = false
         }
 
@@ -145,7 +162,7 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
                 // found inline comment after `{`, need to add space before it
                 code.space()
             }
-            code.add(visit(statement).trim());
+            code.add(visit(statement).trim())
 
             if (!seenFirstNewline) {
                 // don't add new line for inline comment
@@ -154,99 +171,74 @@ export const formatStatements = (code: CodeBuilder, node: CstNode): void => {
         } else if (statement.group === "statement") {
             if (!seenFirstNewline) {
                 // add initial new line after `{`
-                code.newLine().indent();
+                code.newLine().indent()
                 seenFirstNewline = true
             }
 
-            formatStatement(code, statement, true);
+            formatStatement(code, statement, true)
             const newlines = trailingNewlines(statement)
             if (containsSeveralNewlines(newlines)) {
                 needNewLine = true
             }
         }
 
-        code.newLine();
+        code.newLine()
     }
 
-    code.dedent().add("}");
+    code.dedent().add("}")
 
-    processInlineCommentsAfterIndex(code, node, endIndex);
-};
+    processInlineCommentsAfterIndex(code, node, endIndex)
+}
 
 export const formatStatement = (code: CodeBuilder, node: Cst, needSemicolon: boolean): void => {
     if (node.$ !== "node") {
-        throw new Error("Expected node in statement");
+        throw new Error("Expected node in statement")
     }
 
     switch (node.type) {
         case "StatementLet":
-            formatLetStatement(code, node, needSemicolon);
-            break;
+            formatLetStatement(code, node, needSemicolon)
+            break
         case "StatementDestruct":
-            formatDestructStatement(code, node, needSemicolon);
-            break;
+            formatDestructStatement(code, node, needSemicolon)
+            break
         case "StatementReturn":
-            formatReturnStatement(code, node, needSemicolon);
-            break;
+            formatReturnStatement(code, node, needSemicolon)
+            break
         case "StatementExpression":
-            formatExpressionStatement(code, node, needSemicolon);
-            break;
+            formatExpressionStatement(code, node, needSemicolon)
+            break
         case "StatementAssign":
-            formatAssignStatement(code, node, needSemicolon);
-            break;
+            formatAssignStatement(code, node, needSemicolon)
+            break
         case "StatementCondition":
-            formatConditionStatement(code, node);
-            break;
+            formatConditionStatement(code, node)
+            break
         case "StatementWhile":
-            formatWhileStatement(code, node);
-            break;
+            formatWhileStatement(code, node)
+            break
         case "StatementRepeat":
-            formatRepeatStatement(code, node);
-            break;
+            formatRepeatStatement(code, node)
+            break
         case "StatementUntil":
-            formatUntilStatement(code, node, needSemicolon);
-            break;
+            formatUntilStatement(code, node, needSemicolon)
+            break
         case "StatementTry":
-            formatTryStatement(code, node);
-            break;
+            formatTryStatement(code, node)
+            break
         case "StatementForEach":
-            formatForEachStatement(code, node);
-            break;
+            formatForEachStatement(code, node)
+            break
         case "StatementBlock":
             const body = childByField(node, "body")
             if (body) {
-                formatStatements(code, body);
+                formatStatements(code, body)
             }
-            break;
+            break
         default:
-            throw new Error(`Unsupported statement type: ${node.type}`);
+            throw new Error(`Unsupported statement type: ${node.type}`)
     }
-};
-
-const statementAnchor = (node: Cst): string => {
-    if (node.$ !== "node") {
-        return ""
-    }
-
-    switch (node.type) {
-        case "StatementExpression":
-        case "StatementReturn":
-        case "StatementDestruct":
-        case "StatementLet":
-        case "StatementAssign":
-        case "StatementUntil":
-            return ";"
-        case "StatementCondition":
-        case "StatementRepeat":
-        case "StatementWhile":
-        case "StatementTry":
-        case "StatementForEach":
-        case "StatementBlock":
-            return "}"
-        default:
-            throw new Error(`Unsupported statement type: ${node.type}`);
-    }
-};
+}
 
 const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // let name : Int = 100;
@@ -256,26 +248,26 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
     //     |    |     assign
     //     |    typeOpt
     //     name
-    const name = childByField(node, "name");
-    const typeOpt = childByField(node, "type");
-    const init = childByField(node, "init");
-    const assign = childLeafWithText(node, "=");
+    const name = childByField(node, "name")
+    const typeOpt = childByField(node, "type")
+    const init = childByField(node, "init")
+    const assign = childLeafWithText(node, "=")
 
     if (!name || !init || !assign) {
-        throw new Error("Invalid let statement");
+        throw new Error("Invalid let statement")
     }
 
-    code.add("let").space().apply(formatId, name);
+    code.add("let").space().apply(formatId, name)
 
     if (typeOpt) {
-        processInlineComments(node, code, name, typeOpt);
-        formatAscription(code, typeOpt);
-        processInlineComments(node, code, typeOpt, assign);
+        processInlineComments(node, code, name, typeOpt)
+        formatAscription(code, typeOpt)
+        processInlineComments(node, code, typeOpt, assign)
     } else {
-        processInlineComments(node, code, name, assign);
+        processInlineComments(node, code, name, assign)
     }
 
-    code.space().add("=").space();
+    code.space().add("=").space()
 
     let indented = false
     const comments = getCommentsBetween(node, assign, init)
@@ -289,18 +281,18 @@ const formatLetStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boo
         indented = true
     }
 
-    formatExpression(code, init);
+    formatExpression(code, init)
 
     if (indented) {
         code.dedent()
     }
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
     const endIndex = childIdxByField(node, "init")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // return 100;
@@ -309,38 +301,40 @@ const formatReturnStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     // |      exprOpt
     // |
     // returnKeyword
-    const returnKeyword = childLeafWithText(node, "return");
-    const exprOpt = childByField(node, "expression");
+    const returnKeyword = childLeafWithText(node, "return")
+    const exprOpt = childByField(node, "expression")
 
-    code.add("return");
+    code.add("return")
     if (exprOpt) {
-        code.space();
-        processInlineComments(node, code, returnKeyword, exprOpt);
-        formatExpression(code, exprOpt);
+        code.space()
+        processInlineComments(node, code, returnKeyword, exprOpt)
+        formatExpression(code, exprOpt)
     }
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
-    const endIndex = exprOpt
-        ? childIdxByField(node, "expression")
-        : 0 // index of return
+    const endIndex = exprOpt ? childIdxByField(node, "expression") : 0 // index of return
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
-const formatExpressionStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
-    const expression = childByField(node, "expression");
+const formatExpressionStatement = (
+    code: CodeBuilder,
+    node: CstNode,
+    needSemicolon: boolean,
+): void => {
+    const expression = childByField(node, "expression")
     if (!expression) {
-        throw new Error("Invalid expression statement");
+        throw new Error("Invalid expression statement")
     }
-    formatExpression(code, expression);
+    formatExpression(code, expression)
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
     const endIndex = childIdxByField(node, "expression")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // value + = 100;
@@ -350,75 +344,78 @@ const formatAssignStatement = (code: CodeBuilder, node: CstNode, needSemicolon: 
     // |     | assign
     // |     operatorOpt
     // left
-    const left = childByField(node, "left");
-    const operatorOpt = childByField(node, "operator");
-    const assign = childLeafWithText(node, "=");
-    const right = childByField(node, "right");
+    const left = childByField(node, "left")
+    const operatorOpt = childByField(node, "operator")
+    const assign = childLeafWithText(node, "=")
+    const right = childByField(node, "right")
 
     if (!left || !right || !assign) {
-        throw new Error("Invalid assign statement");
+        throw new Error("Invalid assign statement")
     }
 
-    formatExpression(code, left);
+    formatExpression(code, left)
 
     code.space()
     if (operatorOpt) {
-        code.add(visit(operatorOpt));
+        code.add(visit(operatorOpt))
     }
 
-    code.add("=").space();
-    processInlineComments(node, code, assign, right);
+    code.add("=").space()
+    processInlineComments(node, code, assign, right)
 
-    formatExpression(code, right);
+    formatExpression(code, right)
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
     const endIndex = childIdxByField(node, "right")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatConditionStatement = (code: CodeBuilder, node: CstNode): void => {
     // if (true) {} else {}
-    const ifKeyword = childLeafWithText(node, "if");
-    const condition = childByField(node, "condition");
-    const trueBranch = childByField(node, "trueBranch");
-    const falseBranch = childByField(node, "falseBranch");
+    const ifKeyword = childLeafWithText(node, "if")
+    const condition = childByField(node, "condition")
+    const trueBranch = childByField(node, "trueBranch")
+    const falseBranch = childByField(node, "falseBranch")
 
     if (!condition || !trueBranch) {
-        throw new Error("Invalid condition statement");
+        throw new Error("Invalid condition statement")
     }
 
     code.add("if").space()
-    processInlineComments(node, code, ifKeyword, condition);
+    processInlineComments(node, code, ifKeyword, condition)
 
-    formatExpression(code, condition);
-    code.space();
+    formatExpression(code, condition)
+    code.space()
 
-    formatStatements(code, trueBranch);
+    formatStatements(code, trueBranch)
 
     if (falseBranch) {
         if (singleLineStatement(trueBranch)) {
+            // add a new line to format like this:
+            // if (true) { return 10 }
+            // else { return 20 }
             code.newLine()
         } else {
             code.space()
         }
 
-        code.add("else").space();
+        code.add("else").space()
 
         const branch = nonLeafChild(falseBranch)
         if (!branch) return
 
         if (branch.type === "StatementCondition") {
-            formatConditionStatement(code, branch);
+            formatConditionStatement(code, branch)
         } else {
-            formatStatements(code, childByField(branch, "body"));
+            formatStatements(code, childByField(branch, "body"))
         }
     }
 
     const endIndex = childLeafIdxWithText(node, "}")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
     // while (true) {}
@@ -426,21 +423,21 @@ const formatWhileStatement = (code: CodeBuilder, node: CstNode): void => {
     //        |     |
     //        |     body
     //        condition
-    const condition = childByField(node, "condition");
-    const body = childByField(node, "body");
+    const condition = childByField(node, "condition")
+    const body = childByField(node, "body")
 
     if (!condition || !body) {
-        throw new Error("Invalid while statement");
+        throw new Error("Invalid while statement")
     }
 
-    code.add("while").space();
-    formatExpression(code, condition);
-    code.space();
-    formatStatements(code, body);
+    code.add("while").space()
+    formatExpression(code, condition)
+    code.space()
+    formatStatements(code, body)
 
     const endIndex = childLeafIdxWithText(node, "}")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatDestructField = (code: CodeBuilder, field: Cst) => {
     if (field.$ !== "node") return
@@ -451,25 +448,29 @@ const formatDestructField = (code: CodeBuilder, field: Cst) => {
         // |    |
         // |    fieldName
         // varName
-        const fieldName = childByField(field, "fieldName");
-        const varName = childByField(field, "varName");
+        const fieldName = childByField(field, "fieldName")
+        const varName = childByField(field, "varName")
         if (!fieldName || !varName) {
-            throw new Error("Invalid regular field in destruct");
+            throw new Error("Invalid regular field in destruct")
         }
 
-        code.apply(formatId, fieldName).add(":").space().apply(formatId, varName);
+        code.apply(formatId, fieldName).add(":").space().apply(formatId, varName)
     } else if (field.type === "PunnedField") {
         // foo
         // ^^^ this
-        const name = childByField(field, "name");
+        const name = childByField(field, "name")
         if (!name) {
-            throw new Error("Invalid punned field in destruct");
+            throw new Error("Invalid punned field in destruct")
         }
-        code.apply(formatId, name);
+        code.apply(formatId, name)
     }
-};
+}
 
-const formatDestructStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
+const formatDestructStatement = (
+    code: CodeBuilder,
+    node: CstNode,
+    needSemicolon: boolean,
+): void => {
     // let Foo { arg, foo: param, .. } = foo();
     //     ^^^   ^^^^^^^^^^^^^^^  ^^   ^ ^^^^^
     //     |     |                |    | |
@@ -478,22 +479,23 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode, needSemicolon
     //     |     |                restOpt
     //     |     fields
     //     type
-    const type = childByField(node, "type");
-    const fields = childByField(node, "fields");
-    const restOpt = childByType(node, "RestArgument");
-    const assign = childLeafWithText(node, "=");
-    const init = childByField(node, "init");
+    const type = childByField(node, "type")
+    const fields = childByField(node, "fields")
+    const restOpt = childByType(node, "RestArgument")
+    const assign = childLeafWithText(node, "=")
+    const init = childByField(node, "init")
 
     if (!type || !fields || !assign || !init) {
-        throw new Error("Invalid destruct statement");
+        throw new Error("Invalid destruct statement")
     }
 
-    code.add("let").space();
-    formatType(code, type);
+    code.add("let").space()
+    formatType(code, type)
 
     code.space()
 
-    const restArg = restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
+    const restArg =
+        restOpt && restOpt.$ === "node" && restOpt.type === "RestArgument" ? ".." : undefined
 
     formatSeparatedList(code, fields, formatDestructField, {
         wrapperLeft: "{",
@@ -505,15 +507,15 @@ const formatDestructStatement = (code: CodeBuilder, node: CstNode, needSemicolon
         needSeparatorAfterSuffixElement: false, // comma is forbidden after `..`
     })
 
-    code.space().add("=").space();
-    formatExpression(code, init);
+    code.space().add("=").space()
+    formatExpression(code, init)
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
     const endIndex = childIdxByField(node, "init")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
     // repeat(true) {}
@@ -521,21 +523,21 @@ const formatRepeatStatement = (code: CodeBuilder, node: CstNode): void => {
     //        |     |
     //        |     body
     //        condition
-    const condition = childByField(node, "condition");
-    const body = childByField(node, "body");
+    const condition = childByField(node, "condition")
+    const body = childByField(node, "body")
 
     if (!condition || !body) {
-        throw new Error("Invalid repeat statement");
+        throw new Error("Invalid repeat statement")
     }
 
-    code.add("repeat").space();
-    formatExpression(code, condition);
-    code.space();
-    formatStatements(code, body);
+    code.add("repeat").space()
+    formatExpression(code, condition)
+    code.space()
+    formatStatements(code, body)
 
     const endIndex = childLeafIdxWithText(node, "}")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: boolean): void => {
     // do {} until (true);
@@ -543,27 +545,27 @@ const formatUntilStatement = (code: CodeBuilder, node: CstNode, needSemicolon: b
     //    |        |
     //    |        conditionNode
     //    body
-    const body = childByField(node, "body");
-    const conditionNode = childByField(node, "condition");
+    const body = childByField(node, "body")
+    const conditionNode = childByField(node, "condition")
 
     if (!body || !conditionNode) {
-        throw new Error("Invalid until statement");
+        throw new Error("Invalid until statement")
     }
 
-    const condition = nonLeafChild(conditionNode);
+    const condition = nonLeafChild(conditionNode)
 
-    code.add("do").space();
-    formatStatements(code, body);
-    code.space().add("until (");
-    formatExpression(code, condition);
-    code.add(")");
+    code.add("do").space()
+    formatStatements(code, body)
+    code.space().add("until (")
+    formatExpression(code, condition)
+    code.add(")")
     if (needSemicolon) {
-        code.add(";");
+        code.add(";")
     }
 
     const endIndex = childIdxByField(node, "condition")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
     // try {} catch (e) {}
@@ -571,15 +573,15 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
     //     |  |
     //     |  handlerOpt
     //     body
-    const body = childByField(node, "body");
-    const handlerOpt = childByField(node, "handler");
+    const body = childByField(node, "body")
+    const handlerOpt = childByField(node, "handler")
 
     if (!body) {
-        throw new Error("Invalid try statement");
+        throw new Error("Invalid try statement")
     }
 
-    code.add("try").space();
-    formatStatements(code, body);
+    code.add("try").space()
+    formatStatements(code, body)
 
     if (handlerOpt) {
         // catch (e) {}
@@ -587,20 +589,20 @@ const formatTryStatement = (code: CodeBuilder, node: CstNode): void => {
         //        |  |
         //        |  handlerBody
         //        name
-        const name = childByField(handlerOpt, "name");
-        const handlerBody = childByField(handlerOpt, "body");
+        const name = childByField(handlerOpt, "name")
+        const handlerBody = childByField(handlerOpt, "body")
 
         if (!name || !handlerBody) {
-            throw new Error("Invalid catch handler");
+            throw new Error("Invalid catch handler")
         }
 
-        code.space().add("catch").space().add("(").apply(formatId, name).add(")").space();
-        formatStatements(code, handlerBody);
+        code.space().add("catch").space().add("(").apply(formatId, name).add(")").space()
+        formatStatements(code, handlerBody)
     }
 
     const endIndex = childLeafIdxWithText(node, "}")
     processInlineCommentsAfterIndex(code, node, endIndex)
-};
+}
 
 const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
     // foreach (key, value in foo()) {}
@@ -610,21 +612,21 @@ const formatForEachStatement = (code: CodeBuilder, node: CstNode): void => {
     //          |    |        expression
     //          |    value
     //          key
-    const key = childByField(node, "key");
-    const value = childByField(node, "value");
-    const expression = childByField(node, "expression");
-    const body = childByField(node, "body");
+    const key = childByField(node, "key")
+    const value = childByField(node, "value")
+    const expression = childByField(node, "expression")
+    const body = childByField(node, "body")
 
     if (!key || !value || !expression || !body) {
-        throw new Error("Invalid forEach statement");
+        throw new Error("Invalid forEach statement")
     }
 
-    code.add("foreach").space().add("(");
-    code.apply(formatId, key).add(",").space().apply(formatId, value).space().add("in").space();
-    formatExpression(code, expression);
-    code.add(")").space();
-    formatStatements(code, body);
+    code.add("foreach").space().add("(")
+    code.apply(formatId, key).add(",").space().apply(formatId, value).space().add("in").space()
+    formatExpression(code, expression)
+    code.add(")").space()
+    formatStatements(code, body)
 
     const endIndex = childLeafIdxWithText(node, "}")
     processInlineCommentsAfterIndex(code, node, endIndex)
-}; 
+}

@@ -1,26 +1,26 @@
-import * as $ from '@tonstudio/parser-runtime';
-import * as g from '../packages/pgen/cst/cst'
-import * as G from '../packages/pgen/grammar';
-import { desugar } from '../packages/pgen/cst/transform';
-import generate from '@babel/generator';
-import { inspect } from "util";
-import * as fs from 'fs';
-const log = (obj: unknown) => console.log(inspect(obj, { colors: true, depth: Infinity }));
+import * as $ from "@tonstudio/parser-runtime"
+import * as g from "../packages/pgen/cst/cst"
+import * as G from "../packages/pgen/grammar"
+import {desugar} from "@tonstudio/pgen/cst/transform"
+import generate from "@babel/generator"
+import {inspect} from "util"
+import * as fs from "fs"
+const log = (obj: unknown) => console.log(inspect(obj, {colors: true, depth: Infinity}))
 
 const ast = $.parse({
     grammar: G.Grammar,
     space: G.space,
     text: fs.readFileSync("grammar.gg", "utf8"),
-});
-if (ast.$ === 'error') {
-    console.error(ast.error);
-    process.exit(1);
+})
+if (ast.$ === "error") {
+    console.error(ast.error)
+    process.exit(1)
 }
 
-const transformed = desugar(ast.value);
+const transformed = desugar(ast.value)
 log(transformed)
 
-const parserAst = g.generate(transformed);
+const parserAst = g.generate(transformed)
 
 const PARSER_HEADER = `
 let nextId = 0
@@ -168,8 +168,8 @@ const lex = (ctx: Context, b: Builder, rule: Rule): boolean => {
 
     return rule(newCtx, b)
 }
-`;
+`
 
-const parserGenerated = generate(parserAst, { minified: false }).code;
-const parserResult = PARSER_HEADER + parserGenerated;
-fs.writeFileSync(__dirname + "/result.ts", parserResult);
+const parserGenerated = generate(parserAst, {minified: false}).code
+const parserResult = PARSER_HEADER + parserGenerated
+fs.writeFileSync(__dirname + "/result.ts", parserResult)

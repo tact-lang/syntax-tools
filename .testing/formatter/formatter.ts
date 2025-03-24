@@ -1,24 +1,29 @@
-import {Cst} from "../result";
-import {CodeBuilder} from "../code-builder";
-import {formatFunction, formatNativeFunction, formatAsmFunction, formatPrimitiveType} from "./format-declarations";
-import {formatStatement} from "./format-statements";
-import {formatExpression} from "./format-expressions";
-import {visit, childByField} from "../cst-helpers";
-import {formatConstant, formatContract, formatTrait} from "./format-contracts";
-import {formatMessage, formatStruct} from "./format-structs";
-import {formatImport} from "./format-imports";
-import {containsSeveralNewlines, trailingNewlines} from "./format-helpers";
+import {Cst} from "../result"
+import {CodeBuilder} from "../code-builder"
+import {
+    formatFunction,
+    formatNativeFunction,
+    formatAsmFunction,
+    formatPrimitiveType,
+} from "./format-declarations"
+import {formatStatement} from "./format-statements"
+import {formatExpression} from "./format-expressions"
+import {visit, childByField} from "../cst-helpers"
+import {formatConstant, formatContract, formatTrait} from "./format-contracts"
+import {formatMessage, formatStruct} from "./format-structs"
+import {formatImport} from "./format-imports"
+import {containsSeveralNewlines, trailingNewlines} from "./helpers"
 
 export const format = (node: Cst): string => {
-    const code = new CodeBuilder();
-    formatNode(code, node);
-    return code.toString();
-};
+    const code = new CodeBuilder()
+    formatNode(code, node)
+    return code.toString()
+}
 
 const formatNode = (code: CodeBuilder, node: Cst): void => {
     if (node.$ === "leaf") {
-        code.add(node.text);
-        return;
+        code.add(node.text)
+        return
     }
 
     switch (node.type) {
@@ -27,13 +32,13 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
                 return
             }
 
-            let needNewLine = false;
+            let needNewLine = false
             node.children.forEach((child, index) => {
                 if (child.$ === "leaf") {
                     if (containsSeveralNewlines(child.text)) {
-                        needNewLine = true;
+                        needNewLine = true
                     }
-                    return;
+                    return
                 }
 
                 if (needNewLine) {
@@ -42,102 +47,112 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
 
                 if (child.$ === "node" && child.type === "Comment") {
                     code.add(visit(child))
-                    code.newLine();
+                    code.newLine()
                     return
                 }
 
-                formatNode(code, child);
+                formatNode(code, child)
                 if (index < node.children.length - 2) {
-                    code.newLine();
+                    code.newLine()
                 }
-            });
+            })
             code.trimNewlines().newLine()
-            break;
+            break
         }
         case "Module": {
-            const importsNode = childByField(node, "imports");
+            const importsNode = childByField(node, "imports")
             if (importsNode) {
-                const imports = importsNode.children;
+                const imports = importsNode.children
                 for (const item of imports) {
                     if (item.$ === "node" && item.type === "Import") {
-                        formatImport(code, item);
-                        code.newLine();
+                        formatImport(code, item)
+                        code.newLine()
                     }
                 }
 
-                code.newLine();
+                code.newLine()
             }
 
-            const itemsNode = childByField(node, "items");
+            const itemsNode = childByField(node, "items")
             if (!itemsNode) {
                 break
             }
 
-            let needNewLine = false;
+            let needNewLine = false
 
-            const items = itemsNode.children;
+            const items = itemsNode.children
             items.forEach((item, index) => {
                 if (item.$ === "leaf") {
                     if (containsSeveralNewlines(item.text)) {
-                        needNewLine = true;
+                        needNewLine = true
                     }
-                    return;
+                    return
                 }
 
                 if (item.type === "Comment") {
                     // floating comment
                     code.add(visit(item))
-                    code.newLine();
+                    code.newLine()
                     return
                 }
 
                 if (needNewLine) {
-                    code.newLine();
+                    code.newLine()
                     needNewLine = false
                 }
-                formatNode(code, item);
+                formatNode(code, item)
                 if (index < items.length - 1) {
-                    code.newLine();
+                    code.newLine()
                 }
 
                 const newlines = trailingNewlines(item)
                 if (!needNewLine && containsSeveralNewlines(newlines)) {
-                    code.newLine();
+                    code.newLine()
                 }
-            });
-            break;
+            })
+            break
         }
 
-        case "PrimitiveTypeDecl":
-            formatPrimitiveType(code, node);
-            break;
-        case "$Function":
-            formatFunction(code, node);
-            break;
-        case "NativeFunctionDecl":
-            formatNativeFunction(code, node);
-            break;
-        case "AsmFunction":
-            formatAsmFunction(code, node);
-            break;
-        case "Contract":
-            formatContract(code, node);
-            break;
-        case "Trait":
-            formatTrait(code, node);
-            break;
-        case "StructDecl":
-            formatStruct(code, node);
-            break;
-        case "MessageDecl":
-            formatMessage(code, node);
-            break;
-        case "Constant":
-            formatConstant(code, node);
-            break;
-        case "Comment":
-            code.add(visit(node).trim());
-            break;
+        case "PrimitiveTypeDecl": {
+            formatPrimitiveType(code, node)
+            break
+        }
+        case "$Function": {
+            formatFunction(code, node)
+            break
+        }
+        case "NativeFunctionDecl": {
+            formatNativeFunction(code, node)
+            break
+        }
+        case "AsmFunction": {
+            formatAsmFunction(code, node)
+            break
+        }
+        case "Contract": {
+            formatContract(code, node)
+            break
+        }
+        case "Trait": {
+            formatTrait(code, node)
+            break
+        }
+        case "StructDecl": {
+            formatStruct(code, node)
+            break
+        }
+        case "MessageDecl": {
+            formatMessage(code, node)
+            break
+        }
+        case "Constant": {
+            formatConstant(code, node)
+            break
+        }
+        case "Comment": {
+            code.add(visit(node).trim())
+            break
+        }
         case "StatementDestruct":
         case "StatementRepeat":
         case "StatementUntil":
@@ -149,14 +164,16 @@ const formatNode = (code: CodeBuilder, node: Cst): void => {
         case "StatementAssign":
         case "StatementCondition":
         case "StatementWhile":
-        case "StatementBlock":
-            formatStatement(code, node, true);
-            break;
-        default:
+        case "StatementBlock": {
+            formatStatement(code, node, true)
+            break
+        }
+        default: {
             if (node.group === "expression") {
-                formatExpression(code, node);
+                formatExpression(code, node)
             } else {
-                code.add(visit(node).trim());
+                code.add(visit(node).trim())
             }
+        }
     }
-};
+}
