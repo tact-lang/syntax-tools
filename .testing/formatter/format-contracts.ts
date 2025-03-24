@@ -1,5 +1,12 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, childrenByType, nonLeafChild, visit} from "../cst-helpers";
+import {
+    childByField,
+    childIdxByType,
+    childLeafIdxWithText,
+    childrenByType,
+    nonLeafChild,
+    visit
+} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {containsSeveralNewlines, formatId, formatSeparatedList, idText, trailingNewlines} from "./format-helpers";
 import {formatFunction, formatParameter} from "./format-declarations";
@@ -226,7 +233,7 @@ export function formatFieldDecl(code: CodeBuilder, decl: CstNode, needSemicolon:
         code.add(";");
     }
 
-    const endIndex = decl.children.findIndex(it => it.$ === "leaf" && it.text === ";")
+    const endIndex = childLeafIdxWithText(decl, ";")
     processInlineCommentsAfterIndex(code, decl, endIndex)
 }
 
@@ -273,16 +280,16 @@ function formatContractTraitAttributes(code: CodeBuilder, node: CstNode): void {
 function formatInheritedTraits(code: CodeBuilder, node: CstNode): void {
     // contract Foo with Bar, Baz {}
     //              ^^^^^^^^^^^^^ this
-    const traitsOpt = childByField(node, "traits");
-    if (!traitsOpt) return;
+    const traits = childByField(node, "traits");
+    if (!traits) return;
 
     code.space().add("with").space();
 
     // ["with", " ", "Bar", ", ", "Baz"]
     //               ^ starts from here
-    const namesIndex = traitsOpt.children.findIndex(it => it.$ === "node" && it.type === "Id");
+    const namesIndex = childIdxByType(traits, "Id")
 
-    formatSeparatedList(code, traitsOpt, (code, trait) => {
+    formatSeparatedList(code, traits, (code, trait) => {
         code.apply(formatId, trait);
     }, {
         wrapperLeft: "",
@@ -341,8 +348,8 @@ function formatContractTraitBody(code: CodeBuilder, node: CstNode, formatDeclara
 
     if (!declarationsNode) {
         // empty contract
-        const openBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "{")
-        const closeBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+        const openBraceIndex = childLeafIdxWithText(node, "{")
+        const closeBraceIndex = childLeafIdxWithText(node, "}")
 
         const comments = node.children
             .slice(openBraceIndex + 1, closeBraceIndex)

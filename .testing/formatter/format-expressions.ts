@@ -1,5 +1,13 @@
 import {Cst, CstNode} from "../result";
-import {childByField, childByType, nonLeafChild, textOfId, visit} from "../cst-helpers";
+import {
+    childByField,
+    childByType,
+    childIdxByField,
+    childLeafIdxWithText,
+    nonLeafChild,
+    textOfId,
+    visit
+} from "../cst-helpers";
 import {CodeBuilder} from "../code-builder";
 import {formatId, formatSeparatedList, idText} from "./format-helpers";
 import {formatType} from "./format-types";
@@ -305,7 +313,7 @@ const formatStructInstance = (code: CodeBuilder, node: CstNode): void => {
             const initOpt = childByField(field, "init");
 
             const searchField = initOpt ? "init" : "name"
-            const endIndex = field.children.findIndex(it => it.$ === "node" && it.field === searchField)
+            const endIndex = childIdxByField(field, searchField)
             const comments = field.children.slice(endIndex).filter(child => child.$ === "node" && child.type === "Comment");
             if (comments.length > 0) {
                 return comments
@@ -426,7 +434,7 @@ const formatSuffixCall = (code: CodeBuilder, node: CstNode): void => {
         throw new Error("Invalid call expression");
     }
 
-    const endIndex = args.children.findIndex(it => it.$ === "leaf" && it.text === ")")
+    const endIndex = childLeafIdxWithText(args, ")")
 
     formatSeparatedList(code, args, (code, arg) => {
         formatExpression(code, arg);

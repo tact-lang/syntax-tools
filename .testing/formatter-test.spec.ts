@@ -1,7 +1,5 @@
-import {Builder, createContext, CstNode, Module, skip, space} from "./result";
 import {format} from "./formatter/formatter";
-import {simplifyCst} from "./simplify-cst";
-import {processDocComments} from "./process-comments";
+import {parseCode} from "./cst-helpers";
 
 function normalizeIndentation(input: string): string {
     const lines = input.split('\n');
@@ -30,13 +28,10 @@ describe('should format', () => {
         return () => {
             const normalizedInput = normalizeIndentation(input).trim();
             const normalizedOutput = normalizeIndentation(output).trim();
-
-            const ctx = createContext(normalizedInput, space);
-            const b: Builder = []
-            skip(ctx, b)
-            const res = Module(ctx, b)
-            expect(res).toBe(true);
-            const root = processDocComments(simplifyCst(CstNode(b, "Root")) as CstNode);
+            const root = parseCode(normalizedInput);
+            if (root === undefined) {
+                fail("cannot parse code")
+            }
 
             const formatted = format(root)
             expect(formatted.trim()).toBe(normalizedOutput)
@@ -1312,6 +1307,16 @@ fun foo() {}`));
             struct Foo {
                 // top comment
                 value: Int;
+                some: Int;
+            }
+        `));
+
+        it('struct with fields 2', intact(`
+            struct Foo {
+                // top comment
+                value: Int; // inline comment
+
+                // top comment 2
                 some: Int;
             }
         `));

@@ -1,4 +1,4 @@
-import {childByField, visit} from "../cst-helpers";
+import {childByField, childLeafIdxWithText, visit} from "../cst-helpers";
 import {CstNode} from "../result";
 import {CodeBuilder} from "../code-builder";
 import {formatExpression} from "./format-expressions";
@@ -21,7 +21,7 @@ export function formatImport(code: CodeBuilder, node: CstNode): void {
     formatExpression(code, path)
     code.add(";");
 
-    const semicolonIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === ";");
+    const semicolonIndex = childLeafIdxWithText(node, ";")
 
     const afterBody = node.children.slice(semicolonIndex + 1)
     const comments = afterBody.filter(it => it.$ === "node" && it.type === "Comment");

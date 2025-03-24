@@ -1,5 +1,5 @@
 import {Cst, CstNode} from "./result";
-import {childByField, childByType} from "./cst-helpers";
+import {childByField, childByType, childIdxByField, childIdxByType, childLeafIdxWithText} from "./cst-helpers";
 
 let pendingComments: Cst[] = []
 
@@ -35,7 +35,7 @@ interface CommentsExtraction {
 // Comments here can be both inline (attached to node) and plain one (actually attached to the next declaration)
 function extractComments([commentPoint, anchor]: [CstNode, Anchor]): undefined | CommentsExtraction {
     const anchorIndex = typeof anchor === "string"
-        ? commentPoint.children.findIndex(it => it.$ === "leaf" && it.text === anchor)
+        ? childLeafIdxWithText(commentPoint, anchor)
         : anchor(commentPoint)
     if (anchorIndex === -1) {
         // No anchor, bug?
@@ -183,7 +183,7 @@ export const processDocComments = (node: Cst): Cst => {
     // And we need to extract top-level comment and attach it to next declaration
     if (node.type === "Root") {
         // Step 1: collect all nodes to Module
-        const moduleIndex = node.children.findIndex(it => it.$ === "node" && it.type === "Module")
+        const moduleIndex = childIdxByType(node, "Module")
         if (moduleIndex === -1) {
             // not Module?
             // no need to do anything
@@ -259,8 +259,8 @@ export const processDocComments = (node: Cst): Cst => {
     //   "\n\n"
     if (node.type === "Contract" || node.type === "Trait") {
         // starting point to find any first comments
-        const openBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "{")
-        const closeBraceIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "}")
+        const openBraceIndex = childLeafIdxWithText(node, "{")
+        const closeBraceIndex = childLeafIdxWithText(node, "}")
 
         const childrenToProcess = node.children.slice(openBraceIndex + 1, closeBraceIndex)
 
@@ -554,8 +554,8 @@ export const processDocComments = (node: Cst): Cst => {
             }
         }
 
-        const startIndex = node.children.findIndex(it => it.$ === "leaf" && it.text === "{") + 1
-        const fieldsIndex = node.children.findIndex(it => it.$ === "node" && it.field === "fields")
+        const startIndex = childLeafIdxWithText(node, "{") + 1
+        const fieldsIndex = childIdxByField(node, "fields")
 
         const leadingLeafs = node.children.slice(startIndex, fieldsIndex)
         const leadingComments = leadingLeafs.filter(it => it.$ === "node" && it.type === "Comment")
@@ -731,7 +731,7 @@ const findStatementNodeWithComments = (node: CstNode): undefined | [CstNode, Anc
         return [node, [(n) => {
             const index = [...n.children].reverse().findIndex(it => it.$ === "node" && it.type !== "Comment");
             if (index === -1) {
-                return n.children.findIndex(it => it.$ === "leaf" && it.text !== ")");
+                return childLeafIdxWithText(n, ")")
             }
             return n.children.length - 1 - index
         }, ";", "}"]]

@@ -1,4 +1,17 @@
-import {Cst, CstLeaf, CstNode} from "./result";
+import {Builder, createContext, Cst, CstLeaf, CstNode, Module, skip, space} from "./result";
+import {processDocComments} from "./process-comments";
+import {simplifyCst} from "./simplify-cst";
+
+export function parseCode(code: string): undefined | Cst {
+    const ctx = createContext(code, space);
+    const b: Builder = []
+    skip(ctx, b)
+    const res = Module(ctx, b)
+    if (!res) {
+        return undefined
+    }
+    return processDocComments(simplifyCst(CstNode(b, "Root")))
+}
 
 export const visit = (node: Cst): string => {
     if (node.$ === "leaf") return node.text
@@ -11,6 +24,14 @@ export const childByType = (node: Cst, type: string): undefined | Cst => {
     }
 
     return node.children.find(c => c.$ === "node" && c.type === type)
+}
+
+export const childIdxByType = (node: Cst, type: string): number => {
+    if (node.$ === "leaf") {
+        return -1
+    }
+
+    return node.children.findIndex(c => c.$ === "node" && c.type === type)
 }
 
 export const childrenByType = (node: Cst, type: string): Cst[] => {
@@ -53,6 +74,14 @@ export const childByField = (node: Cst, field: string): undefined | CstNode => {
     return undefined
 }
 
+export const childIdxByField = (node: Cst, field: string): number => {
+    if (node.$ === "leaf") {
+        return -1
+    }
+
+    return node.children.findIndex(c => c.$ === "node" && c.field === field)
+}
+
 export const childLeafWithText = (node: Cst, text: string): undefined | CstLeaf => {
     if (node.$ === "leaf") {
         return undefined
@@ -63,6 +92,13 @@ export const childLeafWithText = (node: Cst, text: string): undefined | CstLeaf 
         return res
     }
     return undefined
+}
+
+export const childLeafIdxWithText = (node: Cst, text: string): number => {
+    if (node.$ === "leaf") {
+        return -1
+    }
+    return node.children.findIndex(c => c.$ === "leaf" && c.text === text)
 }
 
 export const textOfId = (node: Cst): string => {
