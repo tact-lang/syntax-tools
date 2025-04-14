@@ -24,7 +24,8 @@ export const gen = async (source: string, target: string) => {
     await fs.writeFile(target, parserResult)
 }
 
-const PARSER_HEADER = `let nextId = 0
+const PARSER_HEADER = `/* Generated. Do not edit. */
+let nextId = 0
 
 export const createContext = (s: string, space: Rule) => ({
     s,
