@@ -67,8 +67,8 @@ export const CstLeaf = (text: string): CstLeaf => ({
 });
 
 export const CstNode = (children: readonly Cst[], type: string = "unknown", field: string = "", group: string = ""): CstNode => {
-  if (children.length === 1 && children[0].$ === "node" && children[0].type === "") {
-    return CstNode(children[0].children, type)
+  if (children.length === 1 && children[0]?.$ === "node" && children[0].type === "") {
+    return CstNode(children[0].children, type, field, group)
   }
 
   const process = (ch: Cst): readonly Cst[] => {
@@ -110,7 +110,7 @@ const peek = (ctx: Context): string | undefined => {
 
 const consumeClass = (ctx: Context, b: Builder, cond: (c: string) => boolean): boolean => {
     if (ctx.p === ctx.l) return false
-    const c = ctx.s[ctx.p]
+    const c = ctx.s[ctx.p] ?? ""
     if (!cond(c)) return false
     ctx.p++;
     const b2: Builder = []
@@ -140,7 +140,7 @@ export const consumeAny = (ctx: Context, b: Builder) => {
         return false;
     }
 
-    const c = ctx.s[ctx.p];
+    const c = ctx.s[ctx.p] ?? "";
     b.push(CstLeaf(c));
     ctx.p++;
     return true;
