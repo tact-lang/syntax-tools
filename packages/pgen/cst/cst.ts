@@ -140,22 +140,6 @@ const storeNodeFromBuilder = (name: string, nodeType: string) => t.expressionSta
         ])
 );
 
-const storeNodeFromBuilder2 = (name: string, nodeType: string) => t.expressionStatement(
-    t.callExpression(
-        t.memberExpression(
-            t.identifier("b"),
-            t.identifier("push")
-        ), [
-            t.callExpression(t.identifier("CstNode"), [
-                t.identifier(name),
-                ...(nodeType.length > 0 && !isLowerCase(nodeType[0])
-                    ? [t.stringLiteral(nodeType)]
-                    : [t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))]),
-                t.logicalExpression("??", t.identifier("field"), t.stringLiteral(""))
-            ])
-        ])
-);
-
 // b.push(CstLeaf(expr))
 const storeLeaf = (expr: t.Expression) => t.expressionStatement(
     t.callExpression(
