@@ -97,13 +97,6 @@ export const generateExpr = (node: g.Expr, ruleName: string, fieldName: undefine
             return generateLookNeg(node)
         case "LookPos":
             return generateLookPos(node)
-        // TODO
-        // - check escapes
-        // - positions
-        // - fix nesting
-        // - rules
-        //   - char class
-        //      - others
     }
 }
 
