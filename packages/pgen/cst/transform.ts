@@ -1,5 +1,4 @@
 import { $ast as g } from '../grammar';
-import {Loc} from "@tonstudio/parser-runtime";
 
 export type Expr =
     | Alt
