@@ -6,6 +6,7 @@ import * as G from './grammar';
 import { desugar } from './transform';
 import { generateTsAst } from './compile';
 import { sort } from './sort';
+import { gen } from "./cst/generator"
 
 const main = async () => {
     const argv = minimist(process.argv.slice(2));
@@ -13,8 +14,13 @@ const main = async () => {
     const target = argv.o;
 
     if (!source || !target) {
-        console.error('Syntax: pgen grammar.gg -o grammar.ts');
+        console.error('Syntax: pgen grammar.gg -o grammar.ts [--cst]');
         process.exit(1);
+    }
+
+    if (argv.cst) {
+        await gen(source, target);
+        return
     }
 
     const code = await fs.readFile(source, 'utf-8');
