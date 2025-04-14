@@ -25,6 +25,7 @@ export const gen = async (source: string, target: string) => {
 }
 
 const PARSER_HEADER = `/* Generated. Do not edit. */
+// @ts-nocheck
 let nextId = 0
 
 export const createContext = (s: string, space: Rule) => ({
