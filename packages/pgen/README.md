@@ -4,12 +4,12 @@ Not only other parser generators for web weren't written here, but they lack a s
 
 - **Type-safety**: API of generated parser should be typed without `any`
 - **AST from grammar**: converting untyped trees to AST is unsafe and boring
-- <sup>TBD</sup> **CST**: pretty-printer has to keep comments `/**/`, underscores in numbers `1_234` and other features that are nowhere represented in AST.
+- **CST**: pretty-printer has to keep comments `/**/`, underscores in numbers `1_234` and other features that are nowhere represented in AST.
 - **Named lexemes**: good error messages shouldn't report an identifier as "a-z, A-Z, 0-9, or _".
 - <sup>TBD</sup> **Error recovery**: programming languages should report more than one error at a time.
 - <sup>TBD</sup> **Incremental**: reparse shouldn't take time proprtional to size of the file.
 - **High-order rules `A<B>`**: duplicated code leads to increased chance to make a mistake, and high-order rules are required for duplication.
-- <sup>TBD</sup> **No stack overflow on large expressions**: nested constructions might lead to stack overflow. 
+- <sup>TBD</sup> **No stack overflow on large expressions**: nested constructions might lead to stack overflow.
 - **Space skipping**: manually annotating grammar with spaces is error-prone and boring.
 
 ## Comparison to peggy
@@ -52,3 +52,23 @@ Not only other parser generators for web weren't written here, but they lack a s
 - Spaces are not skipped inside lexification operator `#x`.
 - Spaces are skipped at the start, before rest of the parsing will happen
 - If not the whole input was consumed, error will be emitted
+
+## Building
+
+```
+yarn build
+```
+
+## Running
+
+To generate AST parser:
+
+```
+./bin/pgen grammar.gg grammar.ts
+```
+
+To generate CST parser:
+
+```
+./bin/pgen grammar.gg grammar.ts --cst
+```
